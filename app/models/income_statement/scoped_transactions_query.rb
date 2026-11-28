@@ -55,6 +55,20 @@ module IncomeStatement::ScopedTransactionsQuery
       @budget_excluded_kinds_sql ||= Transaction::BUDGET_EXCLUDED_KINDS.map { |k| "'#{k}'" }.join(", ")
     end
 
+    # The same row eligibility serves the totals and their transaction drill-down.
+    def reportable_conditions_sql(t, filter_investment_activity: true)
+      <<~SQL
+        #{t}.kind NOT IN (#{budget_excluded_kinds_sql})
+        #{investment_activity_label_sql(t) if filter_investment_activity}
+        AND ae.excluded = false
+        AND a.family_id = :family_id
+        AND a.status IN ('draft', 'active')
+        AND a.exclude_from_reports = false
+        #{exclude_tax_advantaged_sql}
+        #{include_finance_accounts_sql}
+      SQL
+    end
+
     def pending_providers_sql(t = "t")
       Transaction.pending_providers_sql(t)
     end

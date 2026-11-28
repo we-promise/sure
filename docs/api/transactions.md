@@ -42,20 +42,40 @@ The `GET /api/v1/transactions` endpoint supports the following query parameters 
 | Parameter | Type | Description |
 | --- | --- | --- |
 | `page` | integer | Page number (default: 1) |
-| `per_page` | integer | Items per page (default: 25, max: 100) |
+| `per_page` | integer | Items per page (default: 25, max: 100; larger values are capped at 100) |
 | `account_id` | uuid | Filter by a single account ID |
 | `account_ids[]` | uuid[] | Filter by multiple account IDs |
-| `category_id` | uuid | Filter by a single category ID |
+| `category_id` | uuid | Filter by a single category ID (subcategories are not included) |
 | `category_ids[]` | uuid[] | Filter by multiple category IDs |
 | `merchant_id` | uuid | Filter by a single merchant ID |
 | `merchant_ids[]` | uuid[] | Filter by multiple merchant IDs |
-| `tag_ids[]` | uuid[] | Filter by tag IDs |
-| `start_date` | date | Filter transactions from this date (inclusive) |
-| `end_date` | date | Filter transactions until this date (inclusive) |
-| `min_amount` | number | Filter by minimum amount |
-| `max_amount` | number | Filter by maximum amount |
-| `type` | string | Filter by transaction type: `income` or `expense` |
-| `search` | string | Search by name, notes, or merchant name |
+| `tag_ids[]` | uuid[] | Transactions carrying any of these tags |
+| `start_date` | date | Filter transactions from this date (inclusive), `YYYY-MM-DD` |
+| `end_date` | date | Filter transactions until this date (inclusive), `YYYY-MM-DD` |
+| `min_amount` | number | Minimum signed amount, inclusive (inflows are negative) |
+| `max_amount` | number | Maximum signed amount, inclusive |
+| `type` | string | `income` (negative amounts) or `expense` (positive amounts), transfers included |
+| `search` | string | Search by name, notes, or merchant name; surrounding spaces are ignored |
+| `budget_id` | uuid | Only transactions the budget's category drill-down lists (see below) |
+| `exclude_split_parents` | boolean | `true` leaves out transactions that have been split; their split children are still listed |
+| `excluded` | boolean | Filters on the entry excluded flag only: `false` lists entries not flagged excluded, `true` only flagged ones (split parents included). Without `budget_id`, this flag alone does not apply the report eligibility rules. With `budget_id`, the budget reporting rules apply independently, so `excluded=true` returns no rows. Omit to leave this flag unfiltered |
+
+Filters combine, so `budget_id` can be narrowed further with `category_id`, `account_id`, a date range and so on. A single id and its list (`account_id` and `account_ids[]`, and likewise for categories and merchants) match the ids in both.
+
+A parameter that is present must be valid, or the request returns `422`: ids must be UUIDs written with hyphens, dates `YYYY-MM-DD`, amounts plain or scientific numbers of at most 20 digits written out (`1e19` is the largest power of ten), `type` `income` or `expense` (case aside), and `exclude_split_parents` / `excluded` one of `true`, `false`, `1` or `0` (case and surrounding spaces aside). An empty value is invalid too, except for `search`, where it turns the search off. Leave a parameter out, or send it with no `=` (`?excluded`, `?tag_ids[]`), to turn its filter off.
+
+### Budget and report lists
+
+`budget_id` returns the rows the web budget category drill-down lists for that budget:
+
+- transactions dated within the budget's period;
+- on the accounts the budget's spending is computed from: for the household budget, the caller's finance accounts (owned accounts and shared accounts with `include_in_finances: true`) that are included in reports; for a personal budget, its owner's accounts that are included in reports;
+- and, as everywhere in this API, only on accounts the caller can access. A shared personal budget does not share the owner's accounts, so a viewer only sees the rows on accounts the owner has also shared with them, and the list can then add up to less than the budget's spending;
+- leaving out the `funds_movement`, `cc_payment` and `one_time` kinds, which budgets ignore, and `investment_contribution` too when the family does not count investing as spending.
+
+The budget must be one `GET /api/v1/budgets/{id}` would return to the caller (the household budget, the caller's own, or one shared with them); any other id returns `404`. Unlike the unfiltered list, rows on disabled accounts are left out, as they are on the web.
+
+The budget list uses the totals' reporting rules: excluded and split-parent entries, pending and future-dated transactions, tax-advantaged accounts, and internal investment transfers/sweeps/exchanges are omitted. Only accounts included in the budget income statement count. For a leaf category, `category_id` selects that line's rows. A parent line's actual spending includes its subcategories, while `category_id` matches only one category: use `category_ids[]` with the parent and its subcategory IDs to include the entire parent line. These rows reconcile with the line's actual spending when the caller can access all of its accounts and no additional filters narrow the results. To reconcile, convert each row to the family currency at the rate on its date, then take the line's expenses minus its refunds, floored at zero: a line whose only row is a 20 refund (`amount_decimal` `-20`) has an actual spending of 0. The API returns each row in its own `currency` only, so rows in other currencies need the client's own rates.
 
 ## Transaction object
 

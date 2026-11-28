@@ -3,6 +3,8 @@
 require 'swagger_helper'
 
 RSpec.describe 'API V1 Transactions', type: :request do
+  user_modified_schema = API_STRICT_FLAG_SCHEMA.merge(description: 'Whether provider syncs should preserve user-supplied transaction changes: true or false (also 1 or 0, any case); null is the same as leaving it out. Any other value returns 422 and writes nothing.')
+
   let(:family) do
     Family.create!(
       name: 'API Family',
@@ -138,41 +140,56 @@ RSpec.describe 'API V1 Transactions', type: :request do
       produces 'application/json'
       parameter name: :page, in: :query, type: :integer, required: false,
                 description: 'Page number (default: 1)'
-      parameter name: :per_page, in: :query, type: :integer, required: false,
-                description: 'Items per page (default: 25, max: 100)'
-      parameter name: :account_id, in: :query, type: :string, required: false,
-                description: 'Filter by account ID'
-      parameter name: :category_id, in: :query, type: :string, required: false,
-                description: 'Filter by category ID'
-      parameter name: :merchant_id, in: :query, type: :string, required: false,
-                description: 'Filter by merchant ID'
+      parameter name: :per_page, in: :query, type: :integer, required: false, description: API_PER_PAGE_DESCRIPTION
+      parameter name: :account_id, in: :query, required: false,
+                description: 'Filter by account ID. With account_ids, only ids in both match.',
+                schema: { type: :string, format: :uuid }
+      parameter name: :category_id, in: :query, required: false,
+                description: 'Filter by category ID (subcategories are not included). With category_ids, only ids in both match.',
+                schema: { type: :string, format: :uuid }
+      parameter name: :merchant_id, in: :query, required: false,
+                description: 'Filter by merchant ID. With merchant_ids, only ids in both match.',
+                schema: { type: :string, format: :uuid }
       parameter name: :start_date, in: :query, required: false,
-                description: 'Filter transactions from this date',
+                description: 'Filter transactions from this date (inclusive)',
                 schema: { type: :string, format: :date }
       parameter name: :end_date, in: :query, required: false,
-                description: 'Filter transactions until this date',
+                description: 'Filter transactions until this date (inclusive)',
                 schema: { type: :string, format: :date }
       parameter name: :min_amount, in: :query, type: :number, required: false,
-                description: 'Filter by minimum amount'
+                description: 'Minimum signed amount, inclusive (inflows are negative); at most 20 digits written out, or 422'
       parameter name: :max_amount, in: :query, type: :number, required: false,
-                description: 'Filter by maximum amount'
+                description: 'Maximum signed amount, inclusive; at most 20 digits written out, or 422'
       parameter name: :type, in: :query, required: false,
-                description: 'Filter by transaction type',
+                description: 'income lists negative amounts and expense positive ones, transfers included; case is ignored',
                 schema: { type: :string, enum: %w[income expense] }
       parameter name: :search, in: :query, type: :string, required: false,
-                description: 'Search by name, notes, or merchant name'
+                description: 'Search by name, notes, or merchant name; surrounding spaces are ignored'
       parameter name: :account_ids, in: :query, required: false,
                 description: 'Filter by multiple account IDs',
-                schema: { type: :array, items: { type: :string } }
+                schema: { type: :array, items: { type: :string, format: :uuid } }
       parameter name: :category_ids, in: :query, required: false,
                 description: 'Filter by multiple category IDs',
-                schema: { type: :array, items: { type: :string } }
+                schema: { type: :array, items: { type: :string, format: :uuid } }
       parameter name: :merchant_ids, in: :query, required: false,
                 description: 'Filter by multiple merchant IDs',
-                schema: { type: :array, items: { type: :string } }
+                schema: { type: :array, items: { type: :string, format: :uuid } }
       parameter name: :tag_ids, in: :query, required: false,
-                description: 'Filter by tag IDs',
-                schema: { type: :array, items: { type: :string } }
+                description: 'Transactions carrying any of these tags',
+                schema: { type: :array, items: { type: :string, format: :uuid } }
+      parameter name: :budget_id, in: :query, required: false,
+                description: "Only rows the budget's category drill-down on the web lists: transactions in the budget period, " \
+                             "on the accounts its spending is computed from (the owner's report accounts for a personal budget, " \
+                             "the caller's for the household budget), using the totals' rules for posted, non-future, non-excluded transactions, tax-advantaged accounts and internal investment movements, " \
+                             'and limited to accounts the caller can access. Must be a budget the caller can see; returns 404 otherwise.',
+                schema: { type: :string, format: :uuid }
+      parameter name: :exclude_split_parents, in: :query, required: false,
+                description: 'When true, leave out transactions that have been split (their split children are still listed).',
+                schema: { type: :boolean }
+      parameter name: :excluded, in: :query, required: false,
+                description: 'Filters on the entry excluded flag only. false lists entries not flagged excluded; true lists only flagged ones, ' \
+                             'split parents included. Without budget_id, omit to list both. With budget_id, reporting rules already exclude flagged entries.',
+                schema: { type: :boolean }
 
       response '200', 'transactions listed' do
         schema '$ref' => '#/components/schemas/TransactionCollection'
@@ -193,6 +210,30 @@ RSpec.describe 'API V1 Transactions', type: :request do
 
         let(:start_date) { (Date.current - 7.days).to_s }
         let(:end_date) { Date.current.to_s }
+
+        run_test!
+      end
+
+      response '404', 'budget not found or not visible to the caller' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:budget_id) { SecureRandom.uuid }
+
+        run_test!
+      end
+
+      response '422', 'invalid filter: a present parameter that is empty or not of its documented type' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:excluded) { 'maybe' }
+
+        run_test!
+      end
+
+      response '422', 'invalid filter: a date that is not YYYY-MM-DD' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:start_date) { '2024/01/05' }
 
         run_test!
       end
@@ -221,7 +262,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
               nature: { type: :string, enum: %w[income expense inflow outflow], description: 'Transaction nature (determines sign)' },
               external_id: { type: :string, description: 'Optional external idempotency key scoped to account and source' },
               source: { type: :string, description: 'Optional source namespace for external_id. Requires external_id and defaults to api when external_id is provided' },
-              user_modified: { type: :boolean, description: 'Whether provider syncs should preserve user-supplied transaction changes' },
+              user_modified: user_modified_schema,
               tag_ids: { type: :array, items: { type: :string, format: :uuid }, description: 'Array of tag IDs' }
             },
             required: %w[account_id date amount name]
@@ -375,7 +416,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
                 items: { type: :string, format: :uuid },
                 description: 'Array of tag IDs to assign. Omit to preserve existing tags; use [] to clear all tags.'
               },
-              user_modified: { type: :boolean, description: 'Whether provider syncs should preserve user-supplied transaction changes' }
+              user_modified: user_modified_schema
             }
           }
         }

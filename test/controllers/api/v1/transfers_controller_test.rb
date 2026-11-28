@@ -136,14 +136,6 @@ class Api::V1::TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "validation_failed", response_data["error"]
   end
 
-  test "rejects invalid date filter" do
-    get api_v1_transfers_url, params: { start_date: "01/15/2024" }, headers: api_headers(@api_key)
-
-    assert_response :unprocessable_entity
-    response_data = JSON.parse(response.body)
-    assert_equal "validation_failed", response_data["error"]
-  end
-
   test "filters transfers when either transaction side date matches" do
     matched_outflow = create_transaction(@account, amount: 75, date: Date.parse("2024-02-10"), name: "Dated outflow")
     matched_inflow = create_transaction(@destination_account, amount: -75, date: Date.parse("2024-02-10"), name: "Dated inflow")
@@ -186,6 +178,57 @@ class Api::V1::TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
   ensure
     api_key_without_read&.destroy
+  end
+
+  test "reads the date filters with the date reader" do
+    %i[start_date end_date].each do |key|
+      get api_v1_transfers_url, params: { key => "not-a-date" }, headers: api_headers(@api_key)
+
+      assert_response :unprocessable_entity, key
+      assert_equal "#{key} must be a date in YYYY-MM-DD format", JSON.parse(response.body)["message"]
+    end
+  end
+
+  test "rejects empty filter values" do
+    %i[status account_id start_date end_date].each do |key|
+      get api_v1_transfers_url, params: { key => "" }, headers: api_headers(@api_key)
+
+      assert_response :unprocessable_entity, "#{key}= should be rejected"
+      assert_equal "validation_failed", JSON.parse(response.body)["error"]
+    end
+  end
+
+  test "returns nothing for an account of another family" do
+    other_account = families(:empty).accounts.create!(name: "Foreign", accountable: Depository.new, balance: 0, currency: "USD")
+
+    get api_v1_transfers_url, params: { account_id: other_account.id }, headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_empty JSON.parse(response.body)["transfers"]
+  end
+
+  test "hides transfers touching an account the user cannot access" do
+    private_account = @family.accounts.create!(
+      name: "Member Private", accountable: Depository.new, balance: 0, currency: "USD", owner: users(:family_member)
+    )
+    outflow = create_transaction(@account, amount: 60, date: Date.parse("2024-01-20"), name: "To private")
+    inflow = create_transaction(private_account, amount: -60, date: Date.parse("2024-01-20"), name: "From shared")
+    hidden = Transfer.create!(outflow_transaction: outflow, inflow_transaction: inflow)
+
+    get api_v1_transfers_url, params: { account_id: @account.id }, headers: api_headers(@api_key)
+    assert_response :success
+    assert_not_includes JSON.parse(response.body)["transfers"].map { |transfer| transfer["id"] }, hidden.id
+
+    get api_v1_transfers_url, params: { account_id: private_account.id }, headers: api_headers(@api_key)
+    assert_response :success
+    assert_empty JSON.parse(response.body)["transfers"]
+  end
+
+  test "filters pending transfers" do
+    get api_v1_transfers_url, params: { status: "pending" }, headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_not_includes JSON.parse(response.body)["transfers"].map { |transfer| transfer["id"] }, @transfer.id
   end
 
   private

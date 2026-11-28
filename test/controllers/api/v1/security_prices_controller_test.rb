@@ -128,6 +128,16 @@ class Api::V1::SecurityPricesControllerTest < ActionDispatch::IntegrationTest
     assert_includes JSON.parse(response.body)["errors"], "carried_forward must be true or false"
   end
 
+  # It was a 422 before every reader read a bare key as absent.
+  test "a bare provisional key turns the filter off" do
+    get api_v1_security_prices_url, headers: api_headers(@api_key)
+    unfiltered = JSON.parse(response.body)["security_prices"].size
+
+    get "#{api_v1_security_prices_url}?provisional", headers: api_headers(@api_key)
+    assert_response :success
+    assert_equal unfiltered, JSON.parse(response.body)["security_prices"].size
+  end
+
   test "rejects blank provisional filter" do
     get api_v1_security_prices_url,
         params: { provisional: "" },
@@ -176,12 +186,43 @@ class Api::V1::SecurityPricesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "validation_failed", response_data["error"]
   end
 
-  test "rejects invalid date filters" do
-    get api_v1_security_prices_url, params: { start_date: "01/15/2024" }, headers: api_headers(@api_key)
+  test "does not list prices of a security held only in a member's account the caller cannot access" do
+    private_account = @family.accounts.create!(
+      name: "Member Brokerage", accountable: Investment.new, balance: 0, currency: "USD", owner: users(:family_member)
+    )
+    private_security = Security.create!(ticker: "PRIV#{SecureRandom.hex(4).upcase}", name: "Private Holding", country_code: "US")
+    private_account.holdings.create!(security: private_security, date: Date.current, qty: 1, price: 1, amount: 1, currency: "USD")
+    Security::Price.create!(security: private_security, date: Date.current, price: 1, currency: "USD")
 
-    assert_response :unprocessable_entity
-    response_data = JSON.parse(response.body)
-    assert_equal "validation_failed", response_data["error"]
+    get api_v1_security_prices_url, params: { security_id: private_security.id }, headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_empty JSON.parse(response.body)["security_prices"]
+  end
+
+  test "reads the date filters with the date reader" do
+    %i[start_date end_date].each do |key|
+      get api_v1_security_prices_url, params: { key => "not-a-date" }, headers: api_headers(@api_key)
+
+      assert_response :unprocessable_entity, key
+      assert_equal [ "#{key} must be a date in YYYY-MM-DD format" ], JSON.parse(response.body)["errors"]
+    end
+  end
+
+  test "an empty security_id or date, or a list for the currency, is a 422" do
+    [ { security_id: "" }, { start_date: "" }, { currency: [ "USD" ] } ].each do |filters|
+      get api_v1_security_prices_url, params: filters, headers: api_headers(@api_key)
+
+      assert_response :unprocessable_entity, filters.inspect
+      assert_equal "validation_failed", JSON.parse(response.body)["error"]
+    end
+  end
+
+  test "a blank currency is no filter" do
+    get api_v1_security_prices_url, params: { currency: " " }, headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_includes JSON.parse(response.body)["security_prices"].map { |price| price["id"] }, @eur_price.id
   end
 
   test "requires authentication" do

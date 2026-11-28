@@ -108,12 +108,41 @@ class Api::V1::BudgetsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response_data["budgets"].map { |budget| budget["id"] }, @budget.id
   end
 
-  test "rejects invalid date filters" do
-    get api_v1_budgets_url, params: { start_date: "03/01/2024" }, headers: api_headers(@api_key)
+  test "date filters bound budgets.start_date from below and budgets.end_date from above" do
+    later = @family.budgets.create!(
+      start_date: 2.months.ago.beginning_of_month.to_date,
+      end_date: 2.months.ago.end_of_month.to_date,
+      currency: "USD"
+    )
 
-    assert_response :unprocessable_entity
-    response_data = JSON.parse(response.body)
-    assert_equal "validation_failed", response_data["error"]
+    get api_v1_budgets_url, params: { start_date: later.start_date.to_s }, headers: api_headers(@api_key)
+    ids = JSON.parse(response.body)["budgets"].map { |budget| budget["id"] }
+    assert_includes ids, later.id
+    assert_not_includes ids, @budget.id
+
+    get api_v1_budgets_url, params: { end_date: @budget.end_date.to_s }, headers: api_headers(@api_key)
+    ids = JSON.parse(response.body)["budgets"].map { |budget| budget["id"] }
+    assert_includes ids, @budget.id
+    assert_not_includes ids, later.id
+  end
+
+  test "date filters never reach another family's budgets" do
+    get api_v1_budgets_url,
+        params: { start_date: @other_budget.start_date.to_s, end_date: @other_budget.end_date.to_s },
+        headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_not_includes JSON.parse(response.body)["budgets"].map { |budget| budget["id"] }, @other_budget.id
+  end
+
+  # The accepted formats are pinned in BaseControllerTest.
+  test "reads the date filters with the date reader" do
+    %i[start_date end_date].each do |key|
+      get api_v1_budgets_url, params: { key => "not-a-date" }, headers: api_headers(@api_key)
+
+      assert_response :unprocessable_entity
+      assert_equal "#{key} must be a date in YYYY-MM-DD format", JSON.parse(response.body)["message"]
+    end
   end
 
   test "excludes another family member's personal budget" do

@@ -18,10 +18,4 @@ class Api::V1::BalanceSheetController < Api::V1::BaseController
       liabilities: balance_sheet.liabilities.total_money.as_json
     }
   end
-
-  private
-
-    def ensure_read_scope
-      authorize_scope!(:read)
-    end
 end

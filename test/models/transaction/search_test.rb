@@ -1342,7 +1342,142 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_equal [ without_file.id ], without_ids
   end
 
+  # The API's filters (Api::V1::TransactionsController#index) are attributes
+  # whose defaults leave the web query exactly as it was.
+  test "the defaults reproduce the web query" do
+    web_query = @family.transactions.merge(Entry.excluding_split_parents)
+                       .where(accounts: { status: [ "draft", "active" ] })
+
+    assert_equal web_query.to_sql, Transaction::Search.new(@family).transactions_scope.to_sql
+
+    filters = { search: "coffee", merchants: [ merchants(:netflix).name ], start_date: "2026-01-01" }
+    web_query = Transaction::Search.apply_merchant_filter(web_query, filters[:merchants])
+    web_query = EntrySearch.apply_search_filter(web_query, filters[:search])
+    web_query = EntrySearch.apply_date_filters(web_query, filters[:start_date], nil)
+
+    assert_equal web_query.to_sql, Transaction::Search.new(@family, filters:).transactions_scope.to_sql
+  end
+
+  test "include_split_parents keeps split parents next to their children" do
+    parent = create_transaction(account: @checking_account, amount: 100)
+    children = parent.split!([ { name: "One", amount: 60 }, { name: "Two", amount: 40 } ]).map(&:entryable_id)
+
+    assert_equal children.sort, search_ids
+    search = Transaction::Search.new(@family, include_split_parents: true)
+    assert_equal [ parent.entryable_id, *children ].sort, search.transactions_scope.pluck(:id).sort
+    assert_not_equal Transaction::Search.new(@family).cache_key_base, search.cache_key_base
+  end
+
+  # Callers such as the assistant pass user input as filters, so the caller's
+  # options are not among them.
+  test "caller options are keywords, not filters" do
+    %i[include_split_parents exclude_split_parents search_merchant_names].each do |key|
+      assert_raises(ActiveModel::UnknownAttributeError, key.to_s) do
+        Transaction::Search.new(@family, filters: { key => false })
+      end
+    end
+  end
+
+  test "excluded keeps only rows with that excluded flag" do
+    counted = create_transaction(account: @checking_account, amount: 10)
+    excluded = create_transaction(account: @checking_account, amount: 20, excluded: true)
+
+    assert_equal [ counted.entryable_id ], search_ids(excluded: false)
+    assert_equal [ excluded.entryable_id ], search_ids(excluded: true)
+    assert_equal [ counted, excluded ].map(&:entryable_id).sort, search_ids(excluded: nil)
+  end
+
+  test "category_ids, merchant_ids and tag_ids match ids exactly, and an empty list matches nothing" do
+    parent = categories(:food_and_drink)
+    child = @family.categories.create!(name: "Search child #{SecureRandom.hex(3)}", parent:, color: "#000000")
+    in_parent = create_transaction(account: @checking_account, category: parent, merchant: merchants(:netflix), tags: [ tags(:one) ])
+    in_child = create_transaction(account: @checking_account, category: child, merchant: merchants(:amazon), tags: [ tags(:one), tags(:two) ])
+    bare = create_transaction(account: @checking_account)
+
+    assert_equal [ in_parent.entryable_id ], search_ids(category_ids: [ parent.id ])
+    assert_equal [ in_child.entryable_id ], search_ids(merchant_ids: [ merchants(:amazon).id ])
+    assert_equal [ in_parent, in_child ].map(&:entryable_id).sort, search_ids(tag_ids: [ tags(:one).id, tags(:two).id ])
+    %i[category_ids merchant_ids tag_ids].each do |key|
+      assert_empty search_ids(key => []), "#{key}: [] must match nothing"
+      assert_equal [ in_parent, in_child, bare ].map(&:entryable_id).sort, search_ids(key => nil)
+    end
+  end
+
+  # The API passes its account list into the web form's account_ids; the
+  # API's reader never hands over [], so only Ruby callers see the difference.
+  test "account_ids is the web form's list, where an empty list is no filter" do
+    mine = create_transaction(account: @checking_account)
+
+    assert_equal search_ids(account_ids: nil), search_ids(account_ids: [])
+    assert_includes search_ids(account_ids: []), mine.entryable_id
+  end
+
+  test "account_id, category_id and merchant_id narrow their lists, so both must match" do
+    other_account = accounts(:credit_card)
+    mine = create_transaction(account: @checking_account, category: categories(:food_and_drink), merchant: merchants(:netflix))
+    create_transaction(account: other_account, category: categories(:food_and_drink), merchant: merchants(:netflix))
+
+    assert_equal [ mine.entryable_id ], search_ids(account_id: @checking_account.id, account_ids: [ @checking_account.id, other_account.id ])
+    assert_empty search_ids(account_id: @checking_account.id, account_ids: [ other_account.id ])
+    assert_equal [ mine.entryable_id ], search_ids(account_id: @checking_account.id.upcase), "UUIDs match in any case"
+    assert_empty search_ids(category_id: categories(:food_and_drink).id, category_ids: [ SecureRandom.uuid ])
+    assert_empty search_ids(merchant_id: merchants(:netflix).id, merchant_ids: [ SecureRandom.uuid ])
+    assert_includes search_ids(merchant_id: merchants(:netflix).id, merchant_ids: [ merchants(:netflix).id ]), mine.entryable_id
+  end
+
+  test "min_amount and max_amount bound the signed amount, inclusively" do
+    refund = create_transaction(account: @checking_account, amount: -50)
+    small = create_transaction(account: @checking_account, amount: 10)
+    large = create_transaction(account: @checking_account, amount: 100)
+
+    assert_equal [ small, large ].map(&:entryable_id).sort, search_ids(min_amount: BigDecimal("10"))
+    assert_equal [ refund, small ].map(&:entryable_id).sort, search_ids(max_amount: BigDecimal("10"))
+    assert_equal [ small.entryable_id ], search_ids(min_amount: BigDecimal("-49.99"), max_amount: BigDecimal("10"))
+  end
+
+  test "nature splits rows by the sign of the amount, transfers included" do
+    inflow = create_transaction(account: @checking_account, amount: -50)
+    outflow = create_transaction(account: @checking_account, amount: 10)
+    transfer_out = create_transaction(account: @checking_account, amount: 20, kind: "funds_movement")
+    create_transaction(account: @checking_account, amount: 0)
+
+    assert_equal [ inflow.entryable_id ], search_ids(nature: "inflow")
+    assert_equal [ outflow, transfer_out ].map(&:entryable_id).sort, search_ids(nature: "outflow")
+  end
+
+  test "search_merchant_names also matches the merchant name, with one merchants join" do
+    by_merchant = create_transaction(account: @checking_account, merchant: merchants(:netflix), name: "Monthly plan")
+    create_transaction(account: @checking_account, merchant: merchants(:amazon), name: "Order")
+
+    assert_empty search_ids(search: merchants(:netflix).name)
+    by_name = Transaction::Search.new(@family, filters: { search: merchants(:netflix).name }, search_merchant_names: true)
+    assert_equal [ by_merchant.entryable_id ], by_name.transactions_scope.pluck(:id)
+    assert_not_equal Transaction::Search.new(@family, filters: { search: merchants(:netflix).name }).cache_key_base, by_name.cache_key_base
+
+    search = Transaction::Search.new(@family, filters: { search: "plan", merchants: [ merchants(:netflix).name ] }, search_merchant_names: true)
+    assert_equal 1, search.transactions_scope.to_sql.scan("JOIN merchants").size
+    assert_equal [ by_merchant.entryable_id ], search.transactions_scope.pluck(:id)
+  end
+
+  test "budget keeps only the rows the budget drill-down counts" do
+    budget = @family.budgets.create!(start_date: 7.months.ago.beginning_of_month.to_date,
+      end_date: 7.months.ago.end_of_month.to_date, budgeted_spending: 1000, currency: "USD")
+    budget.current_user = users(:family_admin)
+    counted = create_transaction(account: @checking_account, amount: 30, date: budget.start_date + 3.days)
+    create_transaction(account: @checking_account, amount: 30, date: budget.start_date - 1.day)
+    create_transaction(account: @checking_account, amount: 500, date: budget.start_date + 3.days, kind: "funds_movement")
+
+    search = Transaction::Search.new(@family, budget:)
+    assert_equal [ counted.entryable_id ], search.transactions_scope.pluck(:id)
+    assert_includes search.cache_key_base, budget.id
+    assert_not_equal Transaction::Search.new(@family).cache_key_base, search.cache_key_base
+  end
+
   private
+    def search_ids(filters = {})
+      Transaction::Search.new(@family, filters:).transactions_scope.pluck(:id).sort
+    end
+
     # Attaches a small PDF to the transaction.
     def attach_file(transaction, filename: "invoice.pdf")
       transaction.attachments.attach(io: StringIO.new("invoice"), filename: filename, content_type: "application/pdf")

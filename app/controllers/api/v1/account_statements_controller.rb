@@ -7,16 +7,12 @@ class Api::V1::AccountStatementsController < Api::V1::BaseController
   before_action :ensure_write_scope, only: [ :create ]
   before_action :ensure_statement_manager
   before_action :set_statement, only: [ :show ]
+  before_action :set_search, only: [ :index ]
 
   helper_method :accessible_account_ids
 
   def index
-    statements = family.account_statements
-      .viewable_by(current_resource_owner)
-      .includes(:account, :suggested_account)
-      .ordered
-
-    statements = apply_filters(statements)
+    statements = @search.account_statements_scope.includes(:account, :suggested_account).ordered
     @per_page = safe_per_page_param
     @pagy, @statements = pagy(statements, page: safe_page_param, limit: @per_page)
 
@@ -113,26 +109,14 @@ class Api::V1::AccountStatementsController < Api::V1::BaseController
       end
     end
 
-    def apply_filters(scope)
-      if params[:account_id].present?
-        raise InvalidFilterError, "account_id must be a valid UUID" unless valid_uuid?(params[:account_id])
-
-        scope = scope.where(account_id: params[:account_id])
-      end
-
-      if params[:review_status].present?
-        unless AccountStatement.review_statuses.key?(params[:review_status].to_s)
-          raise InvalidFilterError, "review_status must be one of: #{AccountStatement.review_statuses.keys.join(", ")}"
-        end
-
-        scope = scope.where(review_status: params[:review_status].to_s)
-      end
-
-      # The column only holds lowercase hex.
-      scope = scope.where(content_sha256: params[:content_sha256].to_s.strip.downcase) if params[:content_sha256].present?
-      scope = scope.where("period_end_on >= ?", parse_date_param(:start_date)) if params[:start_date].present?
-      scope = scope.where("period_start_on <= ?", parse_date_param(:end_date)) if params[:end_date].present?
-      scope
+    def set_search
+      @search = AccountStatement::Search.new(family.account_statements.viewable_by(current_resource_owner), filters: {
+        account_id: uuid_filter_param(:account_id),
+        review_status: enum_filter_param(:review_status, AccountStatement.review_statuses.keys),
+        content_sha256: string_filter_param(:content_sha256),
+        start_date: date_filter_param(:start_date),
+        end_date: date_filter_param(:end_date)
+      })
     end
 
     def ensure_statement_manager
@@ -142,10 +126,6 @@ class Api::V1::AccountStatementsController < Api::V1::BaseController
         error: "forbidden",
         message: "The Statement Vault requires an admin or member role"
       }, status: :forbidden
-    end
-
-    def ensure_read_scope
-      authorize_scope!(:read)
     end
 
     def ensure_write_scope

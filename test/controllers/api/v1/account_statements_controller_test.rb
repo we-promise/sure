@@ -219,11 +219,40 @@ class Api::V1::AccountStatementsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "rejects invalid filters" do
-    [ { account_id: "nope" }, { review_status: "approved" }, { start_date: "2024-13-01" } ].each do |filter|
+    {
+      { account_id: "nope" } => "account_id must be a valid UUID",
+      { account_id: "" } => "account_id must be a valid UUID",
+      { review_status: "approved" } => "review_status must be one of: unmatched, linked, rejected",
+      { review_status: "" } => "review_status must be one of: unmatched, linked, rejected",
+      { content_sha256: [ "abc" ] } => "content_sha256 must be a string",
+      { start_date: "2024-13-01" } => "start_date must be a date in YYYY-MM-DD format",
+      { start_date: "" } => "start_date must be a date in YYYY-MM-DD format",
+      { end_date: "not-a-date" } => "end_date must be a date in YYYY-MM-DD format"
+    }.each do |filter, message|
       get api_v1_account_statements_url, params: filter, headers: api_headers(@read_only_api_key)
-      assert_response :unprocessable_entity
-      assert_equal "validation_failed", JSON.parse(response.body)["error"]
+      assert_response :unprocessable_entity, filter.inspect
+      body = JSON.parse(response.body)
+      assert_equal "validation_failed", body["error"]
+      assert_equal [ message ], body["errors"]
     end
+  end
+
+  test "ignores a blank content_sha256" do
+    statement = AccountStatement.create_from_upload!(family: @family, account: @account, file: statement_upload)
+
+    get api_v1_account_statements_url, params: { content_sha256: " " }, headers: api_headers(@read_only_api_key)
+
+    assert_response :success
+    assert_includes JSON.parse(response.body)["data"].map { |s| s["id"] }, statement.id
+  end
+
+  test "account filter does not reach statements the caller cannot see" do
+    AccountStatement.create_from_upload!(family: @family, account: accounts(:other_asset), file: statement_upload)
+
+    get api_v1_account_statements_url, params: { account_id: accounts(:other_asset).id }, headers: api_headers(@member_api_key)
+
+    assert_response :success
+    assert_empty JSON.parse(response.body)["data"]
   end
 
   test "shows a statement" do

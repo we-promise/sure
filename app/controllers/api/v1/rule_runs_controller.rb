@@ -3,26 +3,19 @@
 class Api::V1::RuleRunsController < Api::V1::BaseController
   include Pagy::Backend
 
-  STATUSES = %w[pending success failed].freeze
-  EXECUTION_TYPES = %w[manual scheduled immediate].freeze
-  InvalidFilterError = Class.new(StandardError)
-
   before_action :ensure_read_scope
   before_action :set_rule_run, only: :show
+  before_action :set_search, only: :index
 
   def index
-    rule_runs_query = apply_filters(rule_runs_scope).recent
     @per_page = safe_per_page_param
-
     @pagy, @rule_runs = pagy(
-      rule_runs_query,
+      @search.rule_runs_scope.recent,
       page: safe_page_param,
       limit: @per_page
     )
 
     render :index
-  rescue InvalidFilterError => e
-    render_validation_error(e.message)
   end
 
   def show
@@ -37,8 +30,17 @@ class Api::V1::RuleRunsController < Api::V1::BaseController
       @rule_run = rule_runs_scope.find(params[:id])
     end
 
-    def ensure_read_scope
-      authorize_scope!(:read)
+    def set_search
+      @search = RuleRun::Search.new(
+        rule_runs_scope,
+        filters: {
+          rule_id: uuid_filter_param(:rule_id),
+          status: enum_filter_param(:status, RuleRun::STATUSES),
+          execution_type: enum_filter_param(:execution_type, RuleRun::EXECUTION_TYPES),
+          start_executed_at: time_filter_param(:start_executed_at),
+          end_executed_at: time_filter_param(:end_executed_at)
+        }
+      )
     end
 
     def rule_runs_scope
@@ -46,37 +48,5 @@ class Api::V1::RuleRunsController < Api::V1::BaseController
         .joins(:rule)
         .where(rules: { family_id: current_resource_owner.family.id })
         .includes(:rule)
-    end
-
-    def apply_filters(query)
-      if params[:rule_id].present?
-        raise InvalidFilterError, "rule_id must be a valid UUID" unless valid_uuid?(params[:rule_id])
-
-        query = query.where(rule_id: params[:rule_id])
-      end
-
-      if params[:status].present?
-        raise InvalidFilterError, "status must be one of: #{STATUSES.join(', ')}" unless STATUSES.include?(params[:status])
-
-        query = query.where(status: params[:status])
-      end
-
-      if params[:execution_type].present?
-        unless EXECUTION_TYPES.include?(params[:execution_type])
-          raise InvalidFilterError, "execution_type must be one of: #{EXECUTION_TYPES.join(', ')}"
-        end
-
-        query = query.where(execution_type: params[:execution_type])
-      end
-
-      query = query.where("rule_runs.executed_at >= ?", parse_time_param(:start_executed_at)) if params[:start_executed_at].present?
-      query = query.where("rule_runs.executed_at <= ?", parse_time_param(:end_executed_at)) if params[:end_executed_at].present?
-      query
-    end
-
-    def parse_time_param(key)
-      Time.iso8601(params[key].to_s)
-    rescue ArgumentError
-      raise InvalidFilterError, "#{key} must be an ISO 8601 timestamp"
     end
 end

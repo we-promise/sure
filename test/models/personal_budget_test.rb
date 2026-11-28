@@ -164,6 +164,14 @@ class PersonalBudgetTest < ActiveSupport::TestCase
     assert personal_budget.editable_by?(@user2)
   end
 
+  test "visible_owner_ids lists the household, the user and every owner who shared with them" do
+    assert_equal [ nil, @user2.id ], Budget.visible_owner_ids(@user2)
+
+    BudgetShare.create!(owner: @user1, viewer: @user2, permission: "read_only")
+    assert_equal [ nil, @user2.id, @user1.id ], Budget.visible_owner_ids(@user2)
+    assert_equal [ nil, @user1.id ], Budget.visible_owner_ids(@user1)
+  end
+
   test "household actual spending reflects the viewer's accessible accounts, personal reflects only the owner's own" do
     @family.update!(personal_budgets: true)
 

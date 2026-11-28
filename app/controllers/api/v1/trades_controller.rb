@@ -9,24 +9,16 @@ class Api::V1::TradesController < Api::V1::BaseController
   before_action :ensure_write_scope, only: [ :create, :update, :destroy ]
   before_action :set_trade, only: [ :show, :update, :destroy ]
   before_action :ensure_write_permission, only: [ :update, :destroy ]
+  before_action :set_search, only: [ :index ]
 
   def index
-    family = current_resource_owner.family
-    trades_query = family.trades.visible
+    trades_query = @search.trades_scope
+      .includes({ entry: :account }, :security, :category, :lot_source_entry).reverse_chronological
 
-    trades_query = apply_filters(accessible_trades)
-    trades_query = trades_query.includes({ entry: :account }, :security, :category, :lot_source_entry).reverse_chronological
-
-    @pagy, @trades = pagy(
-      trades_query,
-      page: safe_page_param,
-      limit: safe_per_page_param
-    )
     @per_page = safe_per_page_param
+    @pagy, @trades = pagy(trades_query, page: safe_page_param, limit: @per_page)
 
     render :index
-  rescue ArgumentError => e
-    render_validation_error(e.message, [ e.message ])
   rescue => e
     log_and_render_error("index", e)
   end
@@ -160,32 +152,17 @@ class Api::V1::TradesController < Api::V1::BaseController
       require_api_account_permission!(@entry.account, resource: "trade")
     end
 
-    def ensure_read_scope
-      authorize_scope!(:read)
-    end
-
     def ensure_write_scope
       authorize_scope!(:write)
     end
 
-    def apply_filters(query)
-      need_entry_join = params[:account_id].present? || params[:account_ids].present? ||
-                        params[:start_date].present? || params[:end_date].present?
-      query = query.joins(:entry) if need_entry_join
-
-      if params[:account_id].present?
-        query = query.where(entries: { account_id: params[:account_id] })
-      end
-      if params[:account_ids].present?
-        query = query.where(entries: { account_id: Array(params[:account_ids]) })
-      end
-      if params[:start_date].present?
-        query = query.where("entries.date >= ?", parse_date!(params[:start_date], "start_date"))
-      end
-      if params[:end_date].present?
-        query = query.where("entries.date <= ?", parse_date!(params[:end_date], "end_date"))
-      end
-      query
+    def set_search
+      @search = Trade::Search.new(accessible_trades, filters: {
+        account_id: uuid_filter_param(:account_id),
+        account_ids: uuid_list_filter_param(:account_ids),
+        start_date: date_filter_param(:start_date),
+        end_date: date_filter_param(:end_date)
+      })
     end
 
     def trade_params
@@ -469,20 +446,6 @@ class Api::V1::TradesController < Api::V1::BaseController
         .find(trade_params[:transfer_account_id]).id
     end
 
-    def render_validation_error(message, errors)
-      render json: {
-        error: "validation_failed",
-        message: message,
-        errors: errors
-      }, status: :unprocessable_entity
-    end
-
-    def parse_date!(value, param_name)
-      Date.parse(value)
-    rescue Date::Error, ArgumentError, TypeError
-      raise ArgumentError, "Invalid #{param_name} format"
-    end
-
     def log_and_render_error(action, exception)
       Rails.logger.error "TradesController##{action} error: #{exception.message}"
       Rails.logger.error exception.backtrace.join("\n")
@@ -524,20 +487,5 @@ class Api::V1::TradesController < Api::V1::BaseController
       return render_validation_error("Fee must be a valid number", [ "fee must be a valid non-negative number" ]) if fee.nil? || fee.negative?
 
       fee
-    end
-
-    def safe_page_param
-      page = params[:page].to_i
-      page > 0 ? page : 1
-   end
-
-    def safe_per_page_param
-      per_page = params[:per_page].to_i
-      case per_page
-      when 1..100
-        per_page
-      else
-        25
-      end
     end
 end

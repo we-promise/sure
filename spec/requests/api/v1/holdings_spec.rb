@@ -72,13 +72,13 @@ RSpec.describe 'API V1 Holdings', type: :request do
       produces 'application/json'
       parameter name: :page, in: :query, type: :integer, required: false,
                 description: 'Page number (default: 1)'
-      parameter name: :per_page, in: :query, type: :integer, required: false,
-                description: 'Items per page (default: 25, max: 100)'
-      parameter name: :account_id, in: :query, type: :string, required: false,
-                description: 'Filter by account ID'
+      parameter name: :per_page, in: :query, type: :integer, required: false, description: API_PER_PAGE_DESCRIPTION
+      parameter name: :account_id, in: :query, required: false,
+                description: 'Filter by account ID',
+                schema: { type: :string, format: :uuid }
       parameter name: :account_ids, in: :query, required: false,
                 description: 'Filter by multiple account IDs',
-                schema: { type: :array, items: { type: :string } }
+                schema: { type: :array, items: { type: :string, format: :uuid } }
       parameter name: :date, in: :query, required: false,
                 description: 'Filter by exact date',
                 schema: { type: :string, format: :date }
@@ -88,8 +88,9 @@ RSpec.describe 'API V1 Holdings', type: :request do
       parameter name: :end_date, in: :query, required: false,
                 description: 'Filter holdings until this date (inclusive)',
                 schema: { type: :string, format: :date }
-      parameter name: :security_id, in: :query, type: :string, required: false,
-                description: 'Filter by security ID'
+      parameter name: :security_id, in: :query, required: false,
+                description: 'Filter by security ID',
+                schema: { type: :string, format: :uuid }
 
       response '200', 'holdings listed' do
         schema '$ref' => '#/components/schemas/HoldingCollection'
@@ -143,6 +144,14 @@ RSpec.describe 'API V1 Holdings', type: :request do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:start_date) { 'not-a-date' }
+
+        run_test!
+      end
+
+      response '422', 'invalid id filter' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:account_id) { 'not-a-uuid' }
 
         run_test!
       end

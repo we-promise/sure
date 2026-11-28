@@ -5,6 +5,30 @@ class Api::V1::BaseController < ApplicationController
 
   InvalidFilterError = Class.new(StandardError)
 
+  # A 422 with an endpoint's own documented error code (invalid_period...)
+  # in place of validation_failed.
+  class QueryError < StandardError
+    attr_reader :code
+
+    def initialize(code, message)
+      @code = code
+      super(message)
+    end
+  end
+
+  # Spellings the strict boolean filters accept (?excluded=true).
+  BOOLEAN_FILTER_VALUES = {
+    "true" => true,
+    "1" => true,
+    "false" => false,
+    "0" => false
+  }.freeze
+
+  # Digits a decimal filter may have once written out in full (1e19 has 20),
+  # as ActiveRecord writes it to build the SQL: 1e100000000 would be a 100 MB
+  # string. entries.amount holds 19.
+  DECIMAL_FILTER_MAX_DIGITS = 20
+
   class << self
     def valid_uuid?(value)
       UuidFormat.valid?(value)
@@ -31,8 +55,6 @@ class Api::V1::BaseController < ApplicationController
   before_action :check_api_key_rate_limit
   before_action :log_api_access
 
-
-
   # Override Doorkeeper's default behavior to return JSON instead of redirecting
   def doorkeeper_unauthorized_render_options(error: nil)
     { json: { error: "unauthorized", message: "Access token is invalid, expired, or missing" } }
@@ -43,6 +65,7 @@ class Api::V1::BaseController < ApplicationController
   rescue_from Doorkeeper::Errors::DoorkeeperError, with: :handle_unauthorized
   rescue_from ActionController::ParameterMissing, with: :handle_bad_request
   rescue_from InvalidFilterError, with: :handle_invalid_filter
+  rescue_from QueryError, with: :handle_query_error
 
   private
 
@@ -279,11 +302,11 @@ class Api::V1::BaseController < ApplicationController
       end
     end
 
-    def render_validation_error(message)
+    def render_validation_error(message, errors = [ message ])
       render_json({
         error: "validation_failed",
         message: message,
-        errors: [ message ]
+        errors: errors
       }, status: :unprocessable_entity)
     end
 
@@ -307,6 +330,18 @@ class Api::V1::BaseController < ApplicationController
       render_validation_error(exception.message)
     end
 
+    def handle_query_error(exception)
+      render_json({ error: exception.code, message: exception.message }, status: :unprocessable_entity)
+    end
+
+    # Runs typed readers for an endpoint that documents its own error codes:
+    # an invalid value raises QueryError(code, message).
+    def reading_as(code, message)
+      yield
+    rescue InvalidFilterError
+      raise QueryError.new(code, message)
+    end
+
     # A strict YYYY-MM-DD date, or nil when the value is missing or invalid.
     def parse_date(value)
       return unless value.is_a?(String) && value.match?(/\A\d{4}-\d{2}-\d{2}\z/)
@@ -325,10 +360,87 @@ class Api::V1::BaseController < ApplicationController
       nil
     end
 
-    def parse_date_param(key)
-      Date.iso8601(params[key].to_s)
-    rescue ArgumentError
-      raise InvalidFilterError, "#{key} must be an ISO 8601 date"
+    # Typed filter readers. Each returns nil when the key is absent or null (a
+    # JSON null, or a bare `?key`) and the typed value when it is valid;
+    # anything else raises InvalidFilterError, which renders a 422. A key that
+    # has a value must be valid, so `key=` is a 422 too (string_filter_param
+    # alone reads a blank value as absent).
+    # Actions with a catch-all `rescue` must call them from a before_action so
+    # the 422 is not swallowed into a 500.
+
+    # `within:` reads a key nested in a body object (transaction[user_modified]).
+    def boolean_filter_param(key, within: nil)
+      read_filter(key, "must be true or false", within:) { |raw| BOOLEAN_FILTER_VALUES[raw.downcase] }
+    end
+
+    # The other ISO 8601 forms (20240105, 2024-W01-1, 2024-01, timestamps) are
+    # refused, so the message names the one format accepted.
+    def date_filter_param(key)
+      read_filter(key, "must be a date in YYYY-MM-DD format") { |raw| parse_date(raw) }
+    end
+
+    def time_filter_param(key)
+      read_filter(key, "must be an ISO 8601 timestamp") do |raw|
+        Time.iso8601(raw)
+      rescue ArgumentError
+        nil
+      end
+    end
+
+    def decimal_filter_param(key)
+      read_filter(key, "must be a number of at most #{DECIMAL_FILTER_MAX_DIGITS} digits") do |raw|
+        value = parse_decimal(raw)
+        value if value && value.precision <= DECIMAL_FILTER_MAX_DIGITS
+      end
+    end
+
+    def uuid_filter_param(key)
+      read_filter(key, "must be a valid UUID") { |raw| raw if valid_uuid?(raw) }
+    end
+
+    # key[]=a&key[]=b, or a single key=a. A bare `?key[]` reaches params as []
+    # (Rails' deep_munge), so an empty list is absent like a bare `?key`.
+    def uuid_list_filter_param(key)
+      return if params[key].nil? || params[key] == []
+
+      values = Array.wrap(params[key]).map { |raw| scalar_filter_value(raw) }
+      return values if values.any? && values.all? { |value| valid_uuid?(value) }
+
+      raise InvalidFilterError, "#{key} must be a list of valid UUIDs"
+    end
+
+    # ignore_case: true keeps an endpoint that read its enum in any case doing so.
+    def enum_filter_param(key, allowed, ignore_case: false)
+      read_filter(key, "must be one of: #{allowed.join(', ')}") do |raw|
+        raw = raw.downcase if ignore_case
+        raw if allowed.include?(raw)
+      end
+    end
+
+    def string_filter_param(key)
+      read_filter(key, "must be a string", &:itself).presence
+    end
+
+    # Yields the stripped scalar value of a non-null key (in params, or in the
+    # params[within] object) and returns what the block makes of it; raises
+    # "KEY <message>" when the value is not a scalar or the block returns nil.
+    def read_filter(key, message, within: nil)
+      source = within ? params[within] : params
+      return unless source.is_a?(ActionController::Parameters) && !source[key].nil?
+
+      raw = scalar_filter_value(source[key])
+      value = yield raw unless raw.nil?
+      raise InvalidFilterError, "#{key} #{message}" if value.nil?
+
+      value
+    end
+
+    # A query-string or JSON scalar as a stripped string; nil for arrays and
+    # hashes.
+    def scalar_filter_value(raw)
+      case raw
+      when String, Numeric, true, false then raw.to_s.strip
+      end
     end
 
     # Log API access for monitoring and debugging

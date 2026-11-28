@@ -645,6 +645,57 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "index filters by account_ids and an inclusive date range" do
+    trade = create_index_trade(@investment_account, Date.new(2024, 3, 5))
+    create_index_trade(@investment_account, Date.new(2024, 3, 6))
+
+    get api_v1_trades_url,
+      params: { account_ids: [ @investment_account.id ], start_date: "2024-03-05", end_date: "2024-03-05" },
+      headers: api_headers(read_only_api_key)
+
+    assert_response :success
+    assert_equal [ trade.id ], JSON.parse(response.body)["trades"].map { |row| row["id"] }
+  end
+
+  test "index never lists trades on an account the caller cannot access, even when asked for it" do
+    private_account = @user.family.accounts.create!(
+      name: "Member Brokerage", accountable: Investment.new, balance: 0, currency: "USD", owner: users(:family_member)
+    )
+    hidden = create_index_trade(private_account, Date.new(2024, 3, 5))
+
+    [ {}, { account_id: private_account.id }, { account_ids: [ private_account.id ] } ].each do |filters|
+      get api_v1_trades_url, params: filters, headers: api_headers(read_only_api_key)
+
+      assert_response :success
+      assert_not_includes JSON.parse(response.body)["trades"].map { |row| row["id"] }, hidden.id, filters.inspect
+    end
+  end
+
+  test "index reads the date filters with the date reader" do
+    %i[start_date end_date].each do |key|
+      get api_v1_trades_url, params: { key => "not-a-date" }, headers: api_headers(read_only_api_key)
+
+      assert_response :unprocessable_entity, key
+      assert_equal [ "#{key} must be a date in YYYY-MM-DD format" ], JSON.parse(response.body)["errors"]
+    end
+  end
+
+  test "index answers a malformed or empty filter with a 422" do
+    [ { account_id: "not-a-uuid" }, { account_ids: [ "nope" ] }, { account_id: "" }, { end_date: "" } ].each do |filters|
+      get api_v1_trades_url, params: filters, headers: api_headers(read_only_api_key)
+
+      assert_response :unprocessable_entity, filters.inspect
+      assert_equal "validation_failed", JSON.parse(response.body)["error"]
+    end
+  end
+
+  test "index caps per_page at documented maximum" do
+    get api_v1_trades_url, params: { per_page: 250 }, headers: api_headers(read_only_api_key)
+
+    assert_response :success
+    assert_equal 100, JSON.parse(response.body).dig("pagination", "per_page")
+  end
+
   # SHOW action tests
   test "should show trade with valid API key" do
     security = Security.create!(ticker: "SHOW", name: "Show Security", country_code: "US")
@@ -1628,5 +1679,12 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
 
     def api_headers(api_key)
       { "X-Api-Key" => api_key.plain_key }
+    end
+
+    def create_index_trade(account, date)
+      account.entries.create!(
+        name: "Buy", date: date, amount: 100, currency: "USD",
+        entryable: Trade.new(security: securities(:aapl), qty: 1, price: 100, currency: "USD")
+      ).entryable
     end
 end

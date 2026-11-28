@@ -15,10 +15,4 @@ class Api::V1::ProviderConnectionsController < Api::V1::BaseController
       message: "An unexpected error occurred"
     }, status: :internal_server_error)
   end
-
-  private
-
-    def ensure_read_scope
-      authorize_scope!(:read)
-    end
 end

@@ -57,10 +57,6 @@ class Api::V1::UsersController < Api::V1::BaseController
       authorize_scope!(:write)
     end
 
-    def ensure_read_scope
-      authorize_scope!(:read)
-    end
-
     def ensure_admin
       return true if current_resource_owner&.admin?
 

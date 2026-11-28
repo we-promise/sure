@@ -21,9 +21,11 @@ The `GET /api/v1/imports` endpoint supports the following query parameters:
 | Parameter | Type | Description |
 | --- | --- | --- |
 | `page` | integer | Page number (default: 1) |
-| `per_page` | integer | Items per page (default: 25, max: 100) |
+| `per_page` | integer | Items per page (default: 25, max: 100; larger values are capped at 100) |
 | `status` | string | Filter by status: `pending`, `importing`, `complete`, `failed`, `reverting`, `revert_failed` |
-| `type` | string | Filter by import type: `TransactionImport`, `TradeImport`, etc. |
+| `type` | string | Filter by import type: `TransactionImport`, `TradeImport`, etc. The full list is in [`openapi.yaml`](openapi.yaml). |
+
+Values are exact and case-sensitive. An unknown or empty `status` or `type` returns `422` with `error: "validation_failed"`.
 
 ## Import object
 
@@ -72,7 +74,7 @@ When creating an import, you must provide the file content and the column mappin
 | `date_col_label` | string | The header name for the date column. |
 | `amount_col_label` | string | The header name for the amount column. |
 | `name_col_label` | string | The header name for the transaction name column. |
-| `publish` | boolean | If `true`, the import will be automatically queued for processing if configuration is valid. |
+| `publish` | boolean | If `true`, the import will be automatically queued for processing if configuration is valid. Accepts `true`, `false`, `1` or `0` (any case, or a JSON boolean); `null` is the same as leaving it out; any other value returns `422` and creates no import. |
 
 Example request body:
 

@@ -150,20 +150,56 @@ class Api::V1::BalancesControllerTest < ActionDispatch::IntegrationTest
     assert_includes response_data["balances"].map { |balance| balance["id"] }, @balance.id
   end
 
-  test "rejects malformed account_id filter" do
-    get api_v1_balances_url, params: { account_id: "not-a-uuid" }, headers: api_headers(@api_key)
+  test "filters balances by a currency with surrounding spaces" do
+    get api_v1_balances_url, params: { currency: " usd " }, headers: api_headers(@api_key)
 
-    assert_response :unprocessable_entity
-    response_data = JSON.parse(response.body)
-    assert_equal "validation_failed", response_data["error"]
+    assert_response :success
+    assert_includes JSON.parse(response.body)["balances"].map { |balance| balance["id"] }, @balance.id
   end
 
-  test "rejects invalid date filters" do
-    get api_v1_balances_url, params: { start_date: "01/15/2024" }, headers: api_headers(@api_key)
+  test "ignores a blank currency filter" do
+    get api_v1_balances_url, params: { currency: "" }, headers: api_headers(@api_key)
 
-    assert_response :unprocessable_entity
-    response_data = JSON.parse(response.body)
-    assert_equal "validation_failed", response_data["error"]
+    assert_response :success
+    assert_includes JSON.parse(response.body)["balances"].map { |balance| balance["id"] }, @balance.id
+  end
+
+  # Strict since the move to typed filters: a blank value or a list was
+  # ignored or matched nothing. BaseControllerTest pins the date formats.
+  test "rejects filters that are not exactly what they say" do
+    {
+      start_date: [ "not-a-date", "" ],
+      end_date: [ "not-a-date", "" ],
+      account_id: [ "not-a-uuid", "", [ @account.id ] ],
+      currency: [ [ "USD" ] ]
+    }.each do |key, values|
+      values.each do |value|
+        get api_v1_balances_url, params: { key => value }, headers: api_headers(@api_key)
+
+        assert_response :unprocessable_entity, "#{key}=#{value.inspect}"
+        assert_equal "validation_failed", JSON.parse(response.body)["error"]
+      end
+    end
+
+    get api_v1_balances_url, params: { start_date: "not-a-date" }, headers: api_headers(@api_key)
+    assert_equal "start_date must be a date in YYYY-MM-DD format", JSON.parse(response.body)["message"]
+  end
+
+  test "a member sees balances only on accounts they can access, filters included" do
+    member = users(:family_member)
+    member.api_keys.active.destroy_all
+    key = ApiKey.create!(user: member, name: "Member Read", scopes: [ "read" ], source: "web",
+                         display_key: "member_read_#{SecureRandom.hex(8)}")
+
+    get api_v1_balances_url, params: { account_id: @account.id }, headers: api_headers(key)
+    assert_response :success
+    assert_empty JSON.parse(response.body)["balances"], "the admin's unshared account must stay hidden"
+
+    @account.account_shares.create!(user: member, permission: "read_only", include_in_finances: true)
+
+    get api_v1_balances_url, params: { account_id: @account.id }, headers: api_headers(key)
+    assert_response :success
+    assert_includes JSON.parse(response.body)["balances"].map { |balance| balance["id"] }, @balance.id
   end
 
   test "requires authentication" do

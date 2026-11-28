@@ -135,6 +135,63 @@ class Api::V1::RecurringTransactionsControllerTest < ActionDispatch::Integration
     assert_response :unprocessable_entity
     response_data = JSON.parse(response.body)
     assert_equal "validation_failed", response_data["error"]
+    assert_equal [ "account_id must be a valid UUID" ], response_data["errors"]
+  end
+
+  test "filters recurring transactions by account and status" do
+    get api_v1_recurring_transactions_url,
+        params: { account_id: @account.id, status: "active", per_page: 100 },
+        headers: api_headers(@api_key)
+
+    assert_response :success
+    items = JSON.parse(response.body)["recurring_transactions"]
+    assert_includes items.map { |item| item["id"] }, @recurring_transaction.id
+    assert items.all? { |item| item["status"] == "active" && item.dig("account", "id") == @account.id }
+  end
+
+  test "filters by every model status, not only the writable ones" do
+    @recurring_transaction.update_columns(status: "paused")
+
+    get api_v1_recurring_transactions_url, params: { status: "paused" }, headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_equal [ @recurring_transaction.id ], JSON.parse(response.body)["recurring_transactions"].map { |item| item["id"] }
+  end
+
+  test "rejects an unknown or empty status filter" do
+    [ "bogus", "ACTIVE", "" ].each do |value|
+      get api_v1_recurring_transactions_url, params: { status: value }, headers: api_headers(@api_key)
+
+      assert_response :unprocessable_entity
+      assert_equal [ "status must be one of: #{RecurringTransaction.statuses.keys.join(', ')}" ],
+                   JSON.parse(response.body)["errors"]
+    end
+  end
+
+  test "account filter does not reach series on accounts the caller cannot see" do
+    hidden = @family.recurring_transactions.create!(
+      account: accounts(:investment), merchant: @merchant, amount: 5, currency: "USD", expected_day_of_month: 1,
+      last_occurrence_date: Date.new(2026, 4, 1), next_expected_date: Date.new(2026, 5, 1), status: "active", manual: true
+    )
+    member = users(:family_member)
+    member.api_keys.active.destroy_all
+    member_key = ApiKey.create!(user: member, name: "Member Read Key", scopes: [ "read" ], source: "mobile",
+                                display_key: "test_member_#{SecureRandom.hex(8)}")
+
+    get api_v1_recurring_transactions_url, params: { account_id: accounts(:investment).id }, headers: api_headers(member_key)
+
+    assert_response :success
+    assert_empty JSON.parse(response.body)["recurring_transactions"]
+
+    get api_v1_recurring_transactions_url, params: { account_id: accounts(:investment).id }, headers: api_headers(@api_key)
+    assert_equal [ hidden.id ], JSON.parse(response.body)["recurring_transactions"].map { |item| item["id"] }
+  end
+
+  test "caps per_page at 100" do
+    get api_v1_recurring_transactions_url, params: { per_page: 150 }, headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_equal 100, JSON.parse(response.body)["pagination"]["per_page"]
   end
 
   test "should require authentication when showing recurring transaction" do

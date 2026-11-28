@@ -2,6 +2,19 @@
 
 require 'rails_helper'
 
+API_PER_PAGE_DESCRIPTION = 'Items per page (default: 25, max: 100; larger values are capped at 100)'
+
+# A write flag read by Api::V1::BaseController#boolean_filter_param: a JSON
+# boolean or null (read as absent), 1 or 0, or one of those four spelled as a
+# string in any case with surrounding spaces. Merge in the flag's description.
+API_STRICT_FLAG_SCHEMA = {
+  anyOf: [
+    { type: :boolean, nullable: true },
+    { type: :integer, enum: [ 0, 1 ] },
+    { type: :string, pattern: '^\s*([Tt][Rr][Uu][Ee]|[Ff][Aa][Ll][Ss][Ee]|[01])\s*$' }
+  ]
+}.freeze
+
 RSpec.configure do |config|
   config.openapi_root = Rails.root.join('docs', 'api').to_s
   reset_count_keys = Family::FinancialDataReset::STATUS_COUNT_KEYS.map(&:to_s)

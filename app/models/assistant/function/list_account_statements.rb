@@ -91,42 +91,38 @@ class Assistant::Function::ListAccountStatements < Assistant::Function
       .includes(:account, :suggested_account)
       .ordered
 
-    if params["account_id"].present?
-      return error("invalid_account_id", "account_id must be a UUID.") unless valid_uuid?(params["account_id"])
-
-      scope = scope.where(account_id: params["account_id"])
+    account_id = params["account_id"].presence
+    if account_id && !valid_uuid?(account_id)
+      return error("invalid_account_id", "account_id must be a UUID.")
     end
 
-    if params["review_status"].present?
-      status = params["review_status"].to_s
-      unless AccountStatement.review_statuses.key?(status)
-        return error("invalid_review_status", "review_status must be one of: #{AccountStatement.review_statuses.keys.join(", ")}.")
-      end
-
-      scope = scope.where(review_status: status)
+    review_status = params["review_status"].presence&.to_s
+    if review_status && !AccountStatement.review_statuses.key?(review_status)
+      return error("invalid_review_status", "review_status must be one of: #{AccountStatement.review_statuses.keys.join(", ")}.")
     end
 
-    # Downcased because the column is constrained to lowercase hex
-    # (chk_account_statements_content_sha256), so uppercase input would not merely
-    # be unlikely to match — it could never match, and the agent would read the
-    # empty result as "not archived" and upload a duplicate.
-    if params["content_sha256"].present?
-      scope = scope.where(content_sha256: params["content_sha256"].to_s.strip.downcase)
+    # Downcased by the search because the column is constrained to lowercase
+    # hex (chk_account_statements_content_sha256), so uppercase input would not
+    # merely be unlikely to match — it could never match, and the agent would
+    # read the empty result as "not archived" and upload a duplicate.
+    content_sha256 = params["content_sha256"].presence&.to_s&.strip
+
+    %w[overlapping_from overlapping_until].each do |key|
+      next if params[key].blank? || parse_date(params[key])
+
+      return error("invalid_date", "#{key} must be an ISO 8601 date (YYYY-MM-DD).")
     end
 
-    if params["overlapping_from"].present?
-      date = parse_date(params["overlapping_from"])
-      return error("invalid_date", "overlapping_from must be an ISO 8601 date (YYYY-MM-DD).") unless date
-
-      scope = scope.where("period_end_on >= ?", date)
-    end
-
-    if params["overlapping_until"].present?
-      date = parse_date(params["overlapping_until"])
-      return error("invalid_date", "overlapping_until must be an ISO 8601 date (YYYY-MM-DD).") unless date
-
-      scope = scope.where("period_start_on <= ?", date)
-    end
+    scope = AccountStatement::Search.new(
+      scope,
+      filters: {
+        account_id:,
+        review_status:,
+        content_sha256:,
+        start_date: parse_date(params["overlapping_from"]),
+        end_date: parse_date(params["overlapping_until"])
+      }
+    ).account_statements_scope
 
     limit = (params["limit"] || DEFAULT_LIMIT).to_i.clamp(1, MAX_LIMIT)
     # Over-fetch by one to report has_more without a second count query. The rows

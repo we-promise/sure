@@ -76,19 +76,18 @@ RSpec.describe 'API V1 Balances', type: :request do
       produces 'application/json'
       parameter name: :page, in: :query, type: :integer, required: false,
                 description: 'Page number (default: 1)'
-      parameter name: :per_page, in: :query, type: :integer, required: false,
-                description: 'Items per page (default: 25, max: 100)'
+      parameter name: :per_page, in: :query, type: :integer, required: false, description: API_PER_PAGE_DESCRIPTION
       parameter name: :account_id, in: :query, required: false,
-                description: 'Filter by account ID',
+                description: 'Filter by account ID. Must be a UUID; anything else returns 422.',
                 schema: { type: :string, format: :uuid }
       parameter name: :currency, in: :query, required: false,
-                description: 'Filter by currency code',
+                description: 'Filter by ISO 4217 currency code, in any case',
                 schema: { type: :string }
       parameter name: :start_date, in: :query, required: false,
-                description: 'Filter balances from this date',
+                description: 'Filter balances on or after this date (YYYY-MM-DD; anything else returns 422)',
                 schema: { type: :string, format: :date }
       parameter name: :end_date, in: :query, required: false,
-                description: 'Filter balances until this date',
+                description: 'Filter balances on or before this date (YYYY-MM-DD; anything else returns 422)',
                 schema: { type: :string, format: :date }
 
       response '200', 'balances listed' do

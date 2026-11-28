@@ -91,6 +91,59 @@ class Api::V1::HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes holding_ids, @private_holding.id
   end
 
+  test "does not list holdings of a disabled account" do
+    @account.disable!
+
+    get api_v1_holdings_url, params: { account_id: @account.id }, headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_empty JSON.parse(response.body)["holdings"]
+  end
+
+  test "filters by account_ids, security and an inclusive date range" do
+    get api_v1_holdings_url,
+        params: { account_ids: [ @account.id ], security_id: @holding.security_id, start_date: @holding.date.iso8601, end_date: @holding.date.iso8601 },
+        headers: api_headers(@api_key)
+
+    assert_response :success
+    holdings = JSON.parse(response.body)["holdings"]
+    assert_includes holdings.map { |holding| holding["id"] }, @holding.id
+    assert holdings.all? { |holding| holding["date"] == @holding.date.iso8601 }
+  end
+
+  test "reads the date filters with the date reader" do
+    %i[start_date end_date date].each do |key|
+      get api_v1_holdings_url, params: { key => "not-a-date" }, headers: api_headers(@api_key)
+
+      assert_response :unprocessable_entity, key
+      assert_equal [ "#{key} must be a date in YYYY-MM-DD format" ], JSON.parse(response.body)["errors"]
+    end
+  end
+
+  test "a malformed id filter is a 422" do
+    { account_id: "not-a-uuid", security_id: "42", account_ids: [ @account.id, "nope" ] }.each do |key, value|
+      get api_v1_holdings_url, params: { key => value }, headers: api_headers(@api_key)
+
+      assert_response :unprocessable_entity, key
+      assert_equal "validation_failed", JSON.parse(response.body)["error"]
+    end
+  end
+
+  test "a filter sent empty is a 422" do
+    %i[account_id start_date].each do |key|
+      get api_v1_holdings_url, params: { key => "" }, headers: api_headers(@api_key)
+
+      assert_response :unprocessable_entity, key
+    end
+  end
+
+  test "caps per_page at documented maximum" do
+    get api_v1_holdings_url, params: { per_page: 250 }, headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_equal 100, JSON.parse(response.body).dig("pagination", "per_page")
+  end
+
   test "shows an accessible holding" do
     get api_v1_holding_url(@holding), headers: api_headers(@api_key)
 

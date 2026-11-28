@@ -80,8 +80,7 @@ RSpec.describe 'API V1 Transfers', type: :request do
       produces 'application/json'
       parameter name: :page, in: :query, type: :integer, required: false,
                 description: 'Page number (default: 1)'
-      parameter name: :per_page, in: :query, type: :integer, required: false,
-                description: 'Items per page (default: 25, max: 100)'
+      parameter name: :per_page, in: :query, type: :integer, required: false, description: API_PER_PAGE_DESCRIPTION
       parameter name: :status, in: :query, required: false,
                 schema: { type: :string, enum: %w[pending confirmed] },
                 description: 'Filter by transfer status'
@@ -97,6 +96,10 @@ RSpec.describe 'API V1 Transfers', type: :request do
 
       response '200', 'transfers listed' do
         schema '$ref' => '#/components/schemas/TransferDecisionCollection'
+
+        # Without it rswag sends `status=` (the integration session's own
+        # #status is nil), which the API rejects as an empty filter.
+        let(:status) { 'confirmed' }
 
         run_test!
       end

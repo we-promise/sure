@@ -36,10 +36,6 @@ class Api::V1::SyncsController < Api::V1::BaseController
       @sync = family_syncs_query.preload(:syncable, :children).find(params[:id])
     end
 
-    def ensure_read_scope
-      authorize_scope!(:read)
-    end
-
     def family_syncs_query
       Sync.for_family(current_resource_owner.family, resource_owner: current_resource_owner)
     end

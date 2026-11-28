@@ -3,7 +3,10 @@
 require "test_helper"
 
 class ApiCurrentUsageTest < ActiveSupport::TestCase
-  API_CONTROLLER_GLOB = Rails.root.join("app/controllers/api/**/*.rb").to_s
+  API_CONTROLLER_GLOBS = [
+    Rails.root.join("app/controllers/api/**/*.rb").to_s,
+    Rails.root.join("app/controllers/concerns/api/**/*.rb").to_s
+  ].freeze
   BASE_CONTROLLER = Rails.root.join("app/controllers/api/v1/base_controller.rb").to_s
   DISALLOWED_CURRENT_REFERENCES = [
     "Current.user",
@@ -19,10 +22,10 @@ class ApiCurrentUsageTest < ActiveSupport::TestCase
     "Current.session.active_impersonator_session = nil"
   ].freeze
 
-  test "api controllers scope through current_resource_owner instead of Current" do
+  test "api controllers and their concerns scope through current_resource_owner instead of Current" do
     violations = []
 
-    Dir.glob(API_CONTROLLER_GLOB).sort.each do |path|
+    Dir.glob(API_CONTROLLER_GLOBS).sort.each do |path|
       File.readlines(path).each.with_index(1) do |line, line_number|
         next unless DISALLOWED_CURRENT_REFERENCES.any? { |reference| line.include?(reference) }
         next if allowed_base_controller_reference?(path, line)

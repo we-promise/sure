@@ -12,16 +12,13 @@ class Api::V1::RecurringTransactionsController < Api::V1::BaseController
   before_action :ensure_write_scope, only: %i[create update destroy]
   before_action :set_readable_recurring_transaction, only: :show
   before_action :set_writable_recurring_transaction, only: %i[update destroy]
+  before_action :set_search, only: :index
 
   def index
-    return render_invalid_account_filter if params[:account_id].present? && !valid_uuid?(params[:account_id])
-
     @per_page = safe_per_page_param
-    recurring_transactions_query = read_recurring_transactions_scope
+    recurring_transactions_query = @search.recurring_transactions_scope
       .includes(:account, :merchant, :recurrence_rules)
       .order(status: :asc, next_expected_date: :asc)
-
-    recurring_transactions_query = apply_filters(recurring_transactions_query)
 
     @pagy, @recurring_transactions = pagy(
       recurring_transactions_query,
@@ -155,10 +152,6 @@ class Api::V1::RecurringTransactionsController < Api::V1::BaseController
       scope.includes(:account, :merchant).find(params[:id])
     end
 
-    def ensure_read_scope
-      authorize_scope!(:read)
-    end
-
     def ensure_write_scope
       authorize_scope!(:write)
     end
@@ -173,14 +166,11 @@ class Api::V1::RecurringTransactionsController < Api::V1::BaseController
       scope.where(account_id: writable_account_ids).or(scope.where(account_id: nil))
     end
 
-    def apply_filters(query)
-      query = query.where(status: params[:status]) if params[:status].present?
-      if params[:account_id].present?
-        return query.none unless valid_uuid?(params[:account_id])
-
-        query = query.where(account_id: params[:account_id])
-      end
-      query
+    def set_search
+      @search = RecurringTransaction::Search.new(read_recurring_transactions_scope, filters: {
+        status: enum_filter_param(:status, RecurringTransaction.statuses.keys),
+        account_id: uuid_filter_param(:account_id)
+      })
     end
 
     def recurring_transaction_create_attributes
@@ -241,13 +231,6 @@ class Api::V1::RecurringTransactionsController < Api::V1::BaseController
       params.require(:recurring_transaction)
     end
 
-    def render_invalid_account_filter
-      render json: {
-        error: "validation_failed",
-        message: "account_id must be a valid UUID"
-      }, status: :unprocessable_entity
-    end
-
     def recurring_transaction_create_params
       params.require(:recurring_transaction).permit(
         :name,
@@ -277,20 +260,5 @@ class Api::V1::RecurringTransactionsController < Api::V1::BaseController
         :autopay,
         :notes
       )
-    end
-
-    def safe_page_param
-      page = params[:page].to_i
-      page > 0 ? page : 1
-    end
-
-    def safe_per_page_param
-      per_page = params[:per_page].to_i
-      case per_page
-      when 1..100
-        per_page
-      else
-        25
-      end
     end
 end

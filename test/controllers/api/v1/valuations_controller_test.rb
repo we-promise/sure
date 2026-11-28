@@ -82,16 +82,6 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "should reject index with invalid date filter" do
-    get api_v1_valuations_url,
-        params: { start_date: "04/30/2026" },
-        headers: api_headers(@api_key)
-    assert_response :unprocessable_entity
-
-    response_data = JSON.parse(response.body)
-    assert_equal "validation_failed", response_data["error"]
-  end
-
   test "should reject index with malformed account_id filter" do
     get api_v1_valuations_url,
         params: { account_id: "not-a-uuid" },
@@ -101,6 +91,58 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
     response_data = JSON.parse(response.body)
     assert_equal "validation_failed", response_data["error"]
     assert_equal "account_id must be a valid UUID", response_data["message"]
+  end
+
+  # Strict since the move to typed filters: a blank value was ignored.
+  # BaseControllerTest pins the date formats.
+  test "should reject index with a date or account filter that is not a date or a UUID" do
+    {
+      start_date: [ "not-a-date", "" ],
+      end_date: [ "not-a-date", "" ],
+      account_id: [ "", [ @account.id ] ]
+    }.each do |key, values|
+      values.each do |value|
+        get api_v1_valuations_url, params: { key => value }, headers: api_headers(@api_key)
+
+        assert_response :unprocessable_entity, "#{key}=#{value.inspect}"
+        assert_equal "validation_failed", JSON.parse(response.body)["error"]
+      end
+    end
+
+    get api_v1_valuations_url, params: { end_date: "not-a-date" }, headers: api_headers(@api_key)
+    assert_equal "end_date must be a date in YYYY-MM-DD format", JSON.parse(response.body)["message"]
+  end
+
+  # It used to fall back to 25; the docs and every other endpoint cap at 100.
+  test "should cap index per_page at 100" do
+    get api_v1_valuations_url, params: { per_page: 500 }, headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_equal 100, JSON.parse(response.body)["pagination"]["per_page"]
+  end
+
+  test "a member lists valuations only on accounts they can access, filters included" do
+    member = users(:family_member)
+    member.api_keys.active.destroy_all
+    key = ApiKey.create!(user: member, name: "Member Read", scopes: [ "read" ], source: "web",
+                         display_key: "member_read_#{SecureRandom.hex(8)}")
+    private_account = @family.accounts.create!(name: "Admin Private Savings", owner: @user, balance: 0,
+                                               currency: "USD", accountable: Depository.new)
+    hidden = private_account.entries.create!(name: "Balance", date: 1.day.ago.to_date, amount: 100,
+                                             currency: "USD", entryable: Valuation.new(kind: "reconciliation"))
+
+    get api_v1_valuations_url, params: { account_id: private_account.id }, headers: api_headers(key)
+    assert_response :success
+    assert_empty JSON.parse(response.body)["valuations"]
+
+    get api_v1_valuations_url, params: { per_page: 100 }, headers: api_headers(key)
+    ids = JSON.parse(response.body)["valuations"].map { |valuation| valuation["id"] }
+    assert_not_includes ids, hidden.id
+
+    private_account.account_shares.create!(user: member, permission: "read_only", include_in_finances: true)
+
+    get api_v1_valuations_url, params: { account_id: private_account.id }, headers: api_headers(key)
+    assert_equal [ hidden.id ], JSON.parse(response.body)["valuations"].map { |valuation| valuation["id"] }
   end
 
   test "should not expose internal index errors" do
@@ -216,6 +258,46 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal existing_entry.id, response_data["id"]
     assert_equal "Nested upsert correction", response_data["notes"]
     assert_equal BigDecimal("22222.22"), existing_entry.reload.amount
+  end
+
+  test "upsert accepts true/false/1/0 in any case, top level first" do
+    existing_entry = @valuation.entry
+    { "TRUE" => :ok, " 1 " => :ok, "false" => :created, "0" => :created }.each do |raw, status|
+      post api_v1_valuations_url,
+           params: { upsert: raw, valuation: { account_id: existing_entry.account.id, amount: 1000, date: existing_entry.date, upsert: "true" } },
+           headers: api_headers(@api_key)
+
+      assert_response status, raw.inspect
+    end
+  end
+
+  test "a JSON null upsert flag is absent" do
+    existing_entry = @valuation.entry
+
+    [ { upsert: nil }, { valuation: { upsert: nil } } ].each do |flag|
+      body = flag.deep_merge(valuation: { account_id: existing_entry.account.id, amount: 1000, date: existing_entry.date })
+
+      post api_v1_valuations_url, params: body.to_json, headers: api_headers(@api_key).merge("Content-Type" => "application/json")
+
+      assert_response :created, flag.inspect
+    end
+  end
+
+  test "an upsert flag other than true/false/1/0 is a 422 and writes nothing" do
+    existing_entry = @valuation.entry
+
+    [ { upsert: "yes" }, { upsert: "" }, { valuation: { upsert: "on" } } ].each do |flag|
+      body = flag.deep_merge(valuation: { account_id: existing_entry.account.id, amount: 31_337, date: existing_entry.date })
+
+      assert_no_difference [ "Entry.count", "Valuation.count" ] do
+        assert_no_changes -> { existing_entry.reload.amount } do
+          post api_v1_valuations_url, params: body, headers: api_headers(@api_key)
+        end
+      end
+
+      assert_response :unprocessable_entity, flag.inspect
+      assert_equal "upsert must be true or false", JSON.parse(response.body)["message"]
+    end
   end
 
   test "should reject create with read-only API key" do

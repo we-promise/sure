@@ -79,16 +79,23 @@ RSpec.describe 'API V1 Recurring Transactions', type: :request do
       produces 'application/json'
       parameter name: :page, in: :query, type: :integer, required: false,
                 description: 'Page number (default: 1)'
-      parameter name: :per_page, in: :query, type: :integer, required: false,
-                description: 'Items per page (default: 25, max: 100)'
-      parameter name: :status, in: :query, required: false,
+      parameter name: :per_page, in: :query, type: :integer, required: false, description: API_PER_PAGE_DESCRIPTION
+      parameter name: :status, getter: :status_filter, in: :query, required: false,
                 description: 'Filter by recurring status',
-                schema: { type: :string, enum: %w[active inactive] }
+                schema: { type: :string, enum: RecurringTransaction.statuses.keys }
       parameter name: :account_id, in: :query, required: false, description: 'Filter by account ID',
                 schema: { type: :string, format: :uuid }
 
       response '200', 'recurring transactions listed' do
         schema '$ref' => '#/components/schemas/RecurringTransactionCollection'
+
+        run_test!
+      end
+
+      response '200', 'recurring transactions filtered by status' do
+        schema '$ref' => '#/components/schemas/RecurringTransactionCollection'
+
+        let(:status_filter) { 'active' }
 
         run_test!
       end
@@ -105,6 +112,14 @@ RSpec.describe 'API V1 Recurring Transactions', type: :request do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:account_id) { 'not-a-uuid' }
+
+        run_test!
+      end
+
+      response '422', 'validation error - unknown status' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:status_filter) { 'bogus' }
 
         run_test!
       end

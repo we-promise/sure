@@ -321,7 +321,68 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_equal account_names.sort, account_names
   end
 
+  test "include_disabled accepts true/false/1/0 in any case" do
+    inactive_account = accounts(:depository)
+    inactive_account.disable!
+
+    { "TRUE" => true, " 1 " => true, "False" => false, "0" => false }.each do |value, included|
+      get "/api/v1/accounts", params: { include_disabled: value, per_page: 100 }, headers: api_headers(@api_key)
+
+      assert_response :success
+      ids = JSON.parse(response.body)["accounts"].map { |account| account["id"] }
+      assert_equal included, ids.include?(inactive_account.id), "include_disabled=#{value.inspect}"
+    end
+  end
+
+  # Strict since the move to typed filters: the lenient cast used to read
+  # "yes", "on" or "t" as true, and "", "off" or "f" as false.
+  test "rejects an include_disabled that is not a boolean" do
+    account = accounts(:depository)
+
+    [ "yes", "on", "t", "off", "f", "" ].each do |value|
+      get "/api/v1/accounts", params: { include_disabled: value }, headers: api_headers(@api_key)
+      assert_invalid_include_disabled value
+
+      get "/api/v1/accounts/#{account.id}", params: { include_disabled: value }, headers: api_headers(@api_key)
+      assert_invalid_include_disabled value
+    end
+
+    get "/api/v1/accounts", params: { include_disabled: [ "true" ] }, headers: api_headers(@api_key)
+    assert_invalid_include_disabled [ "true" ]
+  end
+
+  test "lists and shows only the accounts the caller can access, disabled ones included" do
+    member = @other_family_user
+    member.update!(family: families(:dylan_family)) # setup moved them out
+    key = @other_family_api_key
+    shared = accounts(:credit_card) # read-only share
+    unshared = accounts(:investment)
+    shared.disable!
+    unshared.disable!
+
+    get "/api/v1/accounts", params: { include_disabled: true, per_page: 100 }, headers: api_headers(key)
+
+    assert_response :success
+    ids = JSON.parse(response.body)["accounts"].map { |account| account["id"] }
+    assert_includes ids, shared.id
+    assert_not_includes ids, unshared.id
+    assert ids.all? { |id| Account.accessible_by(member).exists?(id) }
+
+    get "/api/v1/accounts/#{shared.id}", params: { include_disabled: true }, headers: api_headers(key)
+    assert_response :success
+
+    get "/api/v1/accounts/#{unshared.id}", params: { include_disabled: true }, headers: api_headers(key)
+    assert_response :not_found
+  end
+
   private
+
+    def assert_invalid_include_disabled(value)
+      assert_response :unprocessable_entity, "include_disabled=#{value.inspect}"
+      body = JSON.parse(response.body)
+      assert_equal "validation_failed", body["error"]
+      assert_equal "include_disabled must be true or false", body["message"]
+    end
 
     def api_headers(api_key)
       { "X-Api-Key" => api_key.plain_key }

@@ -24,7 +24,7 @@ RSpec.describe "Api::V1::FamilyExports", type: :request do
       security [ apiKeyAuth: [] ]
       produces "application/json"
       parameter name: :page, in: :query, type: :integer, required: false, description: "Page number (default: 1)"
-      parameter name: :per_page, in: :query, type: :integer, required: false, description: "Items per page (default: 25, max: 100)"
+      parameter name: :per_page, in: :query, type: :integer, required: false, description: API_PER_PAGE_DESCRIPTION
 
       response "200", "family exports listed" do
         schema "$ref" => "#/components/schemas/FamilyExportCollection"

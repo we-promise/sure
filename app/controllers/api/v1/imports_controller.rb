@@ -9,22 +9,14 @@ class Api::V1::ImportsController < Api::V1::BaseController
   before_action :reject_guest_family_config_import!, only: [ :create ]
   before_action :set_import_with_rows, only: [ :show ]
   before_action :set_import, only: [ :rows ]
+  before_action :set_search, only: [ :index ]
+  # Read before create's catch-all rescue, so a bad flag is a 422 and no
+  # import is created.
+  before_action :set_publish, only: [ :create ]
 
   def index
-    imports_query = import_scope.ordered
-
-    # Apply filters
-    if params[:status].present?
-      imports_query = imports_query.where(status: params[:status])
-    end
-
-    if params[:type].present?
-      imports_query = imports_query.where(type: params[:type])
-    end
-
-    # Pagination
     @pagy, @imports = pagy(
-      imports_query,
+      @search.imports_scope.ordered,
       page: safe_page_param,
       limit: safe_per_page_param
     )
@@ -141,7 +133,7 @@ class Api::V1::ImportsController < Api::V1::BaseController
       # If the import is configured (has rows), we can try to auto-publish or just leave it as pending
       # For API simplicity, if enough info is provided, we might want to trigger processing
 
-      if @import.configured? && params[:publish] == "true"
+      if @import.configured? && @publish
         if current_resource_owner.guest? && @import.creates_categories_or_tags?
           return render_json({ error: "forbidden", message: "Guests cannot create categories or tags", import_id: @import.id }, status: :forbidden)
         end
@@ -213,16 +205,23 @@ class Api::V1::ImportsController < Api::V1::BaseController
       render_import_not_found
     end
 
+    def set_search
+      @search = Import::Search.new(import_scope, filters: {
+        status: enum_filter_param(:status, Import.statuses.keys),
+        type: enum_filter_param(:type, Import::TYPES)
+      })
+    end
+
+    def set_publish
+      @publish = boolean_filter_param(:publish)
+    end
+
     def import_scope
       current_resource_owner.family.imports.viewable_by(current_resource_owner)
     end
 
     def render_import_not_found
       render json: { error: "not_found", message: "Import not found" }, status: :not_found
-    end
-
-    def ensure_read_scope
-      authorize_scope!(:read)
     end
 
     def ensure_write_scope
@@ -293,7 +292,7 @@ class Api::V1::ImportsController < Api::V1::BaseController
       end
 
       begin
-        @import.publish_later if params[:publish] == "true"
+        @import.publish_later if @publish
       rescue Import::MaxRowCountExceededError
         render json: {
           error: "max_row_count_exceeded",
@@ -431,15 +430,5 @@ class Api::V1::ImportsController < Api::V1::BaseController
       end
 
       [ content, filename, content_type ]
-    end
-
-    def safe_page_param
-      page = params[:page].to_i
-      page > 0 ? page : 1
-    end
-
-    def safe_per_page_param
-      per_page = params[:per_page].to_i
-      (1..100).include?(per_page) ? per_page : 25
     end
 end

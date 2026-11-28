@@ -26,6 +26,14 @@ class Budget < ApplicationRecord
            :total_rolled_over
 
   class << self
+    # The owners whose budgets `user` can read, as `user_id` values: nil (the
+    # household budget), the user's own personal budget and every owner who
+    # granted them a BudgetShare, read-only or read-write. viewable_by? is the
+    # same rule for one budget.
+    def visible_owner_ids(user)
+      [ nil, user.id, *BudgetShare.where(viewer_id: user.id).pluck(:owner_id) ]
+    end
+
     def date_to_param(date)
       date.strftime(PARAM_DATE_FORMAT).downcase
     end
@@ -178,6 +186,11 @@ class Budget < ApplicationRecord
     scope
   end
 
+  # Drill-down rows use the same eligibility and account scope as the totals.
+  def reportable_transactions
+    income_statement.reportable_transactions(period:)
+  end
+
   # --- Cash on hand, next to the plan ---
   #
   # DELIBERATELY OUTSIDE the allocation arithmetic. `budgeted_spending`,
@@ -269,7 +282,7 @@ class Budget < ApplicationRecord
   # The household budget (user_id nil) is visible/editable by every family
   # member, matching pre-personal_budgets behavior. A personal budget is
   # only visible/editable by its owner, or by someone the owner shared it
-  # with via BudgetShare.
+  # with via BudgetShare. Budget.visible_owner_ids is the same rule as a list.
   def viewable_by?(user)
     return true if user_id.nil?
     return true if user_id == user.id

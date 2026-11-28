@@ -1,8 +1,11 @@
 class RuleRun < ApplicationRecord
+  EXECUTION_TYPES = %w[manual scheduled immediate].freeze
+  STATUSES = %w[pending success failed].freeze
+
   belongs_to :rule
 
-  validates :execution_type, inclusion: { in: %w[manual scheduled immediate] }
-  validates :status, inclusion: { in: %w[pending success failed] }
+  validates :execution_type, inclusion: { in: EXECUTION_TYPES }
+  validates :status, inclusion: { in: STATUSES }
   validates :executed_at, presence: true
   validates :transactions_queued, numericality: { greater_than_or_equal_to: 0 }
   validates :transactions_processed, numericality: { greater_than_or_equal_to: 0 }

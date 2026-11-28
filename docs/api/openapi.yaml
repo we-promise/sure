@@ -5112,7 +5112,8 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       responses:
@@ -5263,13 +5264,15 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       - name: include_disabled
         in: query
         required: false
-        description: Include disabled accounts in the response. Defaults to false.
+        description: 'Include disabled accounts in the response: true or false (also
+          1 or 0, any case). Defaults to false; any other value returns 422.'
         schema:
           type: boolean
       responses:
@@ -5279,6 +5282,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/AccountCollection"
+        '422':
+          description: invalid include_disabled
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/accounts/{id}":
     parameters:
     - name: id
@@ -5298,7 +5307,8 @@ paths:
       - name: include_disabled
         in: query
         required: false
-        description: Allow retrieving a disabled account. Defaults to false.
+        description: 'Allow retrieving a disabled account: true or false (also 1 or
+          0, any case). Defaults to false; any other value returns 422.'
         schema:
           type: boolean
       responses:
@@ -5322,6 +5332,12 @@ paths:
                 "$ref": "#/components/schemas/ErrorResponse"
         '404':
           description: account not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: invalid include_disabled
           content:
             application/json:
               schema:
@@ -5979,33 +5995,36 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       - name: account_id
         in: query
         required: false
-        description: Filter by account ID
+        description: Filter by account ID. Must be a UUID; anything else returns 422.
         schema:
           type: string
           format: uuid
       - name: currency
         in: query
         required: false
-        description: Filter by currency code
+        description: Filter by ISO 4217 currency code, in any case
         schema:
           type: string
       - name: start_date
         in: query
         required: false
-        description: Filter balances from this date
+        description: Filter balances on or after this date (YYYY-MM-DD; anything else
+          returns 422)
         schema:
           type: string
           format: date
       - name: end_date
         in: query
         required: false
-        description: Filter balances until this date
+        description: Filter balances on or before this date (YYYY-MM-DD; anything
+          else returns 422)
         schema:
           type: string
           format: date
@@ -6091,7 +6110,8 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       - name: budget_id
@@ -6206,7 +6226,8 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       - name: start_date
@@ -6392,13 +6413,15 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       - name: roots_only
         in: query
         required: false
-        description: Return only root categories (no parent)
+        description: Return only root categories (no parent). Accepts true, false,
+          1 or 0
         schema:
           type: boolean
       - name: parent_id
@@ -6415,6 +6438,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/CategoryCollection"
+        '422':
+          description: invalid filter
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
     post:
       summary: Create category
       tags:
@@ -6715,7 +6744,8 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       responses:
@@ -7838,7 +7868,8 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       - name: account_id
@@ -7847,6 +7878,7 @@ paths:
         description: Filter by account ID
         schema:
           type: string
+          format: uuid
       - name: account_ids
         in: query
         required: false
@@ -7855,6 +7887,7 @@ paths:
           type: array
           items:
             type: string
+            format: uuid
       - name: date
         in: query
         required: false
@@ -7882,6 +7915,7 @@ paths:
         description: Filter by security ID
         schema:
           type: string
+          format: uuid
       responses:
         '200':
           description: holdings paginated
@@ -7896,7 +7930,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '422':
-          description: invalid date filter
+          description: invalid id filter
           content:
             application/json:
               schema:
@@ -8214,7 +8248,8 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       - name: status
@@ -8257,6 +8292,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ImportCollection"
+        '422':
+          description: invalid filter
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
     post:
       summary: Create import
       description: Create a new import from raw CSV content, inline Sure NDJSON content,
@@ -8331,9 +8372,19 @@ paths:
                   description: Account ID to import into. Must be an account the API
                     user can write to
                 publish:
-                  type: string
-                  description: Set to "true" to automatically queue for processing
-                    if configuration is valid
+                  anyOf:
+                  - type: boolean
+                    nullable: true
+                  - type: integer
+                    enum:
+                    - 0
+                    - 1
+                  - type: string
+                    pattern: "^\\s*([Tt][Rr][Uu][Ee]|[Ff][Aa][Ll][Ss][Ee]|[01])\\s*$"
+                  description: 'true to queue the import for processing if its configuration
+                    is valid: true or false (also 1 or 0, any case); null is the same
+                    as leaving it out. Any other value returns 422 and creates no
+                    import.'
                 date_col_label:
                   type: string
                   description: CSV imports only. Header name for the date column
@@ -8445,9 +8496,19 @@ paths:
                   description: Account ID to import into. Must be an account the API
                     user can write to
                 publish:
-                  type: string
-                  description: Set to "true" to automatically queue for processing
-                    if configuration is valid
+                  anyOf:
+                  - type: boolean
+                    nullable: true
+                  - type: integer
+                    enum:
+                    - 0
+                    - 1
+                  - type: string
+                    pattern: "^\\s*([Tt][Rr][Uu][Ee]|[Ff][Aa][Ll][Ss][Ee]|[01])\\s*$"
+                  description: 'true to queue the import for processing if its configuration
+                    is valid: true or false (also 1 or 0, any case); null is the same
+                    as leaving it out. Any other value returns 422 and creates no
+                    import.'
                 date_col_label:
                   type: string
                   description: CSV imports only. Header name for the date column
@@ -8584,7 +8645,8 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       responses:
@@ -9144,7 +9206,8 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       - name: status
@@ -9154,8 +9217,11 @@ paths:
         schema:
           type: string
           enum:
+          - suggested
           - active
+          - paused
           - inactive
+          - ended
       - name: account_id
         in: query
         required: false
@@ -9165,7 +9231,7 @@ paths:
           format: uuid
       responses:
         '200':
-          description: recurring transactions listed
+          description: recurring transactions filtered by status
           content:
             application/json:
               schema:
@@ -9177,7 +9243,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '422':
-          description: validation error - malformed account filter
+          description: validation error - unknown status
           content:
             application/json:
               schema:
@@ -9453,7 +9519,8 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       - name: account_id
@@ -9559,7 +9626,8 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       - name: rule_id
@@ -9686,7 +9754,8 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       - name: resource_type
@@ -9784,7 +9853,8 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       - name: ticker
@@ -9896,7 +9966,8 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       - name: security_id
@@ -10209,7 +10280,8 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       responses:
@@ -10449,7 +10521,8 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       - name: account_id
@@ -10458,6 +10531,7 @@ paths:
         description: Filter by account ID
         schema:
           type: string
+          format: uuid
       - name: account_ids
         in: query
         required: false
@@ -10466,6 +10540,7 @@ paths:
           type: array
           items:
             type: string
+            format: uuid
       - name: start_date
         in: query
         required: false
@@ -10494,7 +10569,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '422':
-          description: invalid date filter
+          description: invalid id filter
           content:
             application/json:
               schema:
@@ -10786,57 +10861,65 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       - name: account_id
         in: query
         required: false
-        description: Filter by account ID
+        description: Filter by account ID. With account_ids, only ids in both match.
         schema:
           type: string
+          format: uuid
       - name: category_id
         in: query
         required: false
-        description: Filter by category ID
+        description: Filter by category ID (subcategories are not included). With
+          category_ids, only ids in both match.
         schema:
           type: string
+          format: uuid
       - name: merchant_id
         in: query
         required: false
-        description: Filter by merchant ID
+        description: Filter by merchant ID. With merchant_ids, only ids in both match.
         schema:
           type: string
+          format: uuid
       - name: start_date
         in: query
         required: false
-        description: Filter transactions from this date
+        description: Filter transactions from this date (inclusive)
         schema:
           type: string
           format: date
       - name: end_date
         in: query
         required: false
-        description: Filter transactions until this date
+        description: Filter transactions until this date (inclusive)
         schema:
           type: string
           format: date
       - name: min_amount
         in: query
         required: false
-        description: Filter by minimum amount
+        description: Minimum signed amount, inclusive (inflows are negative); at most
+          20 digits written out, or 422
         schema:
           type: number
       - name: max_amount
         in: query
         required: false
-        description: Filter by maximum amount
+        description: Maximum signed amount, inclusive; at most 20 digits written out,
+          or 422
         schema:
           type: number
       - name: type
         in: query
         required: false
-        description: Filter by transaction type
+        description: income lists negative amounts and expense positive ones, transfers
+          included; case is ignored
         schema:
           type: string
           enum:
@@ -10845,7 +10928,8 @@ paths:
       - name: search
         in: query
         required: false
-        description: Search by name, notes, or merchant name
+        description: Search by name, notes, or merchant name; surrounding spaces are
+          ignored
         schema:
           type: string
       - name: account_ids
@@ -10856,6 +10940,7 @@ paths:
           type: array
           items:
             type: string
+            format: uuid
       - name: category_ids
         in: query
         required: false
@@ -10864,6 +10949,7 @@ paths:
           type: array
           items:
             type: string
+            format: uuid
       - name: merchant_ids
         in: query
         required: false
@@ -10872,14 +10958,45 @@ paths:
           type: array
           items:
             type: string
+            format: uuid
       - name: tag_ids
         in: query
         required: false
-        description: Filter by tag IDs
+        description: Transactions carrying any of these tags
         schema:
           type: array
           items:
             type: string
+            format: uuid
+      - name: budget_id
+        in: query
+        required: false
+        description: 'Only rows the budget''s category drill-down on the web lists:
+          transactions in the budget period, on the accounts its spending is computed
+          from (the owner''s report accounts for a personal budget, the caller''s
+          for the household budget), using the totals'' rules for posted, non-future,
+          non-excluded transactions, tax-advantaged accounts and internal investment
+          movements, and limited to accounts the caller can access. Must be a budget
+          the caller can see; returns 404 otherwise.'
+        schema:
+          type: string
+          format: uuid
+      - name: exclude_split_parents
+        in: query
+        required: false
+        description: When true, leave out transactions that have been split (their
+          split children are still listed).
+        schema:
+          type: boolean
+      - name: excluded
+        in: query
+        required: false
+        description: Filters on the entry excluded flag only. false lists entries
+          not flagged excluded; true lists only flagged ones, split parents included.
+          Without budget_id, omit to list both. With budget_id, reporting rules already
+          exclude flagged entries.
+        schema:
+          type: boolean
       responses:
         '200':
           description: transactions filtered by date range
@@ -10887,6 +11004,18 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/TransactionCollection"
+        '404':
+          description: budget not found or not visible to the caller
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: 'invalid filter: a date that is not YYYY-MM-DD'
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
     post:
       summary: Create transaction
       tags:
@@ -10971,9 +11100,19 @@ paths:
                       description: Optional source namespace for external_id. Requires
                         external_id and defaults to api when external_id is provided
                     user_modified:
-                      type: boolean
-                      description: Whether provider syncs should preserve user-supplied
-                        transaction changes
+                      anyOf:
+                      - type: boolean
+                        nullable: true
+                      - type: integer
+                        enum:
+                        - 0
+                        - 1
+                      - type: string
+                        pattern: "^\\s*([Tt][Rr][Uu][Ee]|[Ff][Aa][Ll][Ss][Ee]|[01])\\s*$"
+                      description: 'Whether provider syncs should preserve user-supplied
+                        transaction changes: true or false (also 1 or 0, any case);
+                        null is the same as leaving it out. Any other value returns
+                        422 and writes nothing.'
                     tag_ids:
                       type: array
                       items:
@@ -11098,9 +11237,19 @@ paths:
                       description: Array of tag IDs to assign. Omit to preserve existing
                         tags; use [] to clear all tags.
                     user_modified:
-                      type: boolean
-                      description: Whether provider syncs should preserve user-supplied
-                        transaction changes
+                      anyOf:
+                      - type: boolean
+                        nullable: true
+                      - type: integer
+                        enum:
+                        - 0
+                        - 1
+                      - type: string
+                        pattern: "^\\s*([Tt][Rr][Uu][Ee]|[Ff][Aa][Ll][Ss][Ee]|[01])\\s*$"
+                      description: 'Whether provider syncs should preserve user-supplied
+                        transaction changes: true or false (also 1 or 0, any case);
+                        null is the same as leaving it out. Any other value returns
+                        422 and writes nothing.'
         required: true
     delete:
       summary: Delete a transaction
@@ -11151,7 +11300,8 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       - name: status
@@ -11357,27 +11507,30 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       - name: account_id
         in: query
         required: false
-        description: Filter by account ID
+        description: Filter by account ID. Must be a UUID; anything else returns 422.
         schema:
           type: string
           format: uuid
       - name: start_date
         in: query
         required: false
-        description: Filter valuations from this date
+        description: Filter valuations on or after this date (YYYY-MM-DD; anything
+          else returns 422)
         schema:
           type: string
           format: date
       - name: end_date
         in: query
         required: false
-        description: Filter valuations until this date
+        description: Filter valuations on or before this date (YYYY-MM-DD; anything
+          else returns 422)
         schema:
           type: string
           format: date
@@ -11456,21 +11609,40 @@ paths:
                       type: string
                       description: Additional notes
                     upsert:
-                      type: boolean
+                      anyOf:
+                      - type: boolean
+                        nullable: true
+                      - type: integer
+                        enum:
+                        - 0
+                        - 1
+                      - type: string
+                        pattern: "^\\s*([Tt][Rr][Uu][Ee]|[Ff][Aa][Ll][Ss][Ee]|[01])\\s*$"
                       description: Nested alternative to the top-level response-status
                         flag. Top-level upsert takes precedence when both are provided.
+                        true or false (also 1 or 0, any case); null is the same as
+                        leaving it out; any other value returns 422.
                   required:
                   - account_id
                   - amount
                   - date
                 upsert:
-                  type: boolean
+                  anyOf:
+                  - type: boolean
+                    nullable: true
+                  - type: integer
+                    enum:
+                    - 0
+                    - 1
+                  - type: string
+                    pattern: "^\\s*([Tt][Rr][Uu][Ee]|[Ff][Aa][Ll][Ss][Ee]|[01])\\s*$"
                   description: Response-status signal only. When true and a same-account
                     same-date valuation exists before the request, the endpoint returns
                     200 OK instead of 201 Created. The underlying reconciliation write
                     path is unchanged; this flag does not add duplicate-prevention
                     or safe-retry guarantees beyond existing same-date reconciliation
-                    behavior.
+                    behavior. true or false (also 1 or 0, any case); null is the same
+                    as leaving it out; any other value returns 422 and writes nothing.
               required:
               - valuation
         required: true

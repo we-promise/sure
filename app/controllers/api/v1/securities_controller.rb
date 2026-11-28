@@ -2,13 +2,14 @@
 
 class Api::V1::SecuritiesController < Api::V1::BaseController
   include Pagy::Backend
-  include Api::V1::SecurityResourceFiltering
+  include Api::V1::SecurityResourceScoping
 
   before_action :ensure_read_scope
   before_action :set_security, only: :show
+  before_action :set_search, only: :index
 
   def index
-    securities_query = apply_filters(securities_scope).order(:ticker, :exchange_operating_mic, :name)
+    securities_query = @search.securities_scope.order(:ticker, :exchange_operating_mic, :name)
     @per_page = safe_per_page_param
 
     @pagy, @securities = pagy(
@@ -18,8 +19,6 @@ class Api::V1::SecuritiesController < Api::V1::BaseController
     )
 
     render :index
-  rescue Api::V1::SecurityResourceFiltering::InvalidFilterError => e
-    render_validation_error(e.message)
   end
 
   def show
@@ -34,27 +33,17 @@ class Api::V1::SecuritiesController < Api::V1::BaseController
       @security = securities_scope.find(params[:id])
     end
 
-    def ensure_read_scope
-      authorize_scope!(:read)
-    end
-
     def securities_scope
       Security
         .where(id: scoped_security_ids)
     end
 
-    def apply_filters(query)
-      query = query.where("LOWER(securities.ticker) = ?", params[:ticker].to_s.strip.downcase) if params[:ticker].present?
-      query = query.where(exchange_operating_mic: params[:exchange_operating_mic].to_s.strip.upcase) if params[:exchange_operating_mic].present?
-      if params[:kind].present?
-        invalid_filter!("kind must be one of: #{Security::KINDS.join(', ')}") unless Security::KINDS.include?(params[:kind])
-
-        query = query.where(kind: params[:kind])
-      end
-      if params.key?(:offline)
-        offline = parse_boolean_filter_param(:offline)
-        query = query.where(offline: offline)
-      end
-      query
+    def set_search
+      @search = Security::Search.new(securities_scope, filters: {
+        ticker: string_filter_param(:ticker),
+        exchange_operating_mic: string_filter_param(:exchange_operating_mic),
+        kind: enum_filter_param(:kind, Security::KINDS),
+        offline: boolean_filter_param(:offline)
+      })
     end
 end

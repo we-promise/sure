@@ -16,6 +16,8 @@ class EntrySearch
   attribute :tags, array: true
   attribute :merchants, array: true
 
+  SEARCH_COLUMNS = %w[entries.name entries.notes].freeze
+
   attr_reader :family
 
   # `family` is required to scope the category-name lookup in
@@ -28,14 +30,13 @@ class EntrySearch
   end
 
   class << self
-    def apply_search_filter(scope, search)
+    # Matches the term literally ("%" and "_" included) in any of `columns`.
+    def apply_search_filter(scope, search, columns: SEARCH_COLUMNS)
       return scope if search.blank?
 
-      query = scope
-      query = query.where("entries.name ILIKE :search OR entries.notes ILIKE :search",
+      scope.where(columns.map { |column| "#{column} ILIKE :search" }.join(" OR "),
         search: "%#{ActiveRecord::Base.sanitize_sql_like(search)}%"
       )
-      query
     end
 
     def apply_date_filters(scope, start_date, end_date)

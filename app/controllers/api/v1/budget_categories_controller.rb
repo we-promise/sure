@@ -4,16 +4,15 @@ class Api::V1::BudgetCategoriesController < Api::V1::BaseController
   include Pagy::Backend
 
   before_action :ensure_read_scope
+  before_action :set_search, only: :index
   before_action :refresh_rollover_chains
   before_action :set_budget_category, only: :show
 
   def index
-    budget_categories_query = apply_filters(budget_categories_scope)
-      .order("budgets.start_date DESC", "categories.name ASC")
     @per_page = safe_per_page_param
 
     @pagy, @budget_categories = pagy(
-      budget_categories_query,
+      @search.budget_categories_scope.order("budgets.start_date DESC", "categories.name ASC"),
       page: safe_page_param,
       limit: @per_page
     )
@@ -27,14 +26,22 @@ class Api::V1::BudgetCategoriesController < Api::V1::BaseController
 
   private
 
+    def set_search
+      @search = BudgetCategory::Search.new(
+        budget_categories_scope,
+        filters: {
+          budget_id: uuid_filter_param(:budget_id),
+          category_id: uuid_filter_param(:category_id),
+          start_date: date_filter_param(:start_date),
+          end_date: date_filter_param(:end_date)
+        }
+      )
+    end
+
     def set_budget_category
       raise ActiveRecord::RecordNotFound unless valid_uuid?(params[:id])
 
       @budget_category = budget_categories_scope.find(params[:id])
-    end
-
-    def ensure_read_scope
-      authorize_scope!(:read)
     end
 
     # `rolled_over_amount` is materialized, and the web pages that show it
@@ -66,25 +73,6 @@ class Api::V1::BudgetCategoriesController < Api::V1::BaseController
     end
 
     def visible_owner_ids
-      shared_with_me = BudgetShare.where(viewer_id: current_resource_owner.id).pluck(:owner_id)
-      [ nil, current_resource_owner.id, *shared_with_me ]
-    end
-
-    def apply_filters(query)
-      if params[:budget_id].present?
-        raise InvalidFilterError, "budget_id must be a valid UUID" unless valid_uuid?(params[:budget_id])
-
-        query = query.where(budget_id: params[:budget_id])
-      end
-
-      if params[:category_id].present?
-        raise InvalidFilterError, "category_id must be a valid UUID" unless valid_uuid?(params[:category_id])
-
-        query = query.where(category_id: params[:category_id])
-      end
-
-      query = query.where("budgets.start_date >= ?", parse_date_param(:start_date)) if params[:start_date].present?
-      query = query.where("budgets.end_date <= ?", parse_date_param(:end_date)) if params[:end_date].present?
-      query
+      @visible_owner_ids ||= Budget.visible_owner_ids(current_resource_owner)
     end
 end

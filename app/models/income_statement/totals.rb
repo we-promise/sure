@@ -34,6 +34,14 @@ class IncomeStatement::Totals
     end
   end
 
+  def reportable_transactions
+    sql = ActiveRecord::Base.sanitize_sql_array([
+      "SELECT at.id FROM (#{@transactions_scope.to_sql}) at #{entries_join_sql('at')} #{accounts_join_sql} WHERE #{reportable_conditions_sql('at')} AND (#{classification_sql('at')}) != 'investment'",
+      sql_params
+    ])
+    @family.transactions.where("transactions.id IN (#{sql})")
+  end
+
   private
     TotalsRow = Data.define(:parent_category_id, :category_id, :classification, :total, :transactions_count, :is_uncategorized_investment, :month) do
       def initialize(month: nil, **rest) = super
@@ -80,13 +88,7 @@ class IncomeStatement::Totals
         #{entries_join_sql("at")}
         #{accounts_join_sql}
         LEFT JOIN categories c ON c.id = at.category_id
-        WHERE at.kind NOT IN (#{budget_excluded_kinds_sql})
-          AND ae.excluded = false
-          AND a.family_id = :family_id
-          AND a.status IN ('draft', 'active')
-          AND a.exclude_from_reports = false
-          #{exclude_tax_advantaged_sql}
-          #{include_finance_accounts_sql}
+        WHERE #{reportable_conditions_sql("at", filter_investment_activity: false)}
         GROUP BY c.id, c.parent_id, #{classification_sql("at")};
       SQL
     end
@@ -104,14 +106,7 @@ class IncomeStatement::Totals
         #{entries_join_sql("at")}
         #{accounts_join_sql}
         LEFT JOIN categories c ON c.id = at.category_id
-        WHERE at.kind NOT IN (#{budget_excluded_kinds_sql})
-          #{investment_activity_label_sql("at")}
-          AND ae.excluded = false
-          AND a.family_id = :family_id
-          AND a.status IN ('draft', 'active')
-          AND a.exclude_from_reports = false
-          #{exclude_tax_advantaged_sql}
-          #{include_finance_accounts_sql}
+        WHERE #{reportable_conditions_sql("at")}
         GROUP BY c.id, c.parent_id, #{classification_sql("at")}#{", date_trunc('month', ae.date)::date" if @group_by_month}
       SQL
     end

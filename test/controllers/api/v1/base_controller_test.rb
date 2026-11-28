@@ -466,7 +466,156 @@ class Api::V1::BaseControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "an invalid filter renders a 422 validation error" do
+    get "/api/v1/test_filters", params: { flag: "maybe" }, headers: { "X-Api-Key" => @plain_api_key }
+
+    assert_response :unprocessable_entity
+    assert_equal(
+      { "error" => "validation_failed", "message" => "flag must be true or false", "errors" => [ "flag must be true or false" ] },
+      response.parsed_body
+    )
+  end
+
+  test "a valid filter reaches the action typed" do
+    get "/api/v1/test_filters", params: { flag: "FALSE" }, headers: { "X-Api-Key" => @plain_api_key }
+
+    assert_response :success
+    assert_equal({ "flag" => false }, response.parsed_body)
+  end
+
+  test "a key with no value is absent" do
+    get "/api/v1/test_filters?flag", headers: { "X-Api-Key" => @plain_api_key }
+
+    assert_response :success
+    assert_equal({ "flag" => nil }, response.parsed_body)
+  end
+
+  # Every reader: absent or null is nil; a valid value comes back typed; anything else,
+  # including an empty value or an array/hash where a scalar belongs, is a 422.
+
+  test "boolean_filter_param reads true/false/1/0 ignoring case and spaces" do
+    { "true" => true, " TRUE " => true, "1" => true, "false" => false, "False" => false, "0" => false }.each do |raw, expected|
+      assert_equal expected, read_filter(:boolean_filter_param, raw), raw.inspect
+    end
+    assert_nil read_filter(:boolean_filter_param, nil)
+    assert_nil filter_reader(flag: nil).send(:boolean_filter_param, :flag), "a JSON null is absent"
+    assert_invalid_filter "flag must be true or false", :boolean_filter_param, "yes", "", "2", [ "true" ], { "a" => "true" }
+  end
+
+  test "boolean_filter_param reads a key nested under within:" do
+    assert_equal true, filter_reader(item: { flag: "1" }).send(:boolean_filter_param, :flag, within: :item)
+    assert_equal false, filter_reader(item: { flag: false }).send(:boolean_filter_param, :flag, within: :item)
+    assert_nil filter_reader(item: { other: "1" }).send(:boolean_filter_param, :flag, within: :item)
+    assert_nil filter_reader({}).send(:boolean_filter_param, :flag, within: :item)
+    assert_nil filter_reader(item: "flat").send(:boolean_filter_param, :flag, within: :item)
+    assert_nil filter_reader(item: { flag: nil }).send(:boolean_filter_param, :flag, within: :item)
+    assert_nil filter_reader(flag: "true").send(:boolean_filter_param, :flag, within: :item)
+    assert_raises_filter("flag must be true or false") do
+      filter_reader(item: { flag: "yes" }).send(:boolean_filter_param, :flag, within: :item)
+    end
+  end
+
+  # Other ISO 8601 forms are valid ISO 8601, so the message names the format.
+  test "date_filter_param reads YYYY-MM-DD only" do
+    assert_equal Date.new(2024, 1, 5), read_filter(:date_filter_param, "2024-01-05")
+    assert_equal Date.new(2024, 1, 5), read_filter(:date_filter_param, " 2024-01-05 ")
+    assert_nil read_filter(:date_filter_param, nil)
+    assert_invalid_filter "flag must be a date in YYYY-MM-DD format", :date_filter_param,
+      "", "20240105", "2024-005", "2024-W01-1", "2024-01", "--01-05", "2024-01-05T10:00:00Z",
+      "2024-02-30", "Jan 5 2024", "0000-01-05", [ "2024-01-05" ]
+  end
+
+  test "time_filter_param reads ISO 8601 timestamps" do
+    assert_equal Time.utc(2024, 1, 5, 10, 30), read_filter(:time_filter_param, "2024-01-05T10:30:00Z")
+    assert_equal Time.utc(2024, 1, 5, 9, 30), read_filter(:time_filter_param, "2024-01-05T10:30:00+01:00")
+    assert_nil read_filter(:time_filter_param, nil)
+    assert_invalid_filter "flag must be an ISO 8601 timestamp", :time_filter_param, "", "2024-01-05", "yesterday", [ "2024-01-05T10:30:00Z" ]
+  end
+
+  # Written out in full, 1e100000000 is a 100 MB string, and ActiveRecord
+  # writes it out to build the SQL.
+  test "decimal_filter_param reads numbers of up to 20 digits written out" do
+    assert_equal BigDecimal("12.5"), read_filter(:decimal_filter_param, "12.5")
+    assert_equal BigDecimal("-3"), read_filter(:decimal_filter_param, " -3 ")
+    assert_equal BigDecimal("1e19"), read_filter(:decimal_filter_param, "1e19")
+    assert_equal BigDecimal("-0.00000000000000000001"), read_filter(:decimal_filter_param, "-1e-20")
+    assert_kind_of BigDecimal, read_filter(:decimal_filter_param, "7")
+    assert_nil read_filter(:decimal_filter_param, nil)
+    assert_invalid_filter "flag must be a number of at most 20 digits", :decimal_filter_param,
+      "", "abc", "12abc", "Infinity", "NaN", "1\u00002", [ "1" ], "1e20", "1e-21", "1e100000000", "-1e-100000000"
+  end
+
+  test "uuid_filter_param reads one UUID" do
+    uuid = SecureRandom.uuid
+    assert_equal uuid, read_filter(:uuid_filter_param, uuid)
+    assert_equal uuid, read_filter(:uuid_filter_param, " #{uuid} ")
+    assert_nil read_filter(:uuid_filter_param, nil)
+    assert_invalid_filter "flag must be a valid UUID", :uuid_filter_param, "", "123", "#{uuid}x", uuid.delete("-"), [ uuid ]
+  end
+
+  test "uuid_list_filter_param reads a UUID or a list of them" do
+    first, second = SecureRandom.uuid, SecureRandom.uuid
+    assert_equal [ first, second ], read_filter(:uuid_list_filter_param, [ first, second ])
+    assert_equal [ first ], read_filter(:uuid_list_filter_param, first)
+    assert_nil read_filter(:uuid_list_filter_param, nil)
+    assert_nil filter_reader(flag: nil).send(:uuid_list_filter_param, :flag), "a JSON null is absent"
+    assert_nil read_filter(:uuid_list_filter_param, []), "a bare key[] (Rails reads it as []) is absent"
+    assert_invalid_filter "flag must be a list of valid UUIDs", :uuid_list_filter_param,
+      "", [ "" ], [ first, "123" ], "123", { "0" => first }
+  end
+
+  test "enum_filter_param reads an exact member of the allowed values" do
+    allowed = %w[pending complete]
+    assert_equal "pending", filter_reader(flag: "pending").send(:enum_filter_param, :flag, allowed)
+    assert_equal "complete", filter_reader(flag: " complete ").send(:enum_filter_param, :flag, allowed)
+    assert_nil filter_reader({}).send(:enum_filter_param, :flag, allowed)
+    [ "", "Pending", "unknown", [ "pending" ] ].each do |raw|
+      assert_raises_filter("flag must be one of: pending, complete") do
+        filter_reader(flag: raw).send(:enum_filter_param, :flag, allowed)
+      end
+    end
+  end
+
+  test "enum_filter_param with ignore_case reads any case as the allowed value" do
+    allowed = %w[income expense]
+    assert_equal "income", filter_reader(flag: "Income").send(:enum_filter_param, :flag, allowed, ignore_case: true)
+    assert_equal "expense", filter_reader(flag: " EXPENSE ").send(:enum_filter_param, :flag, allowed, ignore_case: true)
+    [ "", "transfer", [ "income" ] ].each do |raw|
+      assert_raises_filter("flag must be one of: income, expense") do
+        filter_reader(flag: raw).send(:enum_filter_param, :flag, allowed, ignore_case: true)
+      end
+    end
+  end
+
+  test "string_filter_param reads a stripped string, blank as absent" do
+    assert_equal "coffee shop", read_filter(:string_filter_param, "  coffee shop ")
+    assert_nil read_filter(:string_filter_param, "   ")
+    assert_nil read_filter(:string_filter_param, nil)
+    assert_invalid_filter "flag must be a string", :string_filter_param, [ "coffee" ], { "a" => "coffee" }
+  end
+
 private
+
+  # A controller holding `flag=raw` (or no flag when raw is nil), as Rails
+  # would parse it from a query string.
+  def filter_reader(params)
+    Api::V1::BaseController.new.tap { |controller| controller.params = ActionController::Parameters.new(params) }
+  end
+
+  def read_filter(reader, raw)
+    filter_reader(raw.nil? ? {} : { flag: raw }).send(reader, :flag)
+  end
+
+  def assert_invalid_filter(message, reader, *raws)
+    raws.each do |raw|
+      assert_raises_filter(message, raw.inspect) { read_filter(reader, raw) }
+    end
+  end
+
+  def assert_raises_filter(message, context = nil)
+    error = assert_raises(Api::V1::BaseController::InvalidFilterError, *context) { yield }
+    assert_equal message, error.message, context
+  end
 
   def capture_log(&block)
     io = StringIO.new

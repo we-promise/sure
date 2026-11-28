@@ -51,7 +51,8 @@ class Assistant::Function::GetRecurringTransactions < Assistant::Function
       .includes(:merchant, :account, :destination_account)
 
     status = params["status"].presence_in([ "active", "inactive", "all" ]) || "active"
-    scope = scope.where(status: status) unless status == "all"
+    scope = RecurringTransaction::Search.new(scope, filters: { status: (status unless status == "all") })
+      .recurring_transactions_scope
 
     if params["upcoming_within_days"].present?
       days = params["upcoming_within_days"].to_i.clamp(1, 365)

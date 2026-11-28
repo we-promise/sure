@@ -6,30 +6,21 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
   NATURES = %w[income expense inflow outflow].freeze
   INVALID_NATURE_MESSAGE = "nature must be one of: #{NATURES.join(", ")}".freeze
+  # The index `type` filter, as Transaction::Search natures.
+  TYPE_FILTER_NATURES = { "income" => "inflow", "expense" => "outflow" }.freeze
 
   # Ensure proper scope authorization for read vs write access
   before_action :ensure_read_scope, only: [ :index, :show ]
   before_action :ensure_write_scope, only: [ :create, :update, :destroy ]
   before_action :set_transaction, only: [ :show, :update, :destroy ]
+  # Outside index's catch-all rescue so a bad filter is a 404/422, not a 500.
+  before_action :set_search, only: :index
   before_action :ensure_write_permission, only: [ :update, :destroy ]
+  # Outside the write actions' catch-all rescues for the same reason.
+  before_action :set_user_modified, only: [ :create, :update ]
 
   def index
-    family = current_resource_owner.family
-    accessible_account_ids = family.accounts
-      .accessible_by(current_resource_owner)
-      .where.not(status: "pending_deletion")
-      .select(:id)
-    transactions_query = family.transactions
-      .joins(:entry).where(entries: { account_id: accessible_account_ids })
-
-    # Apply filters
-    transactions_query = apply_filters(transactions_query)
-
-    # Apply search
-    transactions_query = apply_search(transactions_query) if params[:search].present?
-
-    # Include necessary associations for efficient queries
-    transactions_query = transactions_query.includes(
+    transactions_query = @search.transactions_scope.includes(
       { entry: :account },
       :category, :merchant, :tags,
       transfer_as_outflow: { inflow_transaction: { entry: :account } },
@@ -114,7 +105,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     if @entry.save
       @entry.lock_saved_attributes!
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
-      @entry.mark_user_modified! if user_modified_requested?
+      @entry.mark_user_modified! if @user_modified
       @entry.sync_account_later
       @entry.apply_immediate_rules_later
 
@@ -183,7 +174,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
         @entry.sync_account_later if sync_needed
         @entry.lock_saved_attributes!
-        @entry.mark_user_modified! if user_modified_requested?
+        @entry.mark_user_modified! if @user_modified
 
         @transaction = @entry.transaction
         updated = true
@@ -264,97 +255,60 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       ).empty?
     end
 
-    def ensure_read_scope
-      authorize_scope!(:read)
+    def accessible_account_ids
+      current_resource_owner.family.accounts
+        .accessible_by(current_resource_owner)
+        .where.not(status: "pending_deletion")
+        .select(:id)
+    end
+
+    # Parses the index filters into Transaction::Search, the query the web
+    # list runs. The API keeps every account the caller can read, disabled ones
+    # included, and also searches merchant names.
+    def set_search
+      @search = Transaction::Search.new(
+        current_resource_owner.family,
+        filters: {
+          account_id: uuid_filter_param(:account_id),
+          account_ids: uuid_list_filter_param(:account_ids),
+          category_id: uuid_filter_param(:category_id),
+          category_ids: uuid_list_filter_param(:category_ids),
+          merchant_id: uuid_filter_param(:merchant_id),
+          merchant_ids: uuid_list_filter_param(:merchant_ids),
+          tag_ids: uuid_list_filter_param(:tag_ids),
+          start_date: date_filter_param(:start_date),
+          end_date: date_filter_param(:end_date),
+          min_amount: decimal_filter_param(:min_amount),
+          max_amount: decimal_filter_param(:max_amount),
+          nature: TYPE_FILTER_NATURES[enum_filter_param(:type, TYPE_FILTER_NATURES.keys, ignore_case: true)],
+          search: string_filter_param(:search),
+          excluded: boolean_filter_param(:excluded),
+          active_accounts_only: false
+        },
+        accessible_account_ids:,
+        budget: requested_budget,
+        include_split_parents: boolean_filter_param(:exclude_split_parents) != true,
+        search_merchant_names: true
+      )
+    end
+
+    # Same visibility as GET /api/v1/budgets/:id: the household budget, the
+    # caller's own, or one its owner shared with the caller. Its rows stay
+    # within the caller's accessible accounts: a budget share does not share
+    # the owner's accounts.
+    def requested_budget
+      budget_id = uuid_filter_param(:budget_id)
+      return if budget_id.nil?
+
+      budget = current_resource_owner.family.budgets.find_by(id: budget_id)
+      raise ActiveRecord::RecordNotFound, "Budget not found" unless budget&.viewable_by?(current_resource_owner)
+
+      budget.current_user = current_resource_owner
+      budget
     end
 
     def ensure_write_scope
       authorize_scope!(:write)
-    end
-
-    def apply_filters(query)
-      # Account filtering
-      if params[:account_id].present?
-        query = query.where(entries: { account_id: params[:account_id] })
-      end
-
-      if params[:account_ids].present?
-        account_ids = Array(params[:account_ids])
-        query = query.where(entries: { account_id: account_ids })
-      end
-
-      # Category filtering
-      if params[:category_id].present?
-        query = query.where(category_id: params[:category_id])
-      end
-
-      if params[:category_ids].present?
-        category_ids = Array(params[:category_ids])
-        query = query.where(category_id: category_ids)
-      end
-
-      # Merchant filtering
-      if params[:merchant_id].present?
-        query = query.where(merchant_id: params[:merchant_id])
-      end
-
-      if params[:merchant_ids].present?
-        merchant_ids = Array(params[:merchant_ids])
-        query = query.where(merchant_id: merchant_ids)
-      end
-
-      # Date range filtering
-      if params[:start_date].present?
-        query = query.where("entries.date >= ?", Date.parse(params[:start_date]))
-      end
-
-      if params[:end_date].present?
-        query = query.where("entries.date <= ?", Date.parse(params[:end_date]))
-      end
-
-      # Amount filtering
-      if params[:min_amount].present?
-        min_amount = params[:min_amount].to_f
-        query = query.where("entries.amount >= ?", min_amount)
-      end
-
-      if params[:max_amount].present?
-        max_amount = params[:max_amount].to_f
-        query = query.where("entries.amount <= ?", max_amount)
-      end
-
-      # Tag filtering
-      if params[:tag_ids].present?
-        tag_ids = Array(params[:tag_ids])
-        query = query.where(
-          id: query.joins(:tags).where(tags: { id: tag_ids }).distinct.select(:id)
-        )
-      end
-
-      # Transaction type filtering (income/expense)
-      if params[:type].present?
-        case params[:type].downcase
-        when "income"
-          query = query.where("entries.amount < 0")
-        when "expense"
-          query = query.where("entries.amount > 0")
-        end
-      end
-
-      query
-    end
-
-    def apply_search(query)
-      # Escape the caller's term so "%" and "_" match literally instead of
-      # acting as ILIKE wildcards, where a bare "%" returns everything.
-      search_term = "%#{ActiveRecord::Base.sanitize_sql_like(params[:search].to_s)}%"
-
-      query
-        .left_joins(:merchant)
-        .where(
-          "entries.name ILIKE ? OR entries.notes ILIKE ? OR merchants.name ILIKE ?",
-          search_term, search_term, search_term
-        )
     end
 
     def transaction_params
@@ -370,8 +324,8 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     # linked to a bank-sync provider (Plaid/SimpleFin/etc.), so the next
     # sync only links its external_id to the entry instead of overwriting
     # the category/name the client already set.
-    def user_modified_requested?
-      ActiveModel::Type::Boolean.new.cast(transaction_params[:user_modified])
+    def set_user_modified
+      @user_modified = boolean_filter_param(:user_modified, within: :transaction)
     end
 
     def account_id_param
@@ -562,21 +516,6 @@ class Api::V1::TransactionsController < Api::V1::BaseController
         amount.abs   # Expense is positive
       else
         amount       # Use as provided
-      end
-    end
-
-    def safe_page_param
-      page = params[:page].to_i
-      page > 0 ? page : 1
-    end
-
-    def safe_per_page_param
-      per_page = params[:per_page].to_i
-      case per_page
-      when 1..100
-        per_page
-      else
-        25  # Default
       end
     end
 end

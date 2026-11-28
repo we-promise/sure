@@ -90,15 +90,14 @@ RSpec.describe 'API V1 Valuations', type: :request do
       produces 'application/json'
       parameter name: :page, in: :query, type: :integer, required: false,
                 description: 'Page number (default: 1)'
-      parameter name: :per_page, in: :query, type: :integer, required: false,
-                description: 'Items per page (default: 25, max: 100)'
-      parameter name: :account_id, in: :query, required: false, description: 'Filter by account ID',
+      parameter name: :per_page, in: :query, type: :integer, required: false, description: API_PER_PAGE_DESCRIPTION
+      parameter name: :account_id, in: :query, required: false, description: 'Filter by account ID. Must be a UUID; anything else returns 422.',
                 schema: { type: :string, format: :uuid }
       parameter name: :start_date, in: :query, required: false,
-                description: 'Filter valuations from this date',
+                description: 'Filter valuations on or after this date (YYYY-MM-DD; anything else returns 422)',
                 schema: { type: :string, format: :date }
       parameter name: :end_date, in: :query, required: false,
-                description: 'Filter valuations until this date',
+                description: 'Filter valuations on or before this date (YYYY-MM-DD; anything else returns 422)',
                 schema: { type: :string, format: :date }
 
       response '200', 'valuations listed' do
@@ -147,17 +146,15 @@ RSpec.describe 'API V1 Valuations', type: :request do
               amount: { type: :number, description: 'Valuation amount (required)' },
               date: { type: :string, format: :date, description: 'Valuation date (required)' },
               notes: { type: :string, description: 'Additional notes' },
-              upsert: {
-                type: :boolean,
-                description: 'Nested alternative to the top-level response-status flag. Top-level upsert takes precedence when both are provided.'
-              }
+              upsert: API_STRICT_FLAG_SCHEMA.merge(
+                description: 'Nested alternative to the top-level response-status flag. Top-level upsert takes precedence when both are provided. true or false (also 1 or 0, any case); null is the same as leaving it out; any other value returns 422.'
+              )
             },
             required: %w[account_id amount date]
           },
-          upsert: {
-            type: :boolean,
-            description: 'Response-status signal only. When true and a same-account same-date valuation exists before the request, the endpoint returns 200 OK instead of 201 Created. The underlying reconciliation write path is unchanged; this flag does not add duplicate-prevention or safe-retry guarantees beyond existing same-date reconciliation behavior.'
-          }
+          upsert: API_STRICT_FLAG_SCHEMA.merge(
+            description: 'Response-status signal only. When true and a same-account same-date valuation exists before the request, the endpoint returns 200 OK instead of 201 Created. The underlying reconciliation write path is unchanged; this flag does not add duplicate-prevention or safe-retry guarantees beyond existing same-date reconciliation behavior. true or false (also 1 or 0, any case); null is the same as leaving it out; any other value returns 422 and writes nothing.'
+          )
         },
         required: %w[valuation]
       }

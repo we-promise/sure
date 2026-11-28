@@ -39,10 +39,11 @@ The `GET /api/v1/categories` endpoint supports the following query parameters fo
 | Parameter | Type | Description |
 | --- | --- | --- |
 | `page` | integer | Page number (default: 1) |
-| `per_page` | integer | Items per page (default: 25, max: 100) |
-| `classification` | string | Filter by classification: `income` or `expense` |
-| `roots_only` | boolean | Return only root categories (categories without a parent) |
+| `per_page` | integer | Items per page (default: 25, max: 100; larger values are capped at 100) |
+| `roots_only` | boolean | Return only root categories (categories without a parent). Accepts `true`, `false`, `1` or `0` |
 | `parent_id` | uuid | Filter subcategories by parent category ID |
+
+A filter that is present must be valid: any other `roots_only` value, or a `parent_id` that is not a UUID, returns `422` with `error: "validation_failed"`.
 
 ## Category object
 
@@ -52,7 +53,6 @@ A category response includes:
 {
   "id": "uuid",
   "name": "Food & Drink",
-  "classification": "expense",
   "color": "#f97316",
   "icon": "utensils",
   "parent": null,
@@ -75,7 +75,6 @@ Example subcategory response:
 {
   "id": "uuid",
   "name": "Restaurants",
-  "classification": "expense",
   "color": "#f97316",
   "icon": "utensils",
   "parent": {
@@ -88,24 +87,7 @@ Example subcategory response:
 }
 ```
 
-## Classification types
-
-Categories are classified into two types:
-
-| Classification | Description |
-| --- | --- |
-| `income` | Categories for income transactions (salary, investments, etc.) |
-| `expense` | Categories for expense transactions (food, utilities, etc.) |
-
-Subcategories inherit the classification of their parent category.
-
 ## Filtering examples
-
-### Get all expense categories
-
-```
-GET /api/v1/categories?classification=expense
-```
 
 ### Get only root categories (no subcategories)
 
@@ -122,7 +104,7 @@ GET /api/v1/categories?parent_id=<parent-category-uuid>
 ### Combine filters with pagination
 
 ```
-GET /api/v1/categories?classification=expense&roots_only=true&page=1&per_page=10
+GET /api/v1/categories?roots_only=true&page=1&per_page=10
 ```
 
 ## Error responses
@@ -136,4 +118,4 @@ Errors conform to the shared `ErrorResponse` schema in the OpenAPI document:
 }
 ```
 
-Common error codes include `unauthorized`, `not_found`, and `internal_server_error`.
+Common error codes include `unauthorized`, `not_found`, `validation_failed` (an invalid filter, with the reason in `errors`), and `internal_server_error`.
