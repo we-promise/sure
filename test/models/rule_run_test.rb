@@ -58,6 +58,17 @@ class RuleRunTest < ActiveSupport::TestCase
     assert_equal 1, rule_run.pending_jobs_count, "the other batch is still running"
   end
 
+  test "a job reporting to a run its rule's deletion removed settles nothing" do
+    # The job's own copy of the run, loaded before the rule went.
+    rule_run = RuleRun.find(create_rule_run(pending_jobs_count: 2).id)
+    @rule.destroy!
+
+    assert_no_difference "DebugLogEntry.count" do
+      rule_run.complete_job!(job_id: "job-a", modified_count: 1)
+      rule_run.fail_job!(job_id: "job-b", error: RuntimeError.new("boom"), source: "AutoCategorizeJob")
+    end
+  end
+
   test "fail_job deduplicates repeated error messages individually" do
     rule_run = create_rule_run(pending_jobs_count: 3)
 
