@@ -14,6 +14,28 @@ class BinanceItemsControllerTest < ActionDispatch::IntegrationTest
     )
   end
 
+  test "accounts page distinguishes missing prices from missing FX and clears the warning" do
+    account = Account.create!(family: @family, name: "Binance warning test", balance: 850,
+                              currency: "USD", accountable: Crypto.create!(subtype: "exchange"))
+    ba = @binance_item.binance_accounts.create!(name: "Binance", currency: "USD", account_type: "combined",
+                                               extra: { "binance" => { "incomplete_valuation" => true, "stale_rate" => false } })
+    AccountProvider.create!(account: account, provider: ba)
+    warning = "Balance unchanged: some asset prices were unavailable. Will retry on next sync."
+
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{ActionView::RecordIdentifier.dom_id(@binance_item)}" do
+      assert_select "[role='status']", text: /#{Regexp.escape(warning)}/
+      assert_select "span", text: /exact exchange rate/, count: 0
+    end
+
+    ba.update!(extra: { "binance" => { "incomplete_valuation" => false, "stale_rate" => false } })
+    get accounts_url
+    assert_response :success
+    assert_no_match warning, response.body
+  end
+
   test "should destroy binance item" do
     assert_difference("BinanceItem.count", 0) do # doesn't delete immediately
       delete binance_item_url(@binance_item)

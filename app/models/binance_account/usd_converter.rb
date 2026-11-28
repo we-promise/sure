@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 # Shared currency conversion helpers for Binance processors.
-# Converts USD amounts to the family's configured base currency using
+# Converts USD amounts to the linked account currency using
 # ExchangeRate.find_or_fetch_rate (which has a built-in 5-day nearest-rate lookback).
-# When a fallback or no rate is used, sets a stale flag in account.extra["binance"].
+# A nearest-date rate is marked stale; a missing rate must not relabel USD.
 module BinanceAccount::UsdConverter
   private
 
@@ -11,14 +11,15 @@ module BinanceAccount::UsdConverter
     # @return [Array(BigDecimal, Boolean, Date|nil)]
     #   [converted_amount, stale, rate_date_used]
     #   stale is false when the exact date rate was found, true otherwise.
-    #   rate_date_used is nil when exact rate was used or no rate found.
-    def convert_from_usd(amount, date: Date.current)
+    #   rate_date_used is nil when the exact rate was used.
+    def convert_from_usd(amount, date: Date.current, valuation_complete: true)
+      return [ 0.to_d, false, nil ] if amount.to_d.zero? && valuation_complete
       return [ amount, false, nil ] if target_currency == "USD"
 
       rate = ExchangeRate.find_or_fetch_rate(from: "USD", to: target_currency, date: date)
 
       if rate.nil?
-        return [ amount.to_d, true, nil ]
+        raise Money::ConversionError.new(from_currency: "USD", to_currency: target_currency, date: date)
       end
 
       converted = Money.new(amount, "USD").exchange_to(target_currency, custom_rate: rate.rate).amount

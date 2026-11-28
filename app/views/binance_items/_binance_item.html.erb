@@ -101,6 +101,12 @@
               </span>
             </div>
           <% end %>
+          <% binance_item.incomplete_valuation_accounts.where(accounts: { id: visible_accounts.map(&:id) }).each do |_ba| %>
+            <%= render DS::Alert.new(
+              variant: :warning, live: :status,
+              message: t("binance_items.binance_item.incomplete_valuation_warning")
+            ) %>
+          <% end %>
         <% end %>
 
         <% stats = binance_item.syncs.ordered.first&.sync_stats || {} %>

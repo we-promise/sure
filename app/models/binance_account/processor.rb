@@ -4,6 +4,8 @@
 class BinanceAccount::Processor
   include BinanceAccount::UsdConverter
 
+  class IncompleteValuation < StandardError; end
+
   # Quote currencies probed when fetching trade history. Ordered by prevalence so
   # the most common pairs are tried first and rate-limit weight is front-loaded.
   TRADE_QUOTE_CURRENCIES = %w[USDT BUSD FDUSD BTC ETH BNB].freeze
@@ -38,8 +40,31 @@ class BinanceAccount::Processor
       Rails.logger.error "BinanceAccount::Processor - holdings failed for #{binance_account.id}: #{e.message}"
     end
 
+    balance_error = nil
     begin
       process_account!
+    rescue Money::ConversionError => e
+      binance_account.update!(extra: binance_account.extra.to_h.deep_merge(build_stale_extra(true, nil, e.date)))
+      DebugLogEntry.capture(
+        category: "provider_sync", level: "error", message: e.message,
+        source: self.class.name, provider_key: "binance",
+        family: binance_account.current_account.family,
+        account_provider: binance_account.account_provider,
+        metadata: {
+          from_currency: e.from_currency, to_currency: e.to_currency, date: e.date,
+          incomplete_valuation: binance_account.extra.dig("binance", "incomplete_valuation") == true
+        }
+      )
+      balance_error = e
+    rescue IncompleteValuation => e
+      DebugLogEntry.capture(
+        category: "provider_sync", level: "warn", message: e.message,
+        source: self.class.name, provider_key: "binance",
+        family: binance_account.current_account.family,
+        account_provider: binance_account.account_provider,
+        metadata: { incomplete_valuation: true }
+      )
+      balance_error = e
     rescue StandardError => e
       Rails.logger.error "BinanceAccount::Processor - account update failed for #{binance_account.id}: #{e.message}"
       raise
@@ -50,19 +75,34 @@ class BinanceAccount::Processor
     # The account was created, and anchored, before any of this history
     # existed. Now that it does, the anchor has to precede it.
     binance_account.current_account.ensure_opening_anchor_precedes_entries
+    raise balance_error if balance_error
   end
 
   private
 
     def target_currency
-      binance_account.binance_item.family.currency
+      binance_account.current_account.currency
     end
 
     def process_account!
       account  = binance_account.current_account
       raw_usd  = (binance_account.current_balance || 0).to_d
-      amount, stale, rate_date = convert_from_usd(raw_usd, date: Date.current)
+      payload = binance_account.raw_payload.to_h
+      # Older payloads have no completeness flag; nonzero assets cannot prove an empty wallet.
+      complete = payload.fetch("valuation_complete") do
+        !raw_usd.zero? || (payload["assets"].is_a?(Array) && payload["assets"].none? { |asset| asset["total"].to_d.nonzero? })
+      end
+      unless complete
+        binance_account.update!(extra: binance_account.extra.to_h.deep_merge("binance" => { "incomplete_valuation" => true }))
+      end
+      amount, stale, rate_date = convert_from_usd(raw_usd, date: Date.current, valuation_complete: complete)
       stale_extra = build_stale_extra(stale, rate_date, Date.current)
+      unless complete
+        warning_extra = stale_extra.deep_merge("binance" => { "incomplete_valuation" => true })
+        binance_account.update!(extra: binance_account.extra.to_h.deep_merge(warning_extra))
+        raise IncompleteValuation, "Binance asset prices are unavailable; keeping the previous balance"
+      end
+      stale_extra = stale_extra.deep_merge("binance" => { "incomplete_valuation" => false })
 
       account.update!(
         balance:      amount,
