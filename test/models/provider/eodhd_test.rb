@@ -345,6 +345,94 @@ class Provider::EodhdTest < ActiveSupport::TestCase
     end
   end
 
+  test "a fundamentals call is refused when it would leave fewer than the price reserve" do
+    with_fresh_cache do
+      # Free cap of 20, reserve of 5: 6 + 10 would leave 4
+      Rails.cache.write("eodhd:daily:#{Date.current}", 6)
+      @provider.unstub(:count_request_attempt!)
+
+      with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => nil) do
+        result = @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS")
+
+        assert_not result.success?
+        assert_kind_of Provider::Eodhd::RateLimitError, result.error
+      end
+      assert_not_requested :get, FUNDAMENTALS_URL, query: hash_including("fmt" => "json")
+      assert_equal 6, Rails.cache.read("eodhd:daily:#{Date.current}")
+    end
+  end
+
+  test "on the free cap a fundamentals call still fits after a price call the same day" do
+    with_fresh_cache do
+      @provider.unstub(:count_request_attempt!)
+      stub_request(:get, %r{\Ahttps://eodhd\.com/api/eod/AAPL\.US})
+        .with(query: hash_including("fmt" => "json"))
+        .to_return(status: 200, body: [ { "date" => "2026-08-21", "close" => 1.0 } ].to_json)
+      stub_request(:get, FUNDAMENTALS_URL)
+        .with(query: hash_including("fmt" => "json"))
+        .to_return(status: 200, body: { "General" => { "Name" => "Apple Inc" } }.to_json)
+
+      with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => nil) do
+        assert @provider.fetch_security_prices(
+          symbol: "AAPL", exchange_operating_mic: "XNYS",
+          start_date: Date.new(2026, 8, 21), end_date: Date.new(2026, 8, 21)
+        ).success?
+        assert @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
+      end
+      assert_equal 11, Rails.cache.read("eodhd:daily:#{Date.current}")
+    end
+  end
+
+  test "a raised cap keeps a price reserve of ten" do
+    with_fresh_cache do
+      # 81 + 10 would leave 9 of 100
+      Rails.cache.write("eodhd:daily:#{Date.current}", 81)
+      @provider.unstub(:count_request_attempt!)
+
+      with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => "100") do
+        result = @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS")
+
+        assert_not result.success?
+        assert_kind_of Provider::Eodhd::RateLimitError, result.error
+      end
+      assert_not_requested :get, FUNDAMENTALS_URL, query: hash_including("fmt" => "json")
+      assert_equal 81, Rails.cache.read("eodhd:daily:#{Date.current}")
+    end
+  end
+
+  test "a fundamentals call that leaves exactly the price reserve is allowed" do
+    with_fresh_cache do
+      Rails.cache.write("eodhd:daily:#{Date.current}", 5)
+      @provider.unstub(:count_request_attempt!)
+      stub_request(:get, FUNDAMENTALS_URL)
+        .with(query: hash_including("fmt" => "json"))
+        .to_return(status: 200, body: { "General" => { "Name" => "Apple Inc" } }.to_json)
+
+      with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => nil) do
+        assert @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
+      end
+      assert_equal 15, Rails.cache.read("eodhd:daily:#{Date.current}")
+    end
+  end
+
+  test "a price request may use the calls reserved for prices" do
+    with_fresh_cache do
+      Rails.cache.write("eodhd:daily:#{Date.current}", 19)
+      @provider.unstub(:count_request_attempt!)
+      stub_request(:get, %r{\Ahttps://eodhd\.com/api/eod/AAPL\.US})
+        .with(query: hash_including("fmt" => "json"))
+        .to_return(status: 200, body: [ { "date" => "2026-08-21", "close" => 1.0 } ].to_json)
+
+      with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => nil) do
+        assert @provider.fetch_security_prices(
+          symbol: "AAPL", exchange_operating_mic: "XNYS",
+          start_date: Date.new(2026, 8, 21), end_date: Date.new(2026, 8, 21)
+        ).success?
+      end
+      assert_equal 20, Rails.cache.read("eodhd:daily:#{Date.current}")
+    end
+  end
+
   test "a fundamentals call is refused when fewer than ten requests remain" do
     with_fresh_cache do
       Rails.cache.write("eodhd:daily:#{Date.current}", 15)
@@ -392,9 +480,8 @@ class Provider::EodhdTest < ActiveSupport::TestCase
         .raises(Faraday::ForbiddenError.new("403")).then.returns(prices)
 
       with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => nil) do
-        2.times do
-          @provider.send(:reserve_daily_limit!, cost: Provider::Eodhd::FUNDAMENTALS_REQUEST_COST)
-        end
+        # Written directly: a second reservation of ten would leave nothing for prices and be refused
+        Rails.cache.write("eodhd:daily:#{Date.current}", 20)
         assert_not @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
         assert_not @provider.fetch_security_info(symbol: "MSFT", exchange_operating_mic: "XNYS").success?
         assert_equal 2, Rails.cache.read("eodhd:daily:#{Date.current}")
@@ -460,7 +547,8 @@ class Provider::EodhdTest < ActiveSupport::TestCase
       # Twice: a 402 leaves no "failed recently" marker, so the next lookup still asks EODHD
       mock_client.expects(:get).twice.raises(Faraday::ClientError.new("402", { status: 402 }))
 
-      with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => nil) do
+      # Above the free cap, so the second reservation (10 -> 20) still leaves the price reserve
+      with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => "100") do
         2.times do
           @provider.send(:reserve_daily_limit!, cost: Provider::Eodhd::FUNDAMENTALS_REQUEST_COST)
           assert_not @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
@@ -516,10 +604,10 @@ class Provider::EodhdTest < ActiveSupport::TestCase
     end
   end
 
-  test "a retried fundamentals request that would exceed the daily limit is refused before reaching EODHD" do
+  test "a retried fundamentals request that would leave too little for prices is refused before reaching EODHD" do
     store = ActiveSupport::Cache::MemoryStore.new
     with_fresh_cache(store) do
-      store.write("eodhd:daily:#{Date.current}", 5)
+      store.write("eodhd:daily:#{Date.current}", 0)
       @provider.unstub(:count_request_attempt!)
       # The budget is checked before the interval throttle, so the refused retry
       # never sleeps: only the first attempt is throttled.
@@ -536,10 +624,11 @@ class Provider::EodhdTest < ActiveSupport::TestCase
         assert_kind_of Provider::Eodhd::RateLimitError, result.error
       end
 
-      # The first attempt is reserved (5 -> 15) and reaches the wire; the retry
-      # (15 -> 25) is refused before it and taken back off the count.
+      # The first attempt is reserved (0 -> 10) and reaches the wire; the retry
+      # (10 -> 20) would leave nothing for prices and is refused before it,
+      # taken back off the count.
       assert_requested :get, FUNDAMENTALS_URL, query: hash_including("fmt" => "json"), times: 1
-      assert_equal 15, store.read("eodhd:daily:#{Date.current}")
+      assert_equal 10, store.read("eodhd:daily:#{Date.current}")
 
       # Our own quota refusal says nothing about the ticker, so it is not remembered
       # as a failed fundamentals lookup.

@@ -16,6 +16,13 @@ class Provider::Eodhd < Provider
   # EODHD bills each fundamentals request as 10 API calls against the daily allowance
   FUNDAMENTALS_REQUEST_COST = 10
 
+  # A fundamentals call must not take the last calls a price refresh needs that
+  # day, so it is refused while fewer than the price reserve remain. The reserve
+  # is a quarter of the daily cap, at most ten: on the free cap of 20 a fixed ten
+  # would refuse every details call once a single price had been fetched.
+  MAX_PRICE_RESERVE = FUNDAMENTALS_REQUEST_COST
+  PRICE_RESERVE_SHARE = 0.25
+
   # A fundamentals response is large and slow to start, so it gets a 60 s read
   # limit rather than the client's 20 s: each retry after a timeout bills
   # another ten calls.
@@ -399,6 +406,8 @@ class Provider::Eodhd < Provider
     # Uses atomic increment-then-check to avoid TOCTOU races between concurrent workers.
     # `cost` is how many API calls EODHD bills for the request. A refused request is
     # taken back off the count, so a refused fundamentals call leaves the rest for prices.
+    # A fundamentals call is also refused while it would leave fewer than
+    # price_reserve calls, so a later price refresh still fits.
     # Between the increment and the refund a concurrent request sees the higher count and
     # may be refused although it would fit; that costs it one retry on the next sync.
     # Returns the counter key, so a later refund goes to the same day even after midnight.
@@ -411,7 +420,20 @@ class Provider::Eodhd < Provider
         raise RateLimitError, "EODHD daily rate limit of #{max_requests_per_day} requests exhausted"
       end
 
+      if fundamentals_cost?(cost) && max_requests_per_day - new_count < price_reserve
+        refund_daily_requests(cost, key: key)
+        raise RateLimitError, "EODHD daily rate limit leaves fewer than #{price_reserve} requests for prices"
+      end
+
       key
+    end
+
+    def fundamentals_cost?(cost)
+      cost == FUNDAMENTALS_REQUEST_COST
+    end
+
+    def price_reserve
+      [ MAX_PRICE_RESERVE, (max_requests_per_day * PRICE_RESERVE_SHARE).floor ].min
     end
 
     # Takes requests back off the count they were added to. If the counter vanished in
