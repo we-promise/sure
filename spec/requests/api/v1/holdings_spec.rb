@@ -36,6 +36,7 @@ RSpec.describe 'API V1 Holdings', type: :request do
   let(:account) do
     Account.create!(
       family: family,
+      owner: user,
       name: 'Investment Account',
       balance: 50_000,
       currency: 'USD',
@@ -65,6 +66,7 @@ RSpec.describe 'API V1 Holdings', type: :request do
 
   path '/api/v1/holdings' do
     get 'List holdings' do
+      description 'Holdings are ordered by date, then by holding ID for rows on the same date.'
       tags 'Holdings'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'

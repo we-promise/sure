@@ -1,0 +1,7 @@
+---
+zh-CN:
+  push_notifications:
+    budget_description: 当预算分类接近上限时也通知我。超出预算的提醒始终会发送。默认关闭。
+    budget_title: 预算预警
+    description: 适用于您已启用的所有设备（浏览器和 iOS）。
+    title: 推送通知

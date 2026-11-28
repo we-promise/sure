@@ -17,6 +17,10 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :web_push_subscriptions, only: [ :create, :show, :destroy ] do
+    post :test_notification, on: :member
+  end
+
   resources :questrade_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
     collection do
       get :preload_accounts
@@ -179,6 +183,7 @@ Rails.application.routes.draw do
       get :oauth_callback
       get :oauth_device_authorize
       post :start_oauth_device_flow
+      post :personal_key
     end
 
     member do
@@ -307,7 +312,7 @@ Rails.application.routes.draw do
   get ".well-known/oauth-authorization-server", to: "oauth_metadata#authorization_server"
   post "register", to: "oauth_registration#create"
   use_doorkeeper do |mapping|
-    mapping.controllers authorizations: "oauth/authorizations"
+    mapping.controllers authorizations: "oauth/authorizations", tokens: "oauth/tokens"
   end
   # MFA routes
   resource :mfa, controller: "mfa", only: [ :new, :create ] do
@@ -418,7 +423,9 @@ Rails.application.routes.draw do
   resource :onboarding, only: :show do
     collection do
       get :preferences
-      get :goals
+      get :tools
+      patch :tools, action: :update_tools
+      get :goals, to: redirect("/onboarding/tools")
       get :trial
     end
   end
@@ -595,6 +602,10 @@ Rails.application.routes.draw do
       post :reset_security
       post :sync_prices
     end
+
+    resources :lots, only: :update, controller: "holding_lots" do
+      post :unlock, on: :member
+    end
   end
   resources :trades, only: %i[show new create update destroy] do
     member do
@@ -750,6 +761,7 @@ Rails.application.routes.draw do
       get :sparkline
       patch :toggle_active
       patch :toggle_exclude_from_reports
+      patch :reconcile_all
       patch :set_default
       patch :remove_default
       get :select_provider

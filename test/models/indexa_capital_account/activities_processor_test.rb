@@ -160,7 +160,7 @@ class IndexaCapitalAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     processor = IndexaCapitalAccount::ActivitiesProcessor.new(@indexa_capital_account)
     result = processor.process
 
-    assert_equal({ trades: 0, transactions: 0 }, result)
+    assert_equal({ trades: 0, transactions: 0, failed: 0 }, result)
   end
 
   private

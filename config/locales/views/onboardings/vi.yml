@@ -5,7 +5,7 @@ vi:
       sign_out: Đăng xuất
       setup: Thiết lập
       preferences: Tùy chọn
-      goals: Mục tiêu
+      tools: Công cụ/AI
       start: Bắt đầu
     logout:
       sign_out: Đăng xuất
@@ -38,17 +38,48 @@ vi:
       currency: Tiền tệ
       date_format: Định dạng ngày
       submit: Hoàn tất
-    goals:
-      title: Điều gì đưa bạn đến đây?
-      subtitle: Chọn một hoặc nhiều mục tiêu bạn muốn đạt được khi sử dụng %{product_name} làm công cụ tài chính cá nhân.
-      unified_accounts: Xem tất cả tài khoản ở một nơi
-      cashflow: Hiểu dòng tiền và chi tiêu
-      budgeting: Quản lý kế hoạch tài chính và ngân sách
-      partner: Quản lý tài chính cùng người thân
-      investments: Theo dõi đầu tư
-      ai_insights: Để AI giúp tôi hiểu tài chính
-      optimization: Phân tích và tối ưu hóa tài khoản
-      reduce_stress: Giảm căng thẳng hoặc lo lắng về tài chính
+    tools:
+      title: Cứ tự nhiên như ở nhà.
+      subtitle: Vài lựa chọn để %{product_name} trở thành của riêng bạn.
+      starting_point:
+        eyebrow: Điểm xuất phát của bạn
+        title: Bạn đã dùng công cụ nào?
+        description: Chọn các công cụ bạn dùng để quản lý tài chính hộ gia đình.
+        select: Chọn công cụ của bạn
+        other_placeholder: Công cụ khác (không bắt buộc)
+        hint: Chọn tất cả các mục phù hợp. Thông tin này giúp chúng tôi gợi ý điểm xuất phát, không có nghĩa là hỗ trợ nhập dữ liệu từ các công cụ đó.
+        tools:
+          nothing_yet: Chưa dùng công cụ nào
+          other: Khác
+      ai:
+        eyebrow: Tùy chọn AI của bạn
+        title: Bạn muốn dùng %{product_name} như thế nào?
+        description: Bạn toàn quyền quyết định. Hãy chọn điều phù hợp với bạn.
+        default: Mặc định
+        modes:
+          none:
+            title: Không dùng AI
+            description: Quản lý tài chính mà không dùng trợ lý trong ứng dụng.
+          builtin:
+            title: AI tích hợp sẵn
+            description: Bật trợ lý trong ứng dụng, dùng nhà cung cấp AI của phiên bản này.
+          external:
+            title: Dùng tác nhân AI của riêng bạn
+            description: Dùng trợ lý của riêng bạn, được kết nối khi bạn cho phép.
+        panels:
+          admin_on: Với tư cách quản trị viên, lựa chọn này cũng là sự đồng ý của hộ gia đình bạn cho các tính năng AI chạy ngầm, như phân loại.
+          admin_off: Với tư cách quản trị viên, lựa chọn này cũng rút lại sự đồng ý của bạn cho các tính năng AI chạy ngầm, như phân loại. Các tính năng này chỉ tiếp tục bật nếu một quản trị viên khác đã bật AI.
+          none:
+            title: Trợ lý của bạn vẫn tắt.
+            body: Thao tác này tắt trợ lý trong ứng dụng cho tài khoản của bạn.
+          builtin:
+            title: Trợ lý của bạn sẽ được bật.
+            body: Thao tác này bật trợ lý trong ứng dụng cho tài khoản của bạn. Trợ lý dùng nhà cung cấp AI nào, và có sẵn hay không, vẫn phụ thuộc vào cài đặt AI của phiên bản này.
+            not_configured: Phiên bản này chưa thiết lập nhà cung cấp AI nào. Quản trị viên có thể thêm trong Cài đặt → Tự lưu trữ.
+            unavailable: Cài đặt AI hiện tại của hộ gia đình bạn không chạy trợ lý trong ứng dụng, nên trợ lý sẽ không phản hồi cho đến khi quản trị viên thay đổi cài đặt.
+          external:
+            title: Kết nối tác nhân của bạn khi bạn sẵn sàng.
+            body: Thao tác này giữ AI ở trạng thái bật cho tài khoản của bạn. Khi hộ gia đình của bạn được cấu hình cho trò chuyện bên ngoài, các cuộc trò chuyện sẽ dùng trợ lý bên ngoài của bạn thay cho trợ lý tích hợp của %{product_name}, trong cùng giao diện trò chuyện. %{product_name} vẫn xử lý việc nhập dữ liệu, phân loại và các quy trình khác với vai trò nơi lưu trữ chính dữ liệu của bạn. Tác tử của bạn có thể tương tác với nó qua MCP hoặc sure-cli; để kết nối, hãy vào Cài đặt → MCP. Lựa chọn này không cấu hình dịch vụ trò chuyện và không tạo, thay đổi hay xóa kết nối nào.
       submit: Tiếp theo
     trial:
       title: Dùng thử Sure trong 45 ngày
