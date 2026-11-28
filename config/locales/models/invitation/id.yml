@@ -1,0 +1,9 @@
+---
+id:
+  activerecord:
+    errors:
+      models:
+        invitation:
+          attributes:
+            email:
+              own_email: "tidak boleh berupa alamat email Anda sendiri"

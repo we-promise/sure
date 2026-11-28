@@ -1,0 +1,12 @@
+---
+id:
+  activerecord:
+    attributes:
+      property:
+        cost_tag: Tag biaya
+    errors:
+      models:
+        property:
+          attributes:
+            cost_tag:
+              other_family: harus merupakan salah satu tag milik Anda sendiri

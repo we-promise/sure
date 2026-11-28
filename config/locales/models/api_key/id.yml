@@ -1,0 +1,7 @@
+---
+id:
+  activerecord:
+    errors:
+      models:
+        api_key:
+          cannot_destroy_demo_key: "Tidak dapat menghapus kunci API pemantauan demo"

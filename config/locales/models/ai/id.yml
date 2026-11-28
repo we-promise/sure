@@ -1,0 +1,35 @@
+---
+id:
+  ai:
+    availability:
+      capability_missing:
+        admin: "%{feature} tidak tersedia: tidak ada model AI yang dikonfigurasi yang dapat melakukannya. Periksa model di Pengaturan → Self-Hosting."
+        member: "%{feature} tidak tersedia: tidak ada model AI yang dikonfigurasi yang dapat melakukannya."
+      no_family_consent:
+        member: "%{feature} memerlukan admin keluarga untuk mengaktifkan AI. Mereka dapat mengaktifkannya dari asisten AI."
+      not_configured:
+        admin: "%{feature} tidak tersedia: tidak ada model AI yang diatur untuk fitur ini. Tambahkan satu di Pengaturan → Self-Hosting."
+        member: "%{feature} tidak tersedia: AI belum diatur untuk fitur ini pada instans ini."
+      user_disabled:
+        member: "%{feature} memerlukan AI yang diaktifkan. Anda dapat mengaktifkannya dari asisten AI."
+    consent_rows:
+      bill_setup: Tagihan
+      categorize: Kategori
+      chat: Obrolan
+      detect_merchants: Merchant
+      embed: Dokumen
+      extract_pdf: Impor PDF
+    sends:
+      bill_configuration: Pengaturan tagihan saat ini
+      category_names: Nama kategori Anda
+      chat_messages: Pesan obrolan Anda
+      depends_on_vector_store: Dokumen yang Anda unggah, sebagai file utuh ke vector store atau sebagai potongan teks ke model embedding
+      looked_up_financial_data: Data keuangan yang dicari asisten untuk menjawab
+      merchant_names: Nama merchant
+      provider_category_hints: Kategori yang disarankan bank Anda
+      search_query: Teks pencarian Anda
+      stored_document_text: Teks laporan yang tersimpan di brankas Anda
+      transaction_amounts: Jumlah transaksi
+      transaction_dates: Tanggal transaksi
+      transaction_names: Nama transaksi
+      uploaded_document: Dokumen yang Anda unggah
