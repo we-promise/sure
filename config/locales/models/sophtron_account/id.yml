@@ -1,0 +1,7 @@
+---
+id:
+  activerecord:
+    errors:
+      models:
+        sophtron_account:
+          no_balance: "Rekening Sophtron harus memiliki saldo saat ini atau saldo tersedia"

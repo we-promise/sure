@@ -1,0 +1,14 @@
+---
+id:
+  activerecord:
+    attributes:
+      brex_item:
+        base_url: URL Dasar
+        name: Nama koneksi
+        token: Token
+    errors:
+      models:
+        brex_item:
+          attributes:
+            base_url:
+              official_hosts_only: harus kosong, https://api.brex.com, atau https://api-staging.brex.com

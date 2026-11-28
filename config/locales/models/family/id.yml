@@ -1,0 +1,10 @@
+---
+id:
+  activerecord:
+    attributes:
+      family:
+        ai_prompt_chat_system: "Prompt sistem obrolan"
+        ai_prompt_categorizer_openai: "Prompt kategorisasi transaksi (OpenAI)"
+        ai_prompt_categorizer_anthropic: "Prompt kategorisasi transaksi (Anthropic)"
+        ai_prompt_merchant_openai: "Prompt pendeteksi merchant (OpenAI)"
+        ai_prompt_merchant_anthropic: "Prompt pendeteksi merchant (Anthropic)"

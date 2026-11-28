@@ -1,0 +1,6 @@
+---
+id:
+  activerecord:
+    attributes:
+      enable_banking_item:
+        client_certificate: Kunci privat

@@ -1,0 +1,5 @@
+---
+id:
+  coinbase:
+    processor:
+      paid_via: "Dibayar melalui %{method}"

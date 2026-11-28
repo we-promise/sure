@@ -1,0 +1,32 @@
+---
+id:
+  provider_warnings:
+    limited_investment_data: "Data investasi dari penyedia ini terbatas. Label aktivitas (Beli, Jual, Dividen) tidak tersedia, yang dapat memengaruhi akurasi anggaran. Pertimbangkan untuk membuat aturan guna mengecualikan atau mengategorikan transaksi investasi."
+    enable_banking_history_truncated:
+      one: "Enable Banking: riwayat transaksi lengkap dari %{count} rekening tidak dapat diambil, sehingga transaksi lama mungkin tidak lengkap"
+      other: "Enable Banking: riwayat transaksi lengkap dari %{count} rekening tidak dapat diambil, sehingga transaksi lama mungkin tidak lengkap"
+    lunchflow_accounts_failed:
+      one: "Impor Lunchflow: %{count} rekening gagal diperbarui"
+      other: "Impor Lunchflow: %{count} rekening gagal diperbarui"
+    lunchflow_transactions_failed:
+      one: "Impor Lunchflow: pengambilan transaksi gagal untuk %{count} rekening"
+      other: "Impor Lunchflow: pengambilan transaksi gagal untuk %{count} rekening"
+    lunchflow_import_error: "Impor Lunchflow: %{error}"
+    truelayer_accounts_failed:
+      one: "Impor TrueLayer: %{count} rekening gagal diperbarui"
+      other: "Impor TrueLayer: %{count} rekening gagal diperbarui"
+    truelayer_transactions_failed:
+      one: "Impor TrueLayer: pengambilan transaksi gagal untuk %{count} rekening"
+      other: "Impor TrueLayer: pengambilan transaksi gagal untuk %{count} rekening"
+    truelayer_balances_failed:
+      one: "Impor TrueLayer: pengambilan saldo gagal untuk %{count} rekening"
+      other: "Impor TrueLayer: pengambilan saldo gagal untuk %{count} rekening"
+    truelayer_processing_failed:
+      one: "Impor TrueLayer: %{count} rekening tidak dapat diproses"
+      other: "Impor TrueLayer: %{count} rekening tidak dapat diproses"
+    truelayer_entries_failed:
+      one: "Impor TrueLayer: %{count} transaksi tidak dapat diimpor"
+      other: "Impor TrueLayer: %{count} transaksi tidak dapat diimpor"
+    truelayer_scheduling_failed:
+      one: "Impor TrueLayer: pembaruan saldo tidak dapat dijadwalkan untuk %{count} rekening"
+      other: "Impor TrueLayer: pembaruan saldo tidak dapat dijadwalkan untuk %{count} rekening"

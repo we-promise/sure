@@ -1,0 +1,7 @@
+---
+id:
+  activerecord:
+    errors:
+      models:
+        plaid_account:
+          no_balance: "Rekening Plaid harus memiliki saldo saat ini atau saldo tersedia"

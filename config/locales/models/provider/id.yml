@@ -1,0 +1,35 @@
+---
+id:
+  providers:
+    truelayer:
+      description: Hubungkan ke bank Inggris Raya Anda melalui TrueLayer
+    property_valuation:
+      not_configured: Penyedia data properti ini belum dikonfigurasi.
+      missing_fields: Harap berikan nama dan alamat AS lengkap (jalan, kota, negara bagian, dan kode pos).
+      missing_fields_gb: Harap berikan nama, alamat jalan dan kode pos, serta UPRN properti.
+      preview_expired: Pratinjau properti ini telah kedaluwarsa — silakan cari alamatnya lagi.
+      entry_name: "Penilaian %{provider}"
+    rentcast:
+      errors:
+        no_valuation: RentCast tidak mengembalikan perkiraan nilai untuk alamat ini.
+        not_found: RentCast tidak dapat menemukan properti yang cocok dengan alamat ini.
+    realie:
+      errors:
+        no_property: Realie tidak mengembalikan properti untuk alamat ini.
+        no_valuation: Realie tidak mengembalikan penilaian untuk properti ini.
+        not_found: Realie tidak dapat menemukan properti yang cocok dengan alamat ini.
+        location_mismatch: Realie mencocokkan properti di kota atau kode pos yang berbeda. Harap periksa kembali alamatnya.
+    chimnie:
+      errors:
+        invalid_uprn: UPRN adalah angka hingga 12 digit. Harap periksa UPRN dan coba lagi.
+        no_estimate: Chimnie tidak memiliki perkiraan nilai untuk properti ini.
+        not_found: Chimnie tidak dapat menemukan properti dengan UPRN ini.
+        unsupported_property: Chimnie hanya menilai properti hunian; UPRN ini milik properti komersial atau multiguna.
+        unauthorized: Chimnie menolak kunci API. Periksa kunci di Pengaturan → Self-Hosting.
+        insufficient_balance: Saldo akun Chimnie Anda terlalu rendah untuk permintaan ini.
+    terrascoutx:
+      errors:
+        no_property: TerraScoutX tidak dapat menemukan properti yang cocok dengan alamat ini.
+        no_valuation: TerraScoutX tidak mengembalikan nilai untuk properti ini.
+        location_mismatch: TerraScoutX mencocokkan properti dengan nomor rumah atau kode pos yang berbeda. Harap periksa kembali alamatnya.
+        insecure_url: TERRASCOUTX_URL harus menggunakan https://.

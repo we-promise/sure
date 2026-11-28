@@ -1,0 +1,7 @@
+---
+id:
+  activerecord:
+    errors:
+      models:
+        indexa_capital_item:
+          credentials_required: "Variabel lingkungan INDEXA_API_TOKEN atau kredensial nama pengguna/dokumen/kata sandi wajib diisi"

@@ -1,0 +1,12 @@
+---
+id:
+  activerecord:
+    attributes:
+      wise_item:
+        sca_private_key: Kunci privat SCA
+    errors:
+      models:
+        wise_item:
+          attributes:
+            sca_private_key:
+              encryption_unavailable: tidak dapat disimpan karena enkripsi Active Record belum dikonfigurasi pada instalasi ini

@@ -1,0 +1,11 @@
+---
+id:
+  address:
+    attributes:
+      country: Negara
+      line1: Baris Alamat 1
+      line2: Baris Alamat 2
+      locality: Kota/Wilayah
+      postal_code: Kode Pos
+      region: Provinsi/Daerah
+    format: "%{line1} %{line2}, %{locality}, %{region} %{postal_code} %{country}"
