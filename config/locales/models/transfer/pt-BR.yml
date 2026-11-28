@@ -17,6 +17,10 @@ pt-BR:
               must_have_single_currency: Transferência deve ter uma única moeda
               outflow_cannot_be_in_multiple_transfers: Transação de saída não pode
                 fazer parte de múltiplas transferências
+          different_accounts: Deve ser entre contas diferentes
+          same_family: Deve ser da mesma família
+          opposite_amounts: Deve ter valores opostos
+          within_days: Deve estar dentro de um intervalo de %{count} dias
   transfer:
     name: Transferência para %{to_account}
     payment_name: Pagamento para %{to_account}
