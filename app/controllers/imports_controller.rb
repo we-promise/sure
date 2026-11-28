@@ -1,4 +1,5 @@
 class ImportsController < ApplicationController
+  include ViewableImports
   include SettingsHelper
 
   before_action :set_import, only: %i[show update publish destroy revert apply_template cancel summary]
@@ -66,7 +67,7 @@ class ImportsController < ApplicationController
   end
 
   def index
-    @pagy, @imports = pagy(Current.family.imports.where(type: Import::TYPES).ordered, limit: safe_per_page)
+    @pagy, @imports = pagy(viewable_imports.where(type: Import::TYPES).ordered, limit: safe_per_page)
     @breadcrumbs = [
       [ t("breadcrumbs.home"), root_path ],
       [ t("breadcrumbs.imports"), imports_path ]
@@ -77,7 +78,7 @@ class ImportsController < ApplicationController
   end
 
   def new
-    @pending_import = Current.family.imports.ordered.pending.first
+    @pending_import = viewable_imports.ordered.pending.first
     @document_upload_extensions = document_upload_supported_extensions
   end
 
@@ -187,8 +188,7 @@ class ImportsController < ApplicationController
 
   private
     def set_import
-      @import = Current.family.imports.includes(:account, :account_statement).find(params[:id])
-      raise ActiveRecord::RecordNotFound if @import.account_statement.present? && !@import.account_statement.viewable_by?(Current.user)
+      @import = viewable_imports.includes(:account, :account_statement).find(params[:id])
     end
 
     def import_params

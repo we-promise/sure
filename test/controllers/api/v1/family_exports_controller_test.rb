@@ -92,6 +92,16 @@ class Api::V1::FamilyExportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal @family.id, export.family_id
   end
 
+  test "creates a family export from an empty JSON request" do
+    [ "", "{}" ].each do |body|
+      assert_difference("@family.family_exports.count") do
+        post api_v1_family_exports_url, params: body, headers: api_headers(@api_key).merge("Content-Type" => "application/json")
+      end
+
+      assert_response :accepted
+    end
+  end
+
   test "read-only key cannot create a family export" do
     assert_no_difference("@family.family_exports.count") do
       post api_v1_family_exports_url, headers: api_headers(@read_only_api_key)
@@ -110,6 +120,17 @@ class Api::V1::FamilyExportsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_equal "invalid_params", JSON.parse(response.body)["error"]
+  end
+
+  test "create rejects unsupported params in a JSON body" do
+    [ { status: "completed" }, { family_export: { status: "completed" } }, { unknown: "value" } ].each do |payload|
+      assert_no_difference("@family.family_exports.count") do
+        post api_v1_family_exports_url, params: payload, headers: api_headers(@api_key), as: :json
+      end
+
+      assert_response :unprocessable_entity
+      assert_equal "invalid_params", JSON.parse(response.body)["error"]
+    end
   end
 
   test "non-admin cannot access family exports" do

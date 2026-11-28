@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class KrakenItemsController < ApplicationController
+  include SafeReturnPath
+
   before_action :set_kraken_item, only: %i[update destroy sync setup_accounts complete_account_setup]
   before_action :require_admin!, only: %i[create select_accounts link_accounts select_existing_account link_existing_account update destroy sync setup_accounts complete_account_setup]
 
@@ -202,19 +204,5 @@ class KrakenItemsController < ApplicationController
       else
         redirect_to fallback_path, alert: message
       end
-    end
-
-    def safe_return_to_path
-      return nil if params[:return_to].blank?
-
-      value = params[:return_to].to_s
-      uri = URI.parse(value)
-      return nil if uri.scheme.present?
-      return nil if uri.host.present?
-      return nil unless value.start_with?("/")
-
-      value
-    rescue URI::InvalidURIError
-      nil
     end
 end

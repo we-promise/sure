@@ -1,0 +1,9 @@
+---
+zh-CN:
+  holding_lots:
+    provider_cost: 您的提供商已提供此持仓的成本，因此无法手动设置其批次成本。
+    update:
+      success: 批次成本已更新。
+      error: 请输入该批次的总成本（零或以上）。
+    unlock:
+      success: 已清除手动设置的成本。

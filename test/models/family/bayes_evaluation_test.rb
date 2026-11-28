@@ -37,6 +37,23 @@ class Family::BayesEvaluationTest < ActiveSupport::TestCase
     assert_nil result["best"]
   end
 
+  # The classifier never picks a category with fewer examples than the minimum,
+  # so the evaluation mustn't count it as an answer either.
+  test "a pick of a category below the minimum of examples counts as no answer" do
+    tea = @family.categories.create!(name: "Tea")
+    2.times { create_transaction(account: @account, name: "Twinings Tea", category: tea, date: Date.new(2026, 1, 15)) }
+    create_transaction(account: @account, name: "Twinings Tea", category: tea, date: Date.new(2026, 9, 3))
+
+    result = Family::BayesEvaluation.new(@family, today: @today).run!
+
+    at_threshold = result.dig("current", "sweep").find { |row| row["threshold"] == 0.4 }
+    assert_equal({ "threshold" => 0.4, "right" => 0, "wrong" => 0 }, at_threshold)
+
+    @family.update_bayes_settings!(min_category_examples: 2)
+    lowered = Family::BayesEvaluation.new(@family, today: @today).run!
+    assert_equal 1, lowered.dig("current", "sweep").find { |row| row["threshold"] == 0.4 }["right"]
+  end
+
   test "scores the matcher on the same months, by similarity and number agreeing" do
     netflix = @family.merchants.create!(name: "Netflix")
     hulu = @family.merchants.create!(name: "Hulu")
