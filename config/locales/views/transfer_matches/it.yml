@@ -3,6 +3,8 @@ it:
   transfer_matches:
     create:
       success: Bonifico creato
+    dismiss_suggestion:
+      success: "Suggerimento ignorato"
     new:
       header:
         title: Abbina bonifico o pagamento
@@ -15,6 +17,8 @@ it:
       inflow_transaction: Transazione in entrata
       create_transfer_match: Crea abbinamento bonifico
     matching_fields:
+      dismiss_suggestion: "Non corrisponde"
+      suggested_account_html: "L'IBAN di questo pagamento corrisponde al tuo conto <strong>%{name}</strong>: l'abbiamo preselezionato qui sotto."
       select_method: Seleziona un metodo per abbinare le tue transazioni.
       match_existing_recommended: Abbina transazione esistente (consigliato)
       create_new_transaction: Crea nuova transazione

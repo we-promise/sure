@@ -13,5 +13,7 @@ ro:
               must_have_single_currency: Transferul trebuie să aibă o singură monedă
               outflow_cannot_be_in_multiple_transfers: Tranzacția de ieșire nu poate face parte din mai multe transferuri
   transfer:
+    counterpart_name: Transfer de la %{from_account}
+    counterpart_name_generic: Transfer primit
     name: Transfer către %{to_account}
     payment_name: Plată către %{to_account}

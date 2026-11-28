@@ -652,6 +652,15 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_enqueued_with(job: SyncJob)
   end
 
+  test "a blank excluded field includes the transaction again" do
+    @entry.update!(excluded: true)
+
+    patch transaction_url(@entry), params: { entry: { excluded: "" } }
+
+    assert_redirected_to account_url(@entry.account)
+    assert_equal false, Entry.where(id: @entry.id).pick(:excluded)
+  end
+
   test "re-renders show with mark-recurring state when update fails validation" do
     family = families(:empty)
     sign_in users(:empty)
@@ -2752,6 +2761,19 @@ end
     assert_response :success
     assert_equal category.id, @entry.reload.entryable.category_id
     assert_not_includes response.body, "action_type=set_transaction_category"
+  end
+
+  test "destroying a transaction also removes its fabricated transfer counterpart" do
+    accounts(:loan).update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
+    outflow_entry.entryable.update!(counterparty_iban_last4: "3000", counterparty_own_account: accounts(:loan))
+    @user.family.auto_create_missing_transfer_counterparts!
+    fabricated_entry_id = Transfer.find_by!(outflow_transaction_id: outflow_entry.entryable_id).inflow_transaction.entry.id
+
+    delete transaction_url(outflow_entry)
+
+    assert_redirected_to account_url(outflow_entry.account)
+    assert_not Entry.exists?(fabricated_entry_id)
   end
 
   test "transaction drawer shows auto-categorization provenance" do

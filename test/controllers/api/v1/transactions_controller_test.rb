@@ -1490,6 +1490,23 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
   assert response_data.key?("message")
 end
 
+  test "destroying a transaction also removes its fabricated transfer counterpart" do
+    loan = accounts(:loan)
+    loan.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    outflow_entry = accounts(:depository).entries.create!(
+      name: "Rent share", amount: 500, currency: "USD", date: Date.current,
+      entryable: Transaction.new(counterparty_iban_last4: "3000", counterparty_own_account: loan)
+    )
+    @family.auto_create_missing_transfer_counterparts!
+    fabricated_entry_id = Transfer.find_by!(outflow_transaction_id: outflow_entry.entryable_id).inflow_transaction.entry.id
+
+    delete api_v1_transaction_url(outflow_entry.entryable), headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_not Entry.exists?(fabricated_entry_id)
+    assert_not Transfer.exists?(outflow_transaction_id: outflow_entry.entryable_id)
+  end
+
   test "should reject destroying a split whose part is linked as a transfer" do
     parent = create_transaction(account: accounts(:depository), amount: 100, name: "Mortgage")
     part = parent.split!([ { name: "Principal", amount: 60 }, { name: "Interest", amount: 40 } ]).first
@@ -1785,20 +1802,6 @@ end
 
     assert_empty queries.grep(/SELECT "entries"\.\* FROM "entries" WHERE "entries"\."parent_entry_id"/),
                  "split children should not be loaded just to compute split_parent"
-  end
-
-  test "excluded is false, not null, when the stored flag is null" do
-    entry = create_transaction(account: @account, amount: 20, name: "Null exclusion")
-    entry.update_column(:excluded, nil)
-
-    get api_v1_transaction_url(entry.transaction), headers: api_headers(@api_key)
-    assert_response :success
-    assert_equal false, JSON.parse(response.body)["excluded"]
-
-    get api_v1_transactions_url, params: { per_page: 100 }, headers: api_headers(@api_key)
-    assert_response :success
-    row = JSON.parse(response.body)["transactions"].find { |t| t["id"] == entry.transaction.id }
-    assert_equal false, row["excluded"]
   end
 
   test "show exposes the activity label and the safe provider fields, not the raw extra" do

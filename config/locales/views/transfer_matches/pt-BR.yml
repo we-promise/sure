@@ -3,6 +3,8 @@ pt-BR:
   transfer_matches:
     create:
       success: Transferência criada
+    dismiss_suggestion:
+      success: "Sugestão descartada"
     new:
       header:
         title: Vincular transferência ou pagamento
@@ -15,6 +17,8 @@ pt-BR:
       inflow_transaction: Transação de entrada
       create_transfer_match: Criar vínculo de transferência
     matching_fields:
+      dismiss_suggestion: "Não corresponde"
+      suggested_account_html: "O IBAN deste pagamento corresponde à sua conta <strong>%{name}</strong> — nós a pré-selecionamos abaixo."
       select_method: Selecione um método para vincular suas transações.
       match_existing_recommended: Vincular transação existente (recomendado)
       create_new_transaction: Criar nova transação

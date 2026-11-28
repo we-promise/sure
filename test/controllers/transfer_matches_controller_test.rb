@@ -145,6 +145,63 @@ class TransferMatchesControllerTest < ActionDispatch::IntegrationTest
     assert_equal category, outflow_txn.category
   end
 
+  test "new pre-selects a target account when the counterparty iban matches another account" do
+    target_account = accounts(:investment)
+    target_account.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+
+    outflow_entry = create_transaction(amount: 100, account: accounts(:depository))
+    link_counterparty!(outflow_entry, "DE89 3704 0044 0532 0130 00")
+
+    get new_transaction_transfer_match_path(outflow_entry)
+
+    assert_response :success
+    assert_select "input[type=hidden][name=?][value=?]", "transfer_match[target_account_id]", target_account.id
+    assert_match target_account.name, response.body
+    assert_select "a[data-turbo-method=post][href=?]", dismiss_suggestion_transaction_transfer_match_path(outflow_entry)
+  end
+
+  test "new does not suggest an account when no iban matches" do
+    outflow_entry = create_transaction(amount: 100, account: accounts(:depository))
+    link_counterparty!(outflow_entry, "AT611904300234573201") # pipelock:ignore IBAN
+
+    get new_transaction_transfer_match_path(outflow_entry)
+
+    assert_response :success
+    assert_no_match I18n.t("transfer_matches.matching_fields.dismiss_suggestion"), response.body
+  end
+
+  test "new does not suggest an account once a real transfer candidate exists" do
+    target_account = accounts(:investment)
+    target_account.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+
+    outflow_entry = create_transaction(amount: 100, account: accounts(:depository))
+    link_counterparty!(outflow_entry, "DE89370400440532013000") # pipelock:ignore IBAN
+    # A real matching inflow already exists on the target account, so this
+    # is a normal match, not a "missing counterpart" situation.
+    create_transaction(amount: -100, account: target_account)
+
+    get new_transaction_transfer_match_path(outflow_entry)
+
+    assert_response :success
+    assert_no_match I18n.t("transfer_matches.matching_fields.dismiss_suggestion"), response.body
+  end
+
+  test "dismiss_suggestion marks the suggestion dismissed and it does not reappear" do
+    target_account = accounts(:investment)
+    target_account.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+
+    outflow_entry = create_transaction(amount: 100, account: accounts(:depository))
+    link_counterparty!(outflow_entry, "DE89370400440532013000") # pipelock:ignore IBAN
+
+    post dismiss_suggestion_transaction_transfer_match_path(outflow_entry)
+
+    assert_redirected_to transactions_url
+    assert outflow_entry.entryable.reload.extra["counterparty_transfer_suggestion_dismissed"]
+
+    get new_transaction_transfer_match_path(outflow_entry)
+    assert_no_match I18n.t("transfer_matches.matching_fields.dismiss_suggestion"), response.body
+  end
+
   # we-promise/sure#4226: marking a synced bank outflow as a transfer to a
   # manual account creates the deposit there, which must resolve its pledge.
   test "matching an outflow to a new inflow on a pledged account resolves the pledge" do
@@ -207,4 +264,18 @@ class TransferMatchesControllerTest < ActionDispatch::IntegrationTest
       delete transaction_transfer_match_path(outflow)
     end
   end
+
+  private
+    # Links the counterparty the way Account::ProviderImportAdapter does on
+    # import: only the last four IBAN characters, plus the family's own
+    # account with that IBAN.
+    def link_counterparty!(entry, iban, **attributes)
+      iban = IbanNormalizable.normalize(iban)
+      candidates = Account.own_accounts_by_iban(entry.account.family, excluding: entry.account)[iban]
+      entry.entryable.update!(
+        counterparty_iban_last4: iban.last(4),
+        counterparty_own_account_id: Account.own_account_id_for(candidates, currency: entry.currency),
+        **attributes
+      )
+    end
 end

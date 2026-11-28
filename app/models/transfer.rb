@@ -20,6 +20,7 @@ class Transfer < ApplicationRecord
   # (or its entry) is deleted, so the surviving leg never keeps a transfer kind
   # without a transfer.
   before_destroy :release_transactions
+  after_destroy :destroy_fabricated_counterpart
   # Destroying locks this row before the fee transactions and the legs, the
   # order confirm! and Entry#unsplit! take them in, so an unlink and a confirm
   # or unsplit do not deadlock each other.
@@ -183,8 +184,30 @@ class Transfer < ApplicationRecord
   def reject!
     Transfer.transaction do
       RejectedTransfer.find_or_create_by!(inflow_transaction_id: inflow_transaction_id, outflow_transaction_id: outflow_transaction_id)
+      dismiss_fabricated_counterpart_suggestion!
       destroy!
     end
+  end
+
+  # User-initiated unlink. Unlike the plain destroy! (also used when an
+  # account is deleted or merged), this records that the user doesn't want
+  # a fabricated counterpart back.
+  def unlink!
+    Transfer.transaction do
+      dismiss_fabricated_counterpart_suggestion!
+      destroy!
+    end
+  end
+
+  # Removing a fabricated leg alone isn't enough: the next sync would find the
+  # outflow unmatched again and fabricate the same counterpart (see
+  # Family::AutoTransferMatchable#auto_create_missing_transfer_counterparts!).
+  # Rejecting or unlinking it is the user saying "this isn't a transfer", so
+  # record that on the outflow the same way dismissing the suggestion does.
+  def dismiss_fabricated_counterpart_suggestion!
+    return unless inflow_transaction&.extra&.dig("auto_generated_transfer_counterpart") == true
+
+    outflow_transaction&.dismiss_counterparty_transfer_suggestion!
   end
 
   # Auto-matched transfers start out pending and leave both transactions as
@@ -263,6 +286,31 @@ class Transfer < ApplicationRecord
         contribution_by_default?
     end
 
+    # The inflow leg Family::AutoTransferMatchable fabricated as a stand-in
+    # counterpart (see #auto_create_missing_transfer_counterparts!) has no
+    # bank data behind it, so it must not outlive its transfer: unlinking it
+    # must not leave a phantom "standard" transaction the user never created,
+    # and deleting the real outflow (which destroys this transfer through
+    # Transaction::Transferable's dependent: :destroy, bypassing #destroy!)
+    # must not leave it inflating the target account's balance. When the
+    # fabricated entry itself is being deleted, its row is already gone here.
+    def destroy_fabricated_counterpart
+      return unless inflow_transaction&.extra&.dig("auto_generated_transfer_counterpart") == true
+
+      entry = Entry.find_by(entryable_type: "Transaction", entryable_id: inflow_transaction_id)
+      if entry.nil?
+        # The user deleted the stand-in itself: without this the next sync
+        # would fabricate it again for the same outflow.
+        outflow = Transaction.find_by(id: outflow_transaction_id)
+        outflow&.dismiss_counterparty_transfer_suggestion!
+        return
+      end
+
+      account = entry.account
+      entry.destroy!
+      account.sync_later
+    end
+
     # Gives each surviving transaction back its standalone state. When the
     # transfer goes because one leg is being deleted (dependent: :destroy on
     # Transaction), that leg is skipped.
@@ -273,6 +321,9 @@ class Transfer < ApplicationRecord
         next if transaction.nil? || key == deleted_leg_key
         next unless Transaction.exists?(transaction.id)
         begin
+          # A fabricated counterpart is removed by #destroy_fabricated_counterpart.
+          next if transaction.extra&.dig("auto_generated_transfer_counterpart") == true
+
           # A pending auto-match never changed the kind (see #confirm!), so a
           # transfer kind on its transactions predates the match and stays.
           if transaction.transfer? && !pending?

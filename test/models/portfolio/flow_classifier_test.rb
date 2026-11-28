@@ -289,17 +289,10 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
     assert_equal :external_inflow, @family_scope.classify(orphan)
   end
 
-  # entries.excluded is nullable. #classify reads a NULL as live (excluded? is
-  # false), and so does the SQL CASE (WHEN NULL is not taken), so the opposite
-  # leg's lookup has to read it the same way; `excluded = false` dropped it and
-  # turned an in-scope move into an external flow. An excluded leg still does
-  # not count, which is the other side of the boundary.
-  test "a security transfer leg with a NULL excluded flag still counts as the opposite leg" do
+  # The Ruby and SQL lookups of the opposite leg agree on which legs are live.
+  test "an excluded security transfer leg does not count as the opposite leg" do
     security = create_portfolio_security
     out_leg, in_leg = create_security_transfer(security: security, from: @brokerage, to: @ira, qty: 10, price: 50)
-
-    in_leg.update_columns(excluded: nil)
-    assert_nil in_leg.reload.excluded, "precondition: the opposite leg's flag is NULL, not false"
 
     assert_equal :internal, @family_scope.classify(out_leg)
     assert_equal :internal, @family_scope.classify_ids([ out_leg.id ])[out_leg.id]

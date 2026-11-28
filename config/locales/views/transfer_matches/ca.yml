@@ -3,7 +3,11 @@ ca:
   transfer_matches:
     create:
       success: Transferència creada
+    dismiss_suggestion:
+      success: "Suggeriment descartat"
     matching_fields:
+      dismiss_suggestion: "No coincideix"
+      suggested_account_html: "L'IBAN d'aquest pagament coincideix amb el teu compte <strong>%{name}</strong>; l'hem preseleccionat a continuació."
       create_new_transaction: Crea una nova transacció
       match_existing_recommended: Aparella amb una transacció existent (recomanat)
       matching_method: Mètode d'aparellament
