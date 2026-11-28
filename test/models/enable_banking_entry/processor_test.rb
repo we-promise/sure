@@ -702,6 +702,135 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal "5411", eb_extra["merchant_category_code"]
   end
 
+  test "stores the creditor postal address in extra for an outgoing payment" do
+    tx = {
+      entry_reference: "ref_creditor_address",
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "12.34", currency: "PLN" },
+      credit_debit_indicator: "DBIT",
+      creditor: {
+        name: nil,
+        postal_address: { address_line: [ "EXAMPLE MARKET 0042           TESTOWO" ] }
+      },
+      remittance_information: [ "Płatność kartą 01.01.2025 Nr karty 1234xx5678" ],
+      status: "BOOK"
+    }
+
+    EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+    entry = @account.entries.find_by!(external_id: "enable_banking_ref_creditor_address")
+    eb_extra = entry.transaction&.extra&.dig("enable_banking")
+    assert_equal "EXAMPLE MARKET 0042 TESTOWO", eb_extra["counterparty_address"]
+  end
+
+  test "stores the debtor postal address in extra for an incoming payment" do
+    tx = {
+      entry_reference: "ref_debtor_address",
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "500.00", currency: "EUR" },
+      credit_debit_indicator: "CRDT",
+      debtor: {
+        name: nil,
+        postal_address: { address_line: [ "EMPLOYER SP. Z O.O.", "MAIN STREET 12" ] }
+      },
+      remittance_information: [ "Salary" ],
+      status: "BOOK"
+    }
+
+    EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+    entry = @account.entries.find_by!(external_id: "enable_banking_ref_debtor_address")
+    eb_extra = entry.transaction&.extra&.dig("enable_banking")
+    assert_equal "EMPLOYER SP. Z O.O., MAIN STREET 12", eb_extra["counterparty_address"]
+  end
+
+  test "does not add a counterparty address when the ASPSP sent none" do
+    tx = {
+      entry_reference: "ref_no_address",
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "25.00", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "Amazon" },
+      status: "BOOK"
+    }
+
+    EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+    entry = @account.entries.find_by!(external_id: "enable_banking_ref_no_address")
+    assert_nil entry.transaction&.extra&.dig("enable_banking", "counterparty_address")
+  end
+
+  test "falls back to a structured postal address when address_line is absent" do
+    tx = {
+      entry_reference: "ref_structured_address",
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "9.99", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      creditor: {
+        name: nil,
+        postal_address: {
+          street_name: "Main Street",
+          building_number: "12",
+          post_code: "00100",
+          town_name: "Helsinki",
+          country: "FI"
+        }
+      },
+      remittance_information: [ "Card purchase" ],
+      status: "BOOK"
+    }
+
+    EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+    entry = @account.entries.find_by!(external_id: "enable_banking_ref_structured_address")
+    eb_extra = entry.transaction&.extra&.dig("enable_banking")
+    assert_equal "Main Street, 12, 00100, Helsinki, FI", eb_extra["counterparty_address"]
+  end
+
+  test "clears a counterparty address the ASPSP stops sending on refresh" do
+    with_address = {
+      entry_reference: "ref_address_refresh",
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "12.34", currency: "PLN" },
+      credit_debit_indicator: "DBIT",
+      creditor: { name: nil, postal_address: { address_line: [ "EXAMPLE MARKET" ] } },
+      remittance_information: [ "Płatność kartą 01.01.2025 Nr karty 1234xx5678" ],
+      status: "BOOK"
+    }
+    EnableBankingEntry::Processor.new(with_address, enable_banking_account: @enable_banking_account).process
+    entry = @account.entries.find_by!(external_id: "enable_banking_ref_address_refresh")
+    assert_equal "EXAMPLE MARKET", entry.transaction.extra.dig("enable_banking", "counterparty_address")
+
+    # The booked version no longer carries the address, and nothing else was left
+    # to put in the branch.
+    without_address = with_address.merge(creditor: { name: "EXAMPLE MARKET" })
+    EnableBankingEntry::Processor.new(without_address, enable_banking_account: @enable_banking_account).process
+
+    assert_nil entry.reload.transaction.extra&.dig("enable_banking")
+  end
+
+  test "keeps the enable_banking branch on an import-locked entry" do
+    with_address = {
+      entry_reference: "ref_address_locked",
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "12.34", currency: "PLN" },
+      credit_debit_indicator: "DBIT",
+      creditor: { name: nil, postal_address: { address_line: [ "EXAMPLE MARKET" ] } },
+      remittance_information: [ "Płatność kartą 01.01.2025 Nr karty 1234xx5678" ],
+      status: "BOOK"
+    }
+    EnableBankingEntry::Processor.new(with_address, enable_banking_account: @enable_banking_account).process
+    entry = @account.entries.find_by!(external_id: "enable_banking_ref_address_locked")
+    entry.update!(import_locked: true)
+
+    without_address = with_address.merge(creditor: { name: "EXAMPLE MARKET" })
+    EnableBankingEntry::Processor.new(without_address, enable_banking_account: @enable_banking_account).process
+
+    assert_equal "EXAMPLE MARKET", entry.reload.transaction.extra.dig("enable_banking", "counterparty_address")
+  end
+
   test "stores pending true in extra for PDNG-tagged transactions" do
     tx = {
       entry_reference: "ref_pdng",
@@ -1095,7 +1224,9 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal 1, @account.entries.where(source: "enable_banking").count
   end
 
-  test "does not add enable_banking extra key when no extra data present" do
+  test "does not add an enable_banking branch when no extra data is present" do
+    # A row with no details must keep `extra` empty: an "additional details is
+    # empty" rule and the drawer's Additional details section both read it that way.
     tx = {
       entry_reference: "ref_noextra",
       transaction_id: nil,
