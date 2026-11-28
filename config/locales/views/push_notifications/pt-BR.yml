@@ -1,0 +1,7 @@
+---
+pt-BR:
+  push_notifications:
+    budget_description: Também me avisar quando uma categoria do orçamento estiver perto do limite. Os alertas de orçamento estourado são sempre enviados. Desativado por padrão.
+    budget_title: Avisos de orçamento
+    description: Vale para todos os dispositivos que você ativou, no navegador e no iOS.
+    title: Notificações push

@@ -269,4 +269,131 @@ class EnableBankingItem::ImporterPdngTest < ActiveSupport::TestCase
     assert_equal 1, stored.size
     assert_equal "settled_ref", stored.first.with_indifferent_access[:entry_reference]
   end
+
+  test "fetch_and_store_transactions replaces a stored row the ASPSP redelivers with corrected data" do
+    @importer.stubs(:include_pending?).returns(false)
+    # Inside the 30-day window determine_sync_start_date uses once rows are stored.
+    recent_booking_date = 5.days.ago.to_date.iso8601
+    row = ->(reference, remittance) {
+      {
+        entry_reference: reference,
+        transaction_id: "id_#{reference}",
+        booking_date: recent_booking_date,
+        transaction_amount: { amount: "10.00", currency: "EUR" },
+        credit_debit_indicator: "DBIT",
+        remittance_information: [ remittance ],
+        status: "BOOK"
+      }
+    }
+
+    @enable_banking_account.update!(raw_transactions_payload: [ row.call("first", "Rent"), row.call("second", "Old text") ])
+
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "BOOK"))
+      .returns([ [ row.call("third", "New"), row.call("second", "Corrected text") ], false ])
+
+    result = @importer.send(:fetch_and_store_transactions, @enable_banking_account)
+
+    assert result[:success]
+    stored = @enable_banking_account.reload.raw_transactions_payload.map(&:with_indifferent_access)
+    assert_equal %w[first second third], stored.map { |tx| tx[:entry_reference] },
+      "stored rows keep their order and new rows are appended"
+    assert_equal [ "Corrected text" ], stored.second[:remittance_information]
+  end
+
+  test "fetch_and_store_transactions skips the snapshot write when a refetch changes nothing" do
+    @importer.stubs(:include_pending?).returns(false)
+    recent_booking_date = 5.days.ago.to_date.iso8601
+    stored_tx = {
+      entry_reference: "tx_ref",
+      transaction_id: "tx_id",
+      booking_date: recent_booking_date,
+      transaction_amount: { amount: "10.00", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      creditor_account: { iban: "DE89370400440532013000" }, # pipelock:ignore IBAN
+      status: "BOOK"
+    }
+    @enable_banking_account.update!(raw_transactions_payload: [ stored_tx ])
+    @enable_banking_account.reload
+
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "BOOK")).returns([ [ stored_tx.deep_dup ], false ])
+    @enable_banking_account.expects(:upsert_enable_banking_transactions_snapshot!).never
+
+    result = @importer.send(:fetch_and_store_transactions, @enable_banking_account)
+
+    assert result[:success]
+  end
+
+  test "fetch_and_store_transactions keeps a stored booked row when a pending row redelivers its ids" do
+    @importer.stubs(:include_pending?).returns(true)
+    booked = {
+      entry_reference: "r1",
+      transaction_id: "t1",
+      booking_date: 5.days.ago.to_date.iso8601,
+      transaction_amount: { amount: "10.00", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      remittance_information: [ "Booked" ],
+      status: "BOOK"
+    }
+    @enable_banking_account.update!(raw_transactions_payload: [ booked ])
+
+    pending = booked.merge(remittance_information: [ "Pending" ], status: "PDNG")
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "BOOK")).returns([ [], false ])
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "PDNG")).returns([ [ pending ], false ])
+
+    result = @importer.send(:fetch_and_store_transactions, @enable_banking_account)
+
+    assert result[:success]
+    stored = @enable_banking_account.reload.raw_transactions_payload.map(&:with_indifferent_access)
+    assert_equal 1, stored.size
+    assert_equal [ "Booked" ], stored.first[:remittance_information]
+    assert_not stored.first[:_pending]
+  end
+
+  test "fetch_and_store_transactions keeps a reference-less stored row when a row on another date reuses its transaction_id" do
+    @importer.stubs(:include_pending?).returns(false)
+    row = ->(days_ago, amount) {
+      {
+        transaction_id: "reused",
+        booking_date: days_ago.days.ago.to_date.iso8601,
+        transaction_amount: { amount: amount, currency: "EUR" },
+        credit_debit_indicator: "DBIT",
+        status: "BOOK"
+      }
+    }
+    @enable_banking_account.update!(raw_transactions_payload: [ row.call(10, "10.00") ])
+
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "BOOK"))
+      .returns([ [ row.call(3, "25.00") ], false ])
+
+    result = @importer.send(:fetch_and_store_transactions, @enable_banking_account)
+
+    assert result[:success]
+    stored = @enable_banking_account.reload.raw_transactions_payload.map(&:with_indifferent_access)
+    assert_includes stored.map { |tx| tx.dig(:transaction_amount, :amount) }, "10.00",
+      "the older movement is not overwritten by a row that only shares its transaction_id"
+  end
+
+  test "fetch_and_store_transactions replaces a reference-less stored row redelivered on the same date" do
+    @importer.stubs(:include_pending?).returns(false)
+    row = ->(remittance) {
+      {
+        transaction_id: "only_id",
+        booking_date: 5.days.ago.to_date.iso8601,
+        transaction_amount: { amount: "10.00", currency: "EUR" },
+        credit_debit_indicator: "DBIT",
+        remittance_information: [ remittance ],
+        status: "BOOK"
+      }
+    }
+    @enable_banking_account.update!(raw_transactions_payload: [ row.call("Old text") ])
+
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "BOOK"))
+      .returns([ [ row.call("Corrected text") ], false ])
+
+    result = @importer.send(:fetch_and_store_transactions, @enable_banking_account)
+
+    assert result[:success]
+    stored = @enable_banking_account.reload.raw_transactions_payload.map(&:with_indifferent_access)
+    assert_equal [ [ "Corrected text" ] ], stored.map { |tx| tx[:remittance_information] }
+  end
 end

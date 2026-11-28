@@ -1,0 +1,19 @@
+---
+id:
+  sync_schedules:
+    menu_item: Frekuensi sinkronisasi
+    intervals:
+      minutes: Setiap %{count} menit
+      hours:
+        one: Setiap jam
+        other: Setiap %{count} jam
+    edit:
+      title: Frekuensi sinkronisasi
+      description: Setiap koneksi disinkronkan bersama sinkronisasi keluarga, sekali sehari untuk sebagian besar penyedia. Pilih interval untuk juga menyinkronkan %{name} secara mandiri sepanjang hari.
+      interval_label: Sinkronisasi
+      no_schedule: Hanya sinkronisasi biasa
+      hint: Sinkronisasi yang sering dihitung terhadap batas laju penyedia, dan beberapa penyedia menagih per permintaan.
+      save: Simpan
+    update:
+      updated: Frekuensi sinkronisasi disimpan.
+      cleared: Frekuensi sinkronisasi dihapus. Koneksi kembali ke sinkronisasi biasanya.
