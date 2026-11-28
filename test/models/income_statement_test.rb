@@ -485,6 +485,96 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal baseline_avg, income_statement_with_scheduled.avg_expense(interval: "month")
   end
 
+  test "a kind left out of the median expense is not counted, and the default still counts it" do
+    # The default counts contributions as expense only while the family does.
+    @family.update!(investment_contributions_as_spending: true)
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+    create_transaction(account: @checking_account, amount: 1000, category: @groceries_category)
+    create_transaction(account: @checking_account, amount: 2000, kind: "investment_contribution")
+    income_statement = IncomeStatement.new(@family)
+
+    excluded = income_statement.median_expense(interval: "month", excluding_kinds: %w[investment_contribution])
+    default = income_statement.median_expense(interval: "month")
+
+    assert_equal 1000.0, excluded
+    assert_equal 3000.0, default, "the same instance must not reuse the excluded figure"
+  end
+
+  # The test environment's cache is a null store, so without a real one the
+  # cache key is never exercised: two fresh instances would pass even if the
+  # excluded and default figures shared a key.
+  test "the excluded and default medians are cached under different keys" do
+    # The default counts contributions as expense only while the family does.
+    @family.update!(investment_contributions_as_spending: true)
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+    create_transaction(account: @checking_account, amount: 1000, category: @groceries_category)
+    create_transaction(account: @checking_account, amount: 2000, kind: "investment_contribution")
+
+    excluded = IncomeStatement.new(@family).median_expense(interval: "month", excluding_kinds: %w[investment_contribution])
+    default = IncomeStatement.new(@family).median_expense(interval: "month")
+
+    assert_equal [ 1000.0, 3000.0 ], [ excluded, default ]
+  end
+
+  # The kind-excluding segment sits beside upstream's freshness segments, not
+  # in place of them: toggling the family setting still reaches the median.
+  test "a cached median follows the family's investing-as-spending setting" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+    create_transaction(account: @checking_account, amount: 1000, category: @groceries_category)
+    create_transaction(account: @checking_account, amount: 2000, kind: "investment_contribution")
+    @family.update!(investment_contributions_as_spending: true)
+
+    counted = IncomeStatement.new(@family).median_expense(interval: "month")
+    @family.update!(investment_contributions_as_spending: false)
+    not_counted = IncomeStatement.new(@family.reload).median_expense(interval: "month")
+
+    assert_equal [ 3000.0, 1000.0 ], [ counted, not_counted ]
+  end
+
+  # The category median comes from category_stats, which has no kind filter,
+  # so a request to leave kinds out must fail rather than be ignored.
+  test "a category median refuses to leave kinds out, and still works without them" do
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+    create_transaction(account: @checking_account, amount: 1000, category: @groceries_category)
+    income_statement = IncomeStatement.new(@family)
+
+    assert_raises(ArgumentError) do
+      income_statement.median_expense(category: @groceries_category, excluding_kinds: %w[investment_contribution])
+    end
+    assert_equal 1000.0, income_statement.median_expense(category: @groceries_category)
+  end
+
+  test "a period bounds the months the median expense is taken over, and the default still takes them all" do
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+    create_transaction(account: @checking_account, amount: 1000, date: Date.new(2026, 2, 10))
+    create_transaction(account: @checking_account, amount: 9000, date: Date.new(2025, 1, 10))
+    create_transaction(account: @checking_account, amount: 9000, date: Date.new(2025, 2, 10))
+    period = Period.custom(start_date: Date.new(2025, 3, 1), end_date: Date.new(2026, 2, 28))
+    income_statement = IncomeStatement.new(@family)
+
+    bounded = income_statement.median_expense(interval: "month", period: period)
+    default = income_statement.median_expense(interval: "month")
+
+    assert_equal 1000.0, bounded
+    assert_equal 9000.0, default, "the same instance must not reuse the bounded figure"
+  end
+
+  test "the bounded and default medians are cached under different keys" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+    create_transaction(account: @checking_account, amount: 1000, date: Date.new(2026, 2, 10))
+    create_transaction(account: @checking_account, amount: 9000, date: Date.new(2025, 1, 10))
+    create_transaction(account: @checking_account, amount: 9000, date: Date.new(2025, 2, 10))
+    period = Period.custom(start_date: Date.new(2025, 3, 1), end_date: Date.new(2026, 2, 28))
+
+    bounded = IncomeStatement.new(@family).median_expense(interval: "month", period: period)
+    default = IncomeStatement.new(@family).median_expense(interval: "month")
+
+    assert_equal [ 1000.0, 9000.0 ], [ bounded, default ]
+  end
+
   test "calculates median income correctly with known dataset" do
     # Clear existing transactions by deleting entries
     Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
