@@ -18,7 +18,7 @@ pt-BR:
       save: Salvar configurações de compartilhamento
       owner_label: "Proprietário: %{name}"
       shared_with_count:
-        one: Compartilhado com 1 membro
+        one: Compartilhado com %{count} membro
         other: "Compartilhado com %{count} membros"
       include_in_finances: Incluir nos meus orçamentos e relatórios
       exclude_from_finances: Excluir dos meus orçamentos e relatórios

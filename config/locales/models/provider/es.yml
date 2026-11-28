@@ -1,10 +1,14 @@
 ---
 es:
   providers:
+    truelayer:
+      description: Conecta tu banco del Reino Unido a través de TrueLayer
     property_valuation:
       not_configured: Este proveedor de datos de propiedades no está configurado.
       missing_fields: Proporciona un nombre y una dirección completa de EE. UU. (calle, ciudad, estado y código postal).
+      missing_fields_gb: Indica un nombre, la dirección con el código postal y el UPRN del inmueble.
       preview_expired: Esta vista previa de la propiedad ha caducado; vuelve a buscar la dirección.
+      entry_name: Valoración de %{provider}
     rentcast:
       errors:
         no_valuation: RentCast no devolvió una estimación de valor para esta dirección.
@@ -15,3 +19,11 @@ es:
         no_valuation: Realie no devolvió una valoración para esta propiedad.
         not_found: Realie no pudo encontrar una propiedad que coincida con esta dirección.
         location_mismatch: Realie encontró una propiedad en otra ciudad o código postal. Revisa la dirección.
+    chimnie:
+      errors:
+        invalid_uprn: Un UPRN es un número de hasta 12 dígitos. Revisa el UPRN e inténtalo de nuevo.
+        no_estimate: Chimnie no tiene una estimación de valor para este inmueble.
+        not_found: Chimnie no ha encontrado ningún inmueble con este UPRN.
+        unsupported_property: Chimnie solo valora inmuebles residenciales; este UPRN corresponde a un inmueble comercial o de uso mixto.
+        unauthorized: Chimnie ha rechazado la clave API. Revísala en Ajustes → Autoalojamiento.
+        insufficient_balance: El saldo de tu cuenta de Chimnie es insuficiente para esta solicitud.

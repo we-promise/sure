@@ -4,6 +4,7 @@ es:
     create:
       invalid_credentials: Correo electrónico o contraseña no válidos.
       local_login_disabled: El inicio de sesión con contraseña local está desactivado. Por favor, utiliza el inicio de sesión único (SSO).
+      account_deactivated: Esta cuenta se ha desactivado. Ponte en contacto con un administrador.
     destroy:
       logout_successful: Has cerrado sesión correctamente.
     post_logout:
@@ -30,6 +31,8 @@ es:
       oidc: Iniciar sesión con OpenID Connect
       google_auth_connect: Iniciar sesión con Google
       local_login_admin_only: El inicio de sesión local está restringido a administradores.
+      passkey_button: Iniciar sesión con una llave de acceso
+      passkey_unsupported: Este navegador no admite llaves de acceso.
       no_auth_methods_enabled: No hay métodos de autenticación habilitados actualmente. Por favor, contacta con un administrador.
       demo_banner_title: Modo de demostración activo
       demo_banner_message: Este es un entorno de demostración. Las credenciales de acceso se han rellenado automáticamente para tu comodidad. Por favor, no introduzcas información real o sensible.

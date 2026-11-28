@@ -5,6 +5,8 @@ en:
       capability_missing:
         admin: "%{feature} is unavailable: none of the configured AI models can do it. Check the models in Settings → Self-Hosting."
         member: "%{feature} is unavailable: none of the configured AI models can do it."
+      no_family_consent:
+        member: "%{feature} needs a family admin to turn AI on. They can turn it on from the AI assistant."
       not_configured:
         admin: "%{feature} is unavailable: no AI model is set up for it. Add one in Settings → Self-Hosting."
         member: "%{feature} is unavailable: AI isn't set up for it on this instance."

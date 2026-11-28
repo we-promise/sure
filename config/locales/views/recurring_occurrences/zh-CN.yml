@@ -28,6 +28,9 @@ zh-CN:
       no_candidates: 没有附近的交易可关联。
       no_search_results: "未找到匹配“%{query}”的交易。"
       link_payment: 关联付款
+      amount_left: "剩余 %{amount}"
+      used_up: 已用完
+      used_up_hint: 其他账单已用完此交易的全部金额。
       not_this_one: 不是这笔
       cant_find: 找不到该交易？
       manual_explainer: 当此处没有匹配的交易时，您可以记录已知发生的付款。

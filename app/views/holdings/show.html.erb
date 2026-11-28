@@ -84,7 +84,7 @@
             <dt class="text-secondary"><%= t(".current_market_price_label") %></dt>
             <dd id="<%= dom_id(@holding, :current_market_price) %>" class="text-primary">
               <% begin %>
-                <%= @holding.security.current_price ? format_money(@holding.security.current_price) : t(".unknown") %>
+                <%= @holding.security.current_price ? current_price_with_quote(@holding.security, @holding.currency) : t(".unknown") %>
                 <% rescue ActiveRecord::RecordInvalid %>
                 <%= t(".unknown") %>
                 <% rescue StandardError => e %>
@@ -127,6 +127,9 @@
               <%= render "holdings/cost_basis_form", holding: @holding, context: :drawer, cancel_action: "drawer-cost-basis#toggle" %>
             </div>
           </div>
+          <% if @lots.any? %>
+            <%= render "holdings/lots", holding: @holding, lots: @lots, can_edit: @can_write_lots, provider_cost: @lots_provider_cost %>
+          <% end %>
           <div class="flex items-center justify-between text-sm">
             <dt class="text-secondary"><%= t(".book_value_label") %></dt>
             <dd class="text-primary">

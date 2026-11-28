@@ -3,6 +3,8 @@ nl:
   settings:
     preferences:
       show:
+        show_balance_updates: Gesynchroniseerde saldo-updates
+        show_balance_updates_hint: Toon altijd de dagelijkse saldi die de bankkoppeling vastlegt in de activiteit van gekoppelde rekeningen
         country: "Land"
         currency: "Valuta"
         date_format: "Datumformaat"
