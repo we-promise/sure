@@ -237,9 +237,10 @@ class AccountsTest < ApplicationSystemTestCase
           within_testid("account-sidebar-tabs") do
             click_on "All"
             # Match the group name exactly: a substring match makes "Cash" and
-            # "Physical Cash" ambiguous.
+            # "Physical Cash" ambiguous. The name sits in nested spans, so take
+            # the first; both lead to the same group.
             group_name = Accountable.from_type(accountable_type).display_name
-            details = find("details summary span", exact_text: group_name).find(:xpath, "./ancestor::details[1]")
+            details = find("details summary span", exact_text: group_name, match: :first).find(:xpath, "./ancestor::details[1]")
             details.click unless details[:open]
             assert_text account_name
           end
