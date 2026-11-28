@@ -190,11 +190,12 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
     # What deleting the transaction removes: the transaction itself, a split's
     # children and, for a transfer leg, the transfer and its fee transactions
     # (the other leg stays and becomes a standard transaction). Entries in an
-    # account the user cannot open show only that (see serialize_brief). The
-    # confirmation rebuilds it under the lock, so access is read each time.
+    # account the user cannot open show only that (see serialize_brief), and
+    # names never show such an account (entry_name). The confirmation rebuilds
+    # it under the lock, so access is read each time.
     def preview(transaction, entry)
-      snapshot = serialize(transaction, entry)
       visible = accessible_account_ids
+      snapshot = serialize(transaction, entry, visible)
 
       children = entry.child_entries.in_split_order.to_a
       snapshot[:split_children] = children.map { |child| serialize_brief(child, visible) } if children.any?
@@ -214,12 +215,12 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
 
     # Shape a Transaction (and its root entry) into the result hash returned to
     # the caller.
-    def serialize(transaction, entry)
+    def serialize(transaction, entry, visible)
       {
         id: transaction.id,
         entry_id: entry.id,
         account_id: entry.account_id,
-        name: entry_name(entry),
+        name: entry_name(entry, visible),
         date: entry.date,
         amount: entry.amount.to_s,
         amount_formatted: format_money(entry),
@@ -236,7 +237,7 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
         id: entry.entryable_id,
         entry_id: entry.id,
         account: entry.account.name,
-        name: entry.name,
+        name: entry_name(entry, visible),
         date: entry.date,
         amount: entry.amount.to_s,
         currency: entry.currency

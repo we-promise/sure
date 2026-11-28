@@ -168,6 +168,22 @@ class Assistant::Function::DeleteTransactionTest < ActiveSupport::TestCase
     assert_equal "standard", transfer.inflow_transaction.reload.kind
   end
 
+  test "a member's preview and delete of a transfer leg do not name the hidden account through its fee" do
+    transfer = create_transfer_to_hidden_account(source_fee_amount: 2)
+    member = Assistant::Function::DeleteTransaction.new(users(:family_member))
+    params = { "id" => transfer.outflow_transaction.id }
+
+    preview = member.call(params)
+
+    assert_equal [ "Transfer fee — Transfer to another account" ], preview[:preview][:transfer][:deleted_fee_transactions].map { |t| t[:name] }
+    assert_not_includes preview.to_json, "Hidden Savings"
+
+    result = member.call(params.merge("preview_token" => preview[:preview_token]))
+
+    assert_equal true, result[:deleted]
+    assert_not_includes result.to_json, "Hidden Savings"
+  end
+
   test "rereads account access when the delete is confirmed" do
     share = accounts(:investment).account_shares.create!(user: users(:family_member), permission: "read_only")
     transfer = create_transfer(from_account: accounts(:depository), to_account: accounts(:investment), amount: 100)
