@@ -651,10 +651,25 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal "HSA", account.short_subtype_label
     assert_equal "Health Savings Account", account.long_subtype_label
 
-    # Test with nil subtype
+    # Test with nil subtype: falls back to the singular type name, not the
+    # plural group name.
     account.accountable.update!(subtype: nil)
-    assert_equal "Investments", account.short_subtype_label
-    assert_equal "Investments", account.long_subtype_label
+    assert_equal "Investment", account.short_subtype_label
+    assert_equal "Investment", account.long_subtype_label
+  end
+
+  test "subtype label falls back to singular type name for accounts without subtypes" do
+    vehicle = Vehicle.new
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Test Vehicle",
+      balance: 1000,
+      currency: "USD",
+      accountable: vehicle
+    )
+
+    assert_equal "Vehicle", account.short_subtype_label
+    assert_equal "Vehicle", account.long_subtype_label
   end
 
   # Tax treatment tests (TaxTreatable concern)
