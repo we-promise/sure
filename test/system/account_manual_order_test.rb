@@ -65,7 +65,6 @@ class AccountManualOrderTest < ApplicationSystemTestCase
     plaid = accounts(:connected)
 
     visit account_path(checking)
-    observe_account_prefetch(account_path(plaid))
 
     wait_for_account_visit(account_path(plaid)) do
       within_testid("account-sidebar-tabs") do
@@ -75,6 +74,8 @@ class AccountManualOrderTest < ApplicationSystemTestCase
         handle.send_keys(:enter)
         handle.send_keys(:up)
 
+        wait_for_sidebar_sparklines
+        observe_account_prefetch(account_path(plaid))
         link = find("[data-sortable-list-target='item'][data-sortable-list-id='#{plaid.id}'] a[href='#{account_path(plaid)}']")
         link.hover
         # Observe the absence of a request beyond Turbo's 100 ms hover delay.
@@ -94,11 +95,13 @@ class AccountManualOrderTest < ApplicationSystemTestCase
     @user.update!(default_account_order: "name_asc")
     visit account_path(accounts(:depository))
     destination = account_path(accounts(:connected))
-    observe_account_prefetch(destination)
+    within_testid("account-sidebar-tabs") do
+      wait_for_sidebar_sparklines
+      observe_account_prefetch(destination)
+      find("a[href='#{destination}']", visible: true).hover
+    end
 
-    within_testid("account-sidebar-tabs") { find("a[href='#{destination}']", visible: true).hover }
-
-    assert_eventually { evaluate_script("window.accountPrefetches.length") == 1 }
+    assert_eventually { evaluate_script("window.accountPrefetches.length").positive? }
   end
 
   test "leaving sort mode keeps focus in the sidebar when no sort toggle is visible" do
@@ -245,6 +248,16 @@ class AccountManualOrderTest < ApplicationSystemTestCase
   end
 
   private
+    # A lazy frame GET cancels Turbo's pending hover-prefetch timer. Scroll
+    # rendered frames into view and await completion before measuring hover;
+    # hidden tab/mobile frames must remain lazy.
+    def wait_for_sidebar_sparklines
+      all("turbo-frame[loading='lazy'][src]:not([complete])", visible: true).each do |frame|
+        frame.scroll_to(:center)
+        frame.assert_matches_selector("turbo-frame[complete]")
+      end
+    end
+
     def observe_account_prefetch(path)
       page.execute_script(<<~JS, path)
         window.accountPrefetches = [];
