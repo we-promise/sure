@@ -470,6 +470,18 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
     assert_equal 436, bridge.cash_after_obligations
   end
 
+  test "accounts excluded from reports are not cash on hand" do
+    set_cash(500)
+    @family.accounts.create!(name: "Someone else's checking", balance: 10_000, currency: "USD",
+                             exclude_from_reports: true, accountable: Depository.new)
+    create_series(name: "Paycheck", amount: -1840, due: Date.current + 5, preset: "weekly", income: true)
+    create_series(name: "Water", amount: 64, due: Date.current + 2)
+
+    bridge = Planner.new(@family, user: @user).plan(periods_limit: 3).first
+
+    assert_equal 500, bridge.cash_on_hand, "the excluded account's balance is not counted"
+  end
+
   test "an unknown balance is not evidence of a shortfall" do
     @family.accounts.update_all(status: "disabled")
     create_series(name: "Paycheck", amount: -1840, due: Date.current + 5, preset: "weekly", income: true)

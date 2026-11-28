@@ -5,7 +5,7 @@ id:
       sign_out: Keluar
       setup: Penyiapan
       preferences: Preferensi
-      goals: Tujuan
+      tools: Alat/AI
       start: Mulai
     logout:
       sign_out: Keluar
@@ -38,17 +38,48 @@ id:
       currency: Mata uang
       date_format: Format tanggal
       submit: Selesai
-    goals:
-      title: Apa tujuan utama Anda?
-      subtitle: Pilih satu atau lebih tujuan Anda dalam menggunakan %{product_name} sebagai alat keuangan pribadi Anda.
-      unified_accounts: Melihat semua rekening saya di satu tempat
-      cashflow: Memahami arus kas dan pengeluaran
-      budgeting: Mengelola rencana keuangan dan anggaran
-      partner: Mengelola keuangan bersama pasangan
-      investments: Memantau investasi
-      ai_insights: Memanfaatkan AI untuk membantu memahami keuangan saya
-      optimization: Menganalisis dan mengoptimalkan rekening
-      reduce_stress: Mengurangi stres atau kecemasan finansial
+    tools:
+      title: Anggap saja rumah sendiri.
+      subtitle: Beberapa pilihan untuk menjadikan %{product_name} milik Anda.
+      starting_point:
+        eyebrow: Titik awal Anda
+        title: Apa yang selama ini Anda gunakan?
+        description: Pilih alat yang Anda gunakan untuk mengelola keuangan keluarga.
+        select: Pilih alat Anda
+        other_placeholder: Alat lain (opsional)
+        hint: Pilih semua yang sesuai. Ini membantu kami menyarankan titik awal, bukan berarti data dari alat tersebut pasti bisa diimpor.
+        tools:
+          nothing_yet: Belum pernah
+          other: Lainnya
+      ai:
+        eyebrow: Preferensi AI Anda
+        title: Bagaimana Anda ingin menggunakan %{product_name}?
+        description: Anda yang memegang kendali. Pilih yang paling cocok untuk Anda.
+        default: Standar
+        modes:
+          none:
+            title: Tanpa AI
+            description: Kelola keuangan Anda tanpa asisten dalam aplikasi.
+          builtin:
+            title: AI bawaan
+            description: Aktifkan asisten dalam aplikasi, menggunakan penyedia AI instans ini.
+          external:
+            title: Gunakan agen AI Anda sendiri
+            description: Gunakan asisten Anda sendiri, terhubung dengan izin Anda.
+        panels:
+          admin_on: Sebagai admin, pilihan ini juga menjadi persetujuan keluarga Anda untuk fitur AI yang berjalan di latar belakang, seperti kategorisasi.
+          admin_off: Sebagai admin, pilihan ini juga menarik persetujuan Anda untuk fitur AI yang berjalan di latar belakang, seperti kategorisasi. Fitur tersebut tetap aktif hanya jika admin lain mengaktifkan AI.
+          none:
+            title: Asisten Anda tetap nonaktif.
+            body: Ini menonaktifkan asisten dalam aplikasi untuk akun Anda.
+          builtin:
+            title: Asisten Anda akan aktif.
+            body: Ini mengaktifkan asisten dalam aplikasi untuk akun Anda. Penyedia AI yang digunakan, dan apakah asisten tersedia, tetap bergantung pada pengaturan AI instans ini.
+            not_configured: Belum ada penyedia AI yang disiapkan di instans ini. Admin dapat menambahkannya di Pengaturan → Self-Hosting.
+            unavailable: Pengaturan AI keluarga Anda saat ini tidak menjalankan asisten dalam aplikasi, jadi asisten tidak akan menjawab sampai admin mengubahnya.
+          external:
+            title: Hubungkan agen Anda saat Anda siap.
+            body: Ini membuat AI tetap aktif untuk akun Anda. Jika keluarga Anda dikonfigurasi untuk obrolan eksternal, percakapan akan menggunakan asisten eksternal Anda, bukan asisten bawaan %{product_name}, di antarmuka obrolan yang sama. %{product_name} tetap menangani impor, kategorisasi, dan proses lainnya sebagai catatan utama data Anda. Agen Anda dapat berinteraksi dengannya melalui MCP atau sure-cli; untuk menghubungkannya, buka Pengaturan → MCP. Pilihan ini tidak mengonfigurasi layanan obrolan dan tidak membuat, mengubah, atau menghapus koneksi apa pun.
       submit: Berikutnya
     trial:
       title: Coba Sure selama 45 hari

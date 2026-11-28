@@ -6,9 +6,38 @@ pt-BR:
         disable_mfa: Desabilitar 2FA
         disable_mfa_confirm: Tem certeza de que deseja desabilitar a autenticação de dois fatores? Isso tornará sua conta menos segura.
         enable_mfa: Habilitar 2FA
+        mfa_enabled_status_html: A autenticação de dois fatores está <span class="font-medium text-green-600">habilitada</span>
+        mfa_enabled_description: Sua conta está protegida por uma camada extra de segurança.
+        mfa_disabled_status_html: A autenticação de dois fatores está <span class="font-medium text-red-600">desabilitada</span>
+        mfa_disabled_description: Habilite a 2FA para adicionar uma camada extra de segurança à sua conta.
         mfa_description: Adicione uma camada extra de segurança à sua conta exigindo um código do seu aplicativo autenticador ao fazer login
         mfa_title: Autenticação de Dois Fatores
+        webauthn_add: Adicionar chave de acesso ou chave de segurança
+        webauthn_added: Adicionada em %{date}
+        webauthn_code_label: Código do autenticador ou código de backup
+        webauthn_code_placeholder: Código atual do autenticador ou um código de backup não usado
+        webauthn_description: Use uma chave de acesso, Touch ID, Windows Hello ou uma chave de segurança física como segundo fator ao fazer login.
+        webauthn_empty: Nenhuma chave de acesso ou chave de segurança cadastrada ainda.
+        webauthn_last_used: Usada pela última vez há %{time_ago}
+        webauthn_name_label: Nome da chave
+        webauthn_name_placeholder: MacBook Touch ID, YubiKey etc.
+        webauthn_remove: Remover
+        webauthn_remove_confirm: Tem certeza de que deseja remover esta chave de acesso ou chave de segurança?
+        webauthn_remove_confirm_body: Você precisará cadastrar esta chave de acesso ou chave de segurança novamente antes de usá-la para verificar o login.
+        webauthn_title: Chaves de acesso e chaves de segurança
+        webauthn_unsupported: Este navegador não suporta chaves de acesso nem chaves de segurança.
         page_title: Segurança
+        encryption_warning:
+          title: Chaves de criptografia ausentes
+          intro: "Dados sensíveis (chaves de API, tokens de provedores, segredos de MFA e dados pessoais) estão sendo armazenados sem criptografia. Para ativar a criptografia, defina as seguintes chaves nas suas variáveis de ambiente ou nas credenciais do Rails:"
+          keys:
+            - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+            - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+            - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+          generate: "Gere um conjunto com: bin/rails db:encryption:init"
+        disable_mfa_password_label: Confirme com sua senha
+        disable_mfa_password_placeholder: Digite sua senha
+        mfa_sso_only: A autenticação de dois fatores é gerenciada pelo seu provedor de identidade.
         sso_title: Contas Conectadas
         sso_subtitle: Gerencie suas conexões de contas de login único (SSO)
         sso_disconnect: Desconectar
@@ -21,3 +50,16 @@ pt-BR:
         sso_confirm_body: Tem certeza de que deseja desconectar sua conta %{provider}? Você poderá reconectá-la posteriormente fazendo login novamente com esse provedor.
         sso_confirm_button: Desconectar
         sso_warning_message: Este é o seu único método de login. Você deve definir uma senha nas suas configurações de segurança antes de desconectar, caso contrário, você poderá ficar bloqueado na sua conta.
+        compromised_secret_warning:
+          title: As chaves de criptografia não são realmente secretas
+          intro: As chaves de criptografia desta instalação foram derivadas automaticamente de um valor de SECRET_KEY_BASE publicamente conhecido (um padrão ou valor de exemplo dos arquivos de exemplo ou dos guias de hospedagem deste projeto). Qualquer pessoa que conheça esse valor pode calcular as mesmas chaves de criptografia, então esses dados não estão realmente protegidos.
+          generate: "NÃO defina simplesmente um novo SECRET_KEY_BASE e execute a tarefa de backfill: se algum dado já tiver sido criptografado com a chave comprometida, o backfill não consegue distinguir esse texto cifrado de texto simples real e vai criptografá-lo de novo por cima, tornando-o irrecuperável. Em vez disso, faça a rotação com segurança, com o app parado: gere novas chaves com bin/rails db:encryption:init e defina-as nas variáveis ACTIVE_RECORD_ENCRYPTION_*; depois execute bin/rails \"security:backfill_encryption[100,0]\" com este SECRET_KEY_BASE na variável de ambiente ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE apenas para esse comando, para que os dados existentes continuem sendo descriptografados e passem para as novas chaves. Consulte o guia de hospedagem com Docker."
+          settings_secrets: As chaves de API e os tokens salvos nas configurações são criptografados com uma chave derivada do próprio SECRET_KEY_BASE, que o esquema anterior não cobre. Depois de alterar o SECRET_KEY_BASE, criptografe-os novamente com bin/rails "security:rotate_setting_secrets[0]", passando o valor antigo na variável de ambiente OLD_SECRET_KEY_BASE (consulte o guia de hospedagem com Docker). Informe novamente qualquer chave que o comando indicar como impossível de descriptografar.
+  webauthn_credentials:
+    code_already_used: Esse código já foi usado. Aguarde o próximo código do seu aplicativo autenticador.
+    default_name: Chave de segurança
+    failure: Não foi possível salvar essa chave de acesso ou chave de segurança. Tente novamente.
+    invalid_code: Esse código não é válido. Informe um código atual do seu aplicativo autenticador ou um código de backup não usado.
+    mfa_required: Habilite a autenticação de dois fatores antes de adicionar uma chave de acesso ou chave de segurança.
+    rate_limited: Muitas tentativas. Aguarde um minuto e tente novamente.
+    success: Chave de acesso ou chave de segurança removida.
