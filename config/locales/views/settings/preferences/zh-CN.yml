@@ -3,6 +3,8 @@ zh-CN:
   settings:
     preferences:
       show:
+        show_balance_updates: 同步余额更新
+        show_balance_updates_hint: 始终在已关联账户的活动中显示银行同步记录的每日余额
         country: 国家
         currency: 货币
         date_format: 日期格式

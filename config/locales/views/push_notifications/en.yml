@@ -1,0 +1,6 @@
+en:
+  push_notifications:
+    budget_description: Also notify me when a budget category nears its limit. Over-budget alerts are always sent. Off by default.
+    budget_title: Budget warnings
+    description: Applies to every device you have enabled, browser and iOS.
+    title: Push notifications
