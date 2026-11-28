@@ -62,6 +62,10 @@ class Family::BayesSettings
 
     # Classifier (the Category classifier rule)
     threshold: 0.7,
+    # A category with fewer training transactions than this is never picked:
+    # with so few words, anything it has seen scores high there, so it would
+    # win unfamiliar transactions with a confident-looking score.
+    min_category_examples: 5,
     lock_results: false
   }.freeze
 
@@ -79,6 +83,7 @@ class Family::BayesSettings
     similar_self_grace_days: 1..3650,
     max_training_transactions: 100..20_000,
     threshold: 0.05..0.99,
+    min_category_examples: 1..100,
     spread_margin: 0.0..0.9,
     smoothing: 0.001..10.0,
     similar_threshold: 0.5..0.99,

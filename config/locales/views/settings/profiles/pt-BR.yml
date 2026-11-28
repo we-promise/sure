@@ -4,6 +4,7 @@ pt-BR:
     profiles:
       destroy:
         cannot_remove_self: Você não pode se remover da conta.
+        member_owns_other_family_data: Este membro ainda é dono de contas em outro grupo familiar e não pode ser removido. Transfira ou remova essas contas primeiro.
         member_removal_failed: Houve um problema ao remover o membro.
         member_removed: Membro foi removido com sucesso.
         not_authorized: Você não está autorizado a remover membros.
@@ -13,7 +14,7 @@ pt-BR:
             é irreversível.
           title: Excluir conta?
         confirm_reset:
-          body: Tem certeza de que deseja resetar sua conta? Isso excluirá todas as suas contas, categorias, comerciantes, tags e outros dados. Esta ação não pode ser desfeita.
+          body: Tem certeza de que deseja resetar sua conta? Isso excluirá todas as suas contas, categorias, estabelecimentos, tags e outros dados. Esta ação não pode ser desfeita.
           title: Resetar conta?
         confirm_reset_with_sample_data:
           body: Tem certeza de que deseja redefinir sua conta e carregar dados de exemplo? Isso excluirá seus dados existentes e os substituirá por dados de demonstração para que você possa explorar o Sure com segurança.
@@ -29,11 +30,11 @@ pt-BR:
         delete_account_warning: Excluir sua conta removerá permanentemente todos
           os seus dados e não pode ser desfeito.
         reset_account: Resetar conta
-        reset_account_warning: Resetar sua conta excluirá todas as suas contas, categorias, comerciantes, tags e outros dados, mas manterá sua conta de usuário intacta.
+        reset_account_warning: Resetar sua conta excluirá todas as suas contas, categorias, estabelecimentos, tags e outros dados, mas manterá sua conta de usuário intacta.
         reset_account_with_sample_data: Reiniciar e pré-carregar
         reset_account_with_sample_data_warning: Exclua todos os seus dados existentes e, em seguida, carregue novos dados de amostra para que você possa explorar um ambiente pré-configurado.
         email: E-mail
-        first_name: Primeiro Nome
+        first_name: Nome
         group_form_input_placeholder: Digite o nome do grupo
         group_form_label: Nome do grupo
         group_title: Membros do grupo
@@ -43,11 +44,14 @@ pt-BR:
         household_title: Família
         invitation_link: Link de convite
         invite_member: Adicionar membro
+        invite_multiple: Adicionar vários membros
         last_name: Sobrenome
-        page_title: Conta
+        page_title: Dados do perfil
         pending: Pendente
         profile_subtitle: Personalize como você aparece no %{product_name}
         profile_title: Perfil
         remove_invitation: Remover Convite
         remove_member: Remover Membro
+        resend_confirmation_link: solicite um novo e-mail de confirmação
         save: Salvar
+        unconfirmed_email_notice_html: Você solicitou a alteração do seu e-mail para %{email}. Acesse seu e-mail e confirme para que a alteração entre em vigor. Se não recebeu o e-mail, verifique sua pasta de spam ou %{resend_link}.

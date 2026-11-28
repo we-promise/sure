@@ -41,7 +41,7 @@ class Insight::Generators::IdleCashGenerator < Insight::Generator
       family.accounts.visible.accessible_by_all_active_members
         .where(accountable_type: "Depository", currency: family.currency)
         .where("balance >= ?", MIN_BALANCE)
-        .where.not(id: Entry.where("date >= ?", IDLE_DAYS.days.ago.to_date).select(:account_id))
+        .where.not(id: Entry.excluding_scheduled.where("entries.date >= ?", IDLE_DAYS.days.ago.to_date).select(:account_id))
         .order(balance: :desc)
     end
 end
