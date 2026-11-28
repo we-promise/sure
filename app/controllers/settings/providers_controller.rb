@@ -98,7 +98,9 @@ class Settings::ProvidersController < ApplicationController
 
   def sync
     provider_key  = params[:provider_key]
-    syncable_type = PANEL_SYNCABLE_TYPES[provider_key]
+    # Not PANEL_SYNCABLE_TYPES[provider_key]: Brakeman reads that as the param
+    # choosing the class to constantize.
+    _key, syncable_type = PANEL_SYNCABLE_TYPES.find { |key, _type| key == provider_key }
     return redirect_to settings_providers_path unless syncable_type
 
     items = syncable_type.constantize.where(family: Current.family).syncable
@@ -237,35 +239,12 @@ class Settings::ProvidersController < ApplicationController
     FAMILY_PANEL_KEYS = FAMILY_PANELS.map { |p| p[:key] }.freeze
     FAMILY_PANELS_BY_KEY = FAMILY_PANELS.index_by { |p| p[:key] }.freeze
 
-    # Maps panel key → ActiveRecord model name for sync health queries
-    PANEL_SYNCABLE_TYPES = {
-      "akahu"          => "AkahuItem",
-      "up"             => "UpItem",
-      "monobank"       => "MonobankItem",
-      "fio"            => "FioItem",
-      "simplefin"      => "SimplefinItem",
-      "lunchflow"      => "LunchflowItem",
-      "redbark"        => "RedbarkItem",
-      "enable_banking" => "EnableBankingItem",
-      "truelayer"      => "TruelayerItem",
-      "coinstats"      => "CoinstatsItem",
-      "wise"           => "WiseItem",
-      "mercury"        => "MercuryItem",
-      "brex"           => "BrexItem",
-      "coinbase"       => "CoinbaseItem",
-      "binance"        => "BinanceItem",
-      "kraken"         => "KrakenItem",
-      "coinspot"       => "CoinspotItem",
-      "onchain_wallet" => "OnchainWalletItem",
-      "snaptrade"      => "SnaptradeItem",
-      "questrade"      => "QuestradeItem",
-      "sharesight"     => "SharesightItem",
-      "ibkr"           => "IbkrItem",
-      "trading212"     => "Trading212Item",
-      "trade_republic" => "TradeRepublicItem",
-      "indexa_capital" => "IndexaCapitalItem",
-      "sophtron"       => "SophtronItem"
-    }.freeze
+    # Maps panel key → ActiveRecord model name for sync health queries, from the
+    # connection each panel's adapter declares.
+    PANEL_SYNCABLE_TYPES = Provider::Factory.connection_declarations
+      .select { |declaration| FAMILY_PANEL_KEYS.include?(declaration[:key]) }
+      .to_h { |declaration| [ declaration[:key], declaration[:type] ] }
+      .freeze
 
     def load_provider_items(provider_key)
       case provider_key

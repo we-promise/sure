@@ -370,17 +370,15 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
   # Bank sync renders a provider's connection row and drawer from FAMILY_PANELS, and
   # FAMILY_PANEL_KEYS keeps it out of the global provider forms. A connected provider
   # moves under Your connections through its provider_summary case, and the row's sync
-  # status and Sync button read PANEL_SYNCABLE_TYPES and family_panel_items. The row
-  # renders the panel partial, so --skip-view skips all four.
+  # status and Sync button read family_panel_items (PANEL_SYNCABLE_TYPES follows from
+  # the adapter's declares_connection). The row renders the panel partial, so
+  # --skip-view skips all three.
   def add_bank_sync_entries
     return if options[:skip_view]
 
     controller_path = "app/controllers/settings/providers_controller.rb"
     add_bank_sync_entry(controller_path, "FAMILY_PANELS", "key: \"#{file_name}\"") do |content|
       self.class.append_family_panel_entry(content, key: file_name, title: class_name.titleize)
-    end
-    add_bank_sync_entry(controller_path, "PANEL_SYNCABLE_TYPES", "=> \"#{class_name}Item\"") do |content|
-      self.class.append_panel_syncable_type(content, key: file_name, class_name: class_name)
     end
     add_bank_sync_entry(controller_path, "family_panel_items", "=> @#{file_name}_items") do |content|
       self.class.append_family_panel_item(content, key: file_name)
@@ -653,12 +651,6 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
   def self.append_family_panel_entry(content, key:, title:)
     append_last_entry(content, /(FAMILY_PANELS = \[\n)(.*?)(\n[ \t]*\]\.freeze)/m,
                       %({ key: "#{key}", title: "#{title}", turbo_id: "#{key}", partial: "#{key}_panel" }))
-  end
-
-  # Maps the panel key to its item model in PANEL_SYNCABLE_TYPES, which the row's sync
-  # status and Settings::ProvidersController#sync read.
-  def self.append_panel_syncable_type(content, key:, class_name:)
-    append_hash_entry(content, /(PANEL_SYNCABLE_TYPES = \{\n)(.*?)(\n[ \t]*\}\.freeze)/m, key, %("#{class_name}Item"))
   end
 
   # Hands the loaded items to the row's sync status through family_panel_items.
