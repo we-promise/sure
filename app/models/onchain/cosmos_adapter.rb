@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-# Cosmos Hub ATOM: spendable, staked and unbonding. Public nodes do not index
-# transactions, so only the balance is read.
+# Cosmos Hub ATOM: spendable, staked, unbonding and unclaimed staking rewards.
+# Public nodes do not index transactions, so only the balance is read.
 class Onchain::CosmosAdapter
   include Onchain::ChainAdapter
 
@@ -60,7 +60,24 @@ class Onchain::CosmosAdapter
         Array(validator["entries"]).sum { |entry| uatom(entry["balance"]) }
       end
 
-      (spendable + staked + unbonding) / UATOM_PER_ATOM
+      (spendable + staked + unbonding + unclaimed_rewards(address)) / UATOM_PER_ATOM
+    end
+
+    # Rewards are claimable ATOM the holder owns, so they belong in the balance.
+    # The node reports them as decimal coins (18 places); fractions of a uatom
+    # cannot be withdrawn and are dropped.
+    def unclaimed_rewards(address)
+      provider.delegation_rewards(address).sum do |coin|
+        next 0.to_d unless coin.is_a?(Hash) && coin["denom"] == DENOM
+
+        decimal_uatom(coin["amount"]).floor
+      end
+    end
+
+    def decimal_uatom(amount)
+      raise Provider::CosmosRest::ApiError, "Cosmos REST returned a malformed amount" unless amount.is_a?(String) && amount.match?(/\A\d+(\.\d+)?\z/)
+
+      amount.to_d
     end
 
     # A missing amount must fail the sync, not read as zero.

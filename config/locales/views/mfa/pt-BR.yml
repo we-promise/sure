@@ -1,6 +1,8 @@
 ---
 pt-BR:
   mfa:
+    demo_family_restricted: A ativação do MFA está desativada para a família de demonstração compartilhada, para que o acesso à demonstração continue disponível para todos.
+    local_password_required: A autenticação de dois fatores precisa de uma senha local. A sua é gerenciada pelo seu provedor de identidade.
     backup_codes:
       backup_codes_description: Cada código só pode ser usado uma vez. Mantenha estes códigos
         seguros e protegidos.
@@ -14,14 +16,18 @@ pt-BR:
       code_already_used: Esse código já foi usado. Insira o próximo código do seu aplicativo autenticador.
       invalid_code: Código de verificação inválido. Tente novamente.
       setup_failed: Algo deu errado ao ativar a autenticação de dois fatores. Tente novamente.
+      invalid_password: Senha incorreta. Tente novamente.
     disable:
       failure: Algo deu errado ao desativar a autenticação de dois fatores. Tente novamente.
+      invalid_password: Senha incorreta. Tente novamente.
       success: Autenticação de dois fatores foi desabilitada
     new:
       code_label: Código de Verificação
       code_placeholder: Digite o código de 6 dígitos
       description: Melhore a segurança da sua conta configurando a autenticação de dois fatores
       page_title: Configuração de Autenticação de Dois Fatores
+      password_label: Confirme com sua senha
+      password_placeholder: Digite sua senha
       scan_description: Use um aplicativo autenticador como Google Authenticator ou 1Password
         para escanear este código QR
       scan_title: 1. Escanear Código QR
@@ -34,8 +40,16 @@ pt-BR:
       verify_title: 2. Digite o Código de Verificação
     verify:
       description: Digite o código do seu aplicativo autenticador para continuar
+      or: ou
       page_title: Verificar Autenticação de Dois Fatores
       title: Autenticação de Dois Fatores
       verify_button: Verificar
+      verifying: Verificando...
+      webauthn_button: Usar chave de acesso ou chave de segurança
+      webauthn_unsupported: Este navegador não é compatível com chaves de acesso ou chaves de segurança.
     verify_code:
       invalid_code: Código de autenticação inválido. Tente novamente.
+    verify_webauthn:
+      invalid_credential: Não foi possível verificar essa chave de acesso ou chave de segurança. Tente novamente.
+    webauthn_options:
+      unavailable: Não há chaves de acesso ou chaves de segurança disponíveis para esta conta.

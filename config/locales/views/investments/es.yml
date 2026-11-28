@@ -14,6 +14,9 @@ es:
       brokerage:
         short: Corretaje
         long: Cuenta de corretaje (Brokerage)
+      cash_management:
+        short: CMA
+        long: Cuenta de gestión de efectivo
       401k:
         short: 401(k)
         long: Plan de jubilación 401(k)
@@ -113,6 +116,9 @@ es:
       life_insurance:
         short: Seguro de vida
         long: Seguro de vida
+      epf:
+        short: EPF
+        long: Employees' Provident Fund
       ppf:
         short: PPF
         long: Public Provident Fund
@@ -185,5 +191,7 @@ es:
     value_tooltip:
       cash: Efectivo
       holdings: Inversiones
+      projected: Saldo previsto
+      scheduled: Programado
       total: Saldo de la cartera
       total_value_tooltip: El saldo total de la cartera es la suma del efectivo de corretaje (disponible para operar) y el valor de mercado actual de tus inversiones.

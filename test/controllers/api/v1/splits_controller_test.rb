@@ -86,11 +86,15 @@ class Api::V1::SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
-  test "returns 422 when an amount is not numeric" do
-    params = { split: { splits: [ { name: "Bad", amount: "not-a-number" } ] } }
+  test "returns 422 when an amount is not a finite number" do
+    [ "not-a-number", "abc", "12abc", "12\u0000abc", "Infinity", "-Infinity", "NaN", "", nil ].each do |amount|
+      params = { split: { splits: [ { name: "Bad", amount: amount }, { name: "Rest", amount: @entry.amount.to_s } ] } }
 
-    post api_v1_transaction_split_url(@transaction), params: params, headers: api_headers(@api_key), as: :json
-    assert_response :unprocessable_entity
+      post api_v1_transaction_split_url(@transaction), params: params, headers: api_headers(@api_key), as: :json
+      assert_response :unprocessable_entity, amount.inspect
+      assert_equal "each split requires a numeric amount", JSON.parse(response.body)["message"], amount.inspect
+      assert_not @entry.reload.split_parent?
+    end
   end
 
   test "returns 422 when the transaction is already split" do
@@ -144,7 +148,28 @@ class Api::V1::SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  test "update refuses while a part is linked as a transfer" do
+    part = @entry.split!([ { name: "Principal", amount: 60 }, { name: "Interest", amount: 40 } ]).first
+    link_split_part_to_loan(part)
+
+    patch api_v1_transaction_split_url(@transaction), params: halves, headers: api_headers(@api_key), as: :json
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+    assert_equal %w[Interest Principal], @entry.reload.child_entries.order(:name).pluck(:name)
+  end
+
   # DESTROY
+
+  test "destroy refuses while a part is linked as a transfer" do
+    part = @entry.split!([ { name: "Principal", amount: 60 }, { name: "Interest", amount: 40 } ]).first
+    link_split_part_to_loan(part)
+
+    delete api_v1_transaction_split_url(@transaction), headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+    assert @entry.reload.split_parent?
+  end
 
   test "unsplits a transaction" do
     post api_v1_transaction_split_url(@transaction), params: halves, headers: api_headers(@api_key), as: :json
@@ -196,6 +221,7 @@ class Api::V1::SplitsControllerTest < ActionDispatch::IntegrationTest
 
     post api_v1_transaction_split_url(@transaction), params: halves, headers: api_headers(key), as: :json
     assert_response :forbidden
+    assert_equal "You do not have write access to this account", JSON.parse(response.body)["message"]
     assert_not @entry.reload.split_parent?
   end
 
@@ -278,6 +304,7 @@ class Api::V1::SplitsControllerTest < ActionDispatch::IntegrationTest
 
       post api_v1_transaction_split_url(@transaction), params: params, headers: api_headers(@api_key), as: :json
       assert_response :unprocessable_entity, "amount: #{huge}"
+      assert_equal "split amount is out of range", JSON.parse(response.body)["message"], "amount: #{huge}"
       assert_not @entry.reload.split_parent?
     end
   end

@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Insight::GeneratorTest < ActiveSupport::TestCase
+  include InsightTestHelper
+
   # Exposes the shared-account helpers the way a generator uses them: figures
   # first, the digest for the metadata afterwards.
   class ProbeGenerator < Insight::Generator
@@ -28,5 +30,27 @@ class Insight::GeneratorTest < ActiveSupport::TestCase
 
     assert_equal first_ids.sort, @generator.figure_account_ids.sort
     assert_equal Digest::SHA256.hexdigest(first_ids.sort.join(",")), @generator.digest
+  end
+
+  # Insight.about_shared_accounts recomputes this digest in SQL on every read;
+  # rows written before it existed were hashed in Ruby, so both must agree.
+  test "the digest matches the one first computed in Ruby" do
+    assert_equal ruby_shared_accounts_digest(@family), @generator.digest
+  end
+
+  # The digest describes the ids the figures were computed from, not the
+  # rows still there when it is taken.
+  test "an account deleted after the figures still counts in the digest" do
+    first_ids = @generator.figure_account_ids
+
+    accounts(:depository).destroy!
+
+    assert_equal Digest::SHA256.hexdigest(first_ids.sort.join(",")), @generator.digest
+  end
+
+  test "the digest of no shared account is the hash of an empty string" do
+    AccountShare.where(account: @family.accounts).delete_all
+
+    assert_equal Digest::SHA256.hexdigest(""), @generator.digest
   end
 end
