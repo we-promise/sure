@@ -86,7 +86,8 @@ class RuleRun < ApplicationRecord
 
   private
     # Counts a job against pending_jobs_count, then yields for its outcome, both
-    # under the row lock. Does nothing for a job already counted. Returns
+    # under the row lock. Does nothing for a job already counted, or when the
+    # run is gone because its rule was deleted while the job ran. Returns
     # whether this job was the run's last.
     def settle_job(job_id)
       drained = false
@@ -102,6 +103,10 @@ class RuleRun < ApplicationRecord
       end
 
       drained
+    rescue ActiveRecord::RecordNotFound
+      raise if self.class.exists?(id)
+
+      false
     end
 
     # The jobs of an immediate run with AI actions offer what they changed once

@@ -304,6 +304,45 @@ class AutoCategorizeJobTest < ActiveJob::TestCase
     assert_equal 1, @rule_run.reload.pending_jobs_count
   end
 
+  test "a rule deleted while its job calls the model ends the job without sending the batch again" do
+    transaction = create_transaction(account: @account, name: "Coffee shop").transaction
+    rule = @rule
+    response = provider_success_response([ categorization(transaction, "Food") ])
+    calls = 0
+    provider = Object.new
+    provider.define_singleton_method(:auto_categorize) do |**|
+      calls += 1
+      rule.destroy!
+      response
+    end
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+    Rails.error.expects(:report).never
+
+    perform_enqueued_jobs do
+      AutoCategorizeJob.perform_later(@family, transaction_ids: [ transaction.id ], rule_run_id: @rule_run.id, user_id: @user_id)
+    end
+
+    assert_equal 1, calls
+    assert_no_enqueued_jobs
+    assert_not RuleRun.exists?(@rule_run.id)
+    assert_equal "Food", transaction.reload.category.name
+  end
+
+  test "a job whose rule was deleted before it started sends nothing" do
+    transaction = create_transaction(account: @account, name: "Coffee shop").transaction
+    provider = mock
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+    provider.expects(:auto_categorize).never
+    @rule.destroy!
+
+    perform_enqueued_jobs do
+      AutoCategorizeJob.perform_later(@family, transaction_ids: [ transaction.id ], rule_run_id: @rule_run.id, user_id: @user_id)
+    end
+
+    assert_no_enqueued_jobs
+    assert_nil transaction.reload.category
+  end
+
   private
     # Runs the real OpenAI provider, whose request fails with `error` each of `times`.
     def openai_fails_with(error, times:)

@@ -33,8 +33,9 @@ class RuleAiJob < ApplicationJob
   def perform(family, transaction_ids: [], rule_run_id: nil, user_id: nil)
     @transaction_ids = transaction_ids
     @rule_run_id = rule_run_id
-    # Sidekiq runs a job again when its process dies before acknowledging it.
-    return if rule_run&.job_settled?(job_id)
+    # The run is gone when its rule was deleted; Sidekiq runs a job again when
+    # its process dies before acknowledging it.
+    return if rule_run_id.present? && (rule_run.nil? || rule_run.job_settled?(job_id))
 
     # Kept across retries (see serialize): a batch applied before its report
     # failed is reported, not sent again.
