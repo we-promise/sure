@@ -1,0 +1,17 @@
+---
+ru:
+  activerecord:
+    errors:
+      models:
+        account_provider:
+          attributes:
+            account:
+              bitcoin_wallet: отслеживает кошелёк Bitcoin. Удалите кошелёк, прежде чем привязывать другого поставщика.
+        bitcoin_wallet_account:
+          attributes:
+            account:
+              linked: привязан к другому поставщику. Кошельки Bitcoin можно отслеживать только на ручных криптосчетах.
+        bitcoin_wallet_source:
+          attributes:
+            extended_public_key:
+              encryption_unavailable: требует настроенного шифрования Active Record

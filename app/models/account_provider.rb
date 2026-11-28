@@ -8,6 +8,7 @@ class AccountProvider < ApplicationRecord
   validates :provider_id, uniqueness: { scope: :provider_type }
 
   validate :financekit_has_exclusive_writer, if: -> { new_record? || will_save_change_to_account_id? || will_save_change_to_provider_id? || will_save_change_to_provider_type? }
+  validate :account_has_no_bitcoin_wallet, if: -> { new_record? || will_save_change_to_account_id? }
 
   # When unlinking a CoinStats account, also destroy the CoinstatsAccount record
   # so it doesn't remain orphaned and count as "needs setup".
@@ -37,6 +38,13 @@ class AccountProvider < ApplicationRecord
   end
 
   private
+
+    # A Bitcoin wallet must be its account's only provider; see BitcoinWalletAccount#eligible_account.
+    def account_has_no_bitcoin_wallet
+      return if account.nil? || provider_type == "BitcoinWalletAccount"
+
+      errors.add(:account, :bitcoin_wallet) if BitcoinWalletAccount.exists?(account_id: account_id)
+    end
 
     # Under the provider's row lock, which reloads it: an ignore! that committed
     # after the provider was loaded is seen, and one still running waits.
