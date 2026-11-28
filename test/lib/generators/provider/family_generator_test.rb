@@ -47,6 +47,15 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     assert_parses ActionView::Template::Handlers::ERB::Erubi.new(generated).src
   end
 
+  # The one block of text the generator inserted between `before` and `after`.
+  def inserted_text(before, after)
+    old_lines = before.lines
+    new_lines = after.lines
+    prefix = old_lines.zip(new_lines).take_while { |a, b| a == b }.size
+    suffix = old_lines.reverse.zip(new_lines.reverse).take_while { |a, b| a == b }.size
+    new_lines[prefix...(new_lines.size - suffix)].join
+  end
+
   # Renders a generated view the way Rails would, from a real view path, so relative
   # translation keys and strict locals behave as they do in the app. Redbark has the
   # model, routes, fixtures and translations the generated views call, so it stands
@@ -359,6 +368,56 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
 
     assert_includes output.call("gocardless"), "Bank sync will not list gocardless"
     assert_empty output.call("redbark"), "Redbark's adapter declares its panel"
+  end
+
+  # /accounts loads a provider's items through its adapter's declaration. An adapter
+  # without one (it existed, or --skip-adapter) leaves @<key>_items unset, so the code
+  # the generator adds there must not fail on nil.
+  test "the code added to /accounts runs when the provider's items are not loaded" do
+    Dir.mktmpdir do |dir|
+      files = %w[app/controllers/accounts_controller.rb app/views/accounts/index.html.erb]
+      originals = files.index_with { |path| Rails.root.join(path).read }
+      files.each do |path|
+        FileUtils.mkdir_p(File.join(dir, File.dirname(path)))
+        File.write(File.join(dir, path), originals[path])
+      end
+
+      added = Dir.chdir(dir) do
+        generator = Provider::FamilyGenerator.new([ "gocardless" ])
+        capture_io { generator.update_accounts_controller && generator.update_accounts_index_view }
+        files.index_with { |path| inserted_text(originals[path], File.read(path)) }
+      end
+
+      stats = added["app/controllers/accounts_controller.rb"]
+      section = added["app/views/accounts/index.html.erb"]
+      assert_includes stats, "@gocardless_items"
+      assert_includes section, "@gocardless_items"
+
+      Object.new.instance_eval(stats)
+      Object.new.instance_eval(ActionView::Template::Handlers::ERB::Erubi.new(section).src)
+    end
+  end
+
+  # The /accounts section renders the item partial, which --skip-view does not write,
+  # so adding it would break /accounts for every family once a connection exists.
+  test "--skip-view leaves /accounts alone and says what to add" do
+    Dir.mktmpdir do |dir|
+      path = "app/views/accounts/index.html.erb"
+      original = Rails.root.join(path).read
+      FileUtils.mkdir_p(File.join(dir, File.dirname(path)))
+
+      results = [ false, true ].index_with do |skip_view|
+        File.write(File.join(dir, path), original)
+        Dir.chdir(dir) do
+          output = capture_io { Provider::FamilyGenerator.new([ "gocardless" ], skip_view: skip_view).update_accounts_index_view }.first
+          [ File.read(path), output ]
+        end
+      end
+
+      assert_includes results[false].first, "<%= render item, visible_accounts: visible_card_accounts(item) %>"
+      assert_equal original, results[true].first
+      assert_includes results[true].last, "app/views/gocardless_items/_gocardless_item.html.erb"
+    end
   end
 
   # An adapter the generator did not write (it existed, or --skip-adapter) lacks the

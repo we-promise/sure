@@ -2,7 +2,8 @@ class Provider::FinancekitAdapter < Provider::Base
   include Provider::InstitutionMetadata
   Provider::Factory.register("FinancekitAccountLineage", self)
   declares_connection key: "financekit", name: "Apple Wallet", accounts: :financekit_account_lineages,
-                      metadata: { region: "US / UK", kinds: %w[Bank], maturity: :beta, logo_text: "AW", logo_color: nil, domain: "apple.com" }
+                      metadata: { region: "US / UK", kinds: %w[Bank], maturity: :beta, logo_text: "AW", logo_color: nil, domain: "apple.com" },
+                      lists: { accounts_index: nil }
 
   def self.supported_account_types
     %w[Depository CreditCard]

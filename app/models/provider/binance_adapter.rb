@@ -8,7 +8,11 @@ class Provider::BinanceAdapter < Provider::Base
   Provider::Factory.register("BinanceAccount", self)
   declares_connection key: "binance", name: "Binance", panel: true,
                       metadata: { region: "Global", kinds: %w[Crypto], maturity: :beta, logo_text: "BI", logo_color: "#ca8a04", domain: "binance.com" },
-                      lists: { settings_page: %i[active ordered], settings_panel: %i[active ordered] }
+                      lists: {
+                        settings_page: %i[active ordered],
+                        settings_panel: %i[active ordered],
+                        accounts_index: ->(items) { items.ordered.with_attached_logo.includes(:binance_accounts, :accounts) }
+                      }
 
   # Define which account types this provider supports
   def self.supported_account_types

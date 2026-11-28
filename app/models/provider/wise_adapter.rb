@@ -9,7 +9,8 @@ class Provider::WiseAdapter < Provider::Base
                       metadata: { region: "Global", kinds: %w[Bank], maturity: :beta, logo_text: "WI", logo_color: "#22c55e", domain: "wise.com" },
                       lists: {
                         settings_page: %i[active ordered],
-                        settings_panel: ->(items) { items.active.ordered.includes(:syncs, :wise_accounts) }
+                        settings_panel: ->(items) { items.active.ordered.includes(:syncs, :wise_accounts) },
+                        accounts_index: ->(items) { items.ordered.includes(:wise_accounts, :accounts) }
                       }
 
   def self.supported_account_types

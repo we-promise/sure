@@ -7,7 +7,11 @@ class Provider::OnchainWalletAdapter < Provider::Base
   Provider::Factory.register("OnchainWalletAccount", self)
   declares_connection key: "onchain_wallet", name: "On-chain wallets", panel: true,
                       metadata: { region: "Global", kinds: %w[Crypto], maturity: :alpha, logo_text: "OC", logo_color: "#d97706", domain: nil, logo_icon: "wallet" },
-                      lists: { settings_page: %i[active ordered], settings_panel: %i[active ordered] }
+                      lists: {
+                        settings_page: %i[active ordered],
+                        settings_panel: %i[active ordered],
+                        accounts_index: ->(items) { items.ordered.includes(:accounts, onchain_wallet_accounts: { account_provider: :account }) }
+                      }
 
   def self.supported_account_types
     %w[Crypto]

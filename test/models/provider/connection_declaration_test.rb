@@ -146,4 +146,79 @@ class Provider::ConnectionDeclarationTest < ActiveSupport::TestCase
     assert_equal items.ordered.to_sql, adapter.connection_declaration[:lists][:settings_panel].call(items).to_sql
     assert_raises(ArgumentError) { adapter.declares_connection(key: "brex", name: "Brex", lists: { settings_pages: %i[ordered] }) }
   end
+
+  # /accounts loads each provider's connections with these queries; Trading 212 and
+  # Sharesight sort the loaded connections by creation.
+  ACCOUNTS_INDEX_QUERIES = {
+    "akahu"          => ->(i) { i.ordered.with_attached_logo.includes(:akahu_accounts) },
+    "binance"        => ->(i) { i.ordered.with_attached_logo.includes(:binance_accounts, :accounts) },
+    "brex"           => ->(i) { i.ordered.with_attached_logo.includes(:accounts, brex_accounts: :account_provider) },
+    "coinbase"       => ->(i) { i.ordered.with_attached_logo.includes(:coinbase_accounts, :accounts) },
+    "coinspot"       => ->(i) { i.ordered.with_attached_logo.includes(:coinspot_accounts, :accounts) },
+    "coinstats"      => ->(i) { i.ordered.with_attached_logo.includes(:coinstats_accounts, :accounts) },
+    "enable_banking" => ->(i) { i.ordered.with_attached_logo },
+    "fio"            => ->(i) { i.active.ordered.with_attached_logo.includes(:fio_accounts) },
+    "ibkr"           => ->(i) { i.ordered.with_attached_logo.includes(:ibkr_accounts) },
+    "indexa_capital" => ->(i) { i.ordered.with_attached_logo.includes(:indexa_capital_accounts) },
+    "kraken"         => ->(i) { i.ordered.with_attached_logo.includes(:kraken_accounts, :accounts) },
+    "lunchflow"      => ->(i) { i.ordered.with_attached_logo.includes(:lunchflow_accounts) },
+    "mercury"        => ->(i) { i.ordered.with_attached_logo.includes(:mercury_accounts) },
+    "monobank"       => ->(i) { i.ordered.with_attached_logo.includes(:monobank_accounts) },
+    "onchain_wallet" => ->(i) { i.ordered.includes(:accounts, onchain_wallet_accounts: { account_provider: :account }) },
+    "plaid"          => ->(i) { i.ordered.with_attached_logo.includes(:plaid_accounts) },
+    "questrade"      => ->(i) { i.ordered.with_attached_logo.includes(:accounts, questrade_accounts: :account_provider) },
+    "redbark"        => ->(i) { i.ordered.with_attached_logo.includes(:redbark_accounts) },
+    "sharesight"     => ->(i) { i.ordered.with_attached_logo.includes(sharesight_accounts: [ :account, :linked_account ]).sort_by(&:created_at) },
+    "simplefin"      => ->(i) { i.ordered.with_attached_logo },
+    "snaptrade"      => ->(i) { i.ordered.with_attached_logo.includes(:snaptrade_accounts) },
+    "sophtron"       => ->(i) { i.ordered.with_attached_logo.includes(:sophtron_accounts) },
+    "trade_republic" => ->(i) { i.ordered.includes(trade_republic_accounts: { account_provider: :account }) },
+    "trading212"     => ->(i) { i.ordered.with_attached_logo.includes(:trading212_accounts).sort_by(&:created_at) },
+    "truelayer"      => ->(i) { i.connected.ordered.with_attached_logo.includes(:truelayer_accounts) },
+    "up"             => ->(i) { i.ordered.with_attached_logo.includes(:up_accounts) },
+    "wise"           => ->(i) { i.ordered.includes(:wise_accounts, :accounts) }
+  }.freeze
+
+  # Stands in for an in-memory sort, so the relation before it is still pinned, along
+  # with the attribute it sorts on.
+  SORT_PROBE = Module.new do
+    def sort_by(&key)
+      attribute = key.call(Class.new(BasicObject) { define_method(:method_missing) { |name| name } }.new)
+      [ :sort_by, attribute, self ]
+    end
+  end
+
+  test "each provider on /accounts declares the query its connections load with" do
+    family = families(:dylan_family)
+    declarations = Provider::Factory.connection_declarations.index_by { |declaration| declaration[:key] }
+
+    assert_equal ACCOUNTS_INDEX_QUERIES.keys, declarations.select { |_key, declaration| declaration[:lists][:accounts_index] }.keys
+    assert_nil declarations.fetch("financekit")[:lists][:accounts_index], "FinanceKit lists its accounts on its own"
+    ACCOUNTS_INDEX_QUERIES.each do |key, query|
+      items = family.public_send(declarations.fetch(key)[:association]).extending(SORT_PROBE)
+      assert_equal query_shape(query.call(items)), query_shape(declarations.fetch(key)[:lists][:accounts_index].call(items)), key
+    end
+  end
+
+  test "a connection is on /accounts, ordered with its logo and accounts, unless it opts out" do
+    adapter = Class.new(Provider::Base)
+    adapter.declares_connection(key: "brex", name: "Brex")
+    items = families(:dylan_family).brex_items
+
+    assert_equal query_shape(items.ordered.with_attached_logo.includes(:brex_accounts)),
+                 query_shape(adapter.connection_declaration[:lists][:accounts_index].call(items))
+
+    adapter.declares_connection(key: "brex", name: "Brex", lists: { accounts_index: nil })
+    assert_nil adapter.connection_declaration[:lists][:accounts_index]
+    assert_raises(ArgumentError) { adapter.declares_connection(key: "brex", name: "Brex", lists: { settings_panel: nil }) }
+  end
+
+  private
+
+    # A relation by its query and preloads; a sorted one (see SORT_PROBE) also by its sort.
+    def query_shape(items)
+      return [ *items.first(2), *query_shape(items.last) ] if items.is_a?(Array)
+
+      [ items.to_sql, items.includes_values ]
+    end
 end

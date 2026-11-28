@@ -38,9 +38,10 @@ class Provider::Base
     []
   end
 
-  # How each list loads a provider's items unless its declaration says otherwise:
-  # the Bank sync page only needs to know which connections exist, and a panel
-  # reads them whole.
+  # How Bank sync loads a provider's items unless its declaration says otherwise:
+  # the page only needs to know which connections exist, and a panel reads them
+  # whole. The /accounts default (accounts_index) preloads the declared accounts
+  # association, so declares_connection builds it.
   ITEM_LISTS = {
     settings_page: ->(items) { items.ordered.select(:id) },
     settings_panel: ->(items) { items.ordered }
@@ -66,12 +67,15 @@ class Provider::Base
   #   turbo_id: (defaults to key) and auto_open:. The partial is "<key>_panel".
   # @param metadata [Hash, nil] Provider::Metadata attributes (region:, kinds:,
   #   maturity:, logo_text:, logo_color:, domain:, ...)
-  # @param lists [Hash] How a list loads the family's items, overriding ITEM_LISTS:
+  # @param lists [Hash] How a list loads the family's items, overriding the defaults:
   #   scope names applied in order, or a lambda over the family's item relation.
+  #   accounts_index: nil keeps the connection off /accounts.
   def self.declares_connection(key:, name:, item_class: "#{key.camelize}Item", accounts: :"#{key}_accounts",
                                linked_accounts: nil, panel: nil, metadata: nil, lists: {})
-    unknown_lists = lists.keys - ITEM_LISTS.keys
-    raise ArgumentError, "#{key}: unknown lists #{unknown_lists.join(', ')}" if unknown_lists.any?
+    default_lists = ITEM_LISTS.merge(accounts_index: ->(items) { items.ordered.with_attached_logo.includes(accounts) })
+    # Only accounts_index may be nil.
+    invalid_lists = lists.keys - default_lists.keys + lists.select { |list, query| query.nil? && ITEM_LISTS.key?(list) }.keys
+    raise ArgumentError, "#{key}: unknown or nil lists #{invalid_lists.join(', ')}" if invalid_lists.any?
 
     @connection_declaration = {
       key: key,
@@ -79,7 +83,7 @@ class Provider::Base
       association: item_class.underscore.pluralize.to_sym,
       accounts: accounts,
       linked_accounts: linked_accounts,
-      lists: ITEM_LISTS.merge(lists.transform_values { |query| item_list_query(query) }).freeze
+      lists: default_lists.merge(lists.transform_values { |query| query && item_list_query(query) }).freeze
     }.compact.freeze
     panel_options = panel.is_a?(Hash) ? panel : {}
     @panel_declaration = panel && {

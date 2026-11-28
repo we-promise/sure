@@ -5,7 +5,10 @@ class Provider::Trading212Adapter < Provider::Base
   Provider::Factory.register("Trading212Account", self)
   declares_connection key: "trading212", name: "Trading 212", panel: true,
                       metadata: { region: "EU", kinds: %w[Investment], maturity: :alpha, logo_text: "T2", logo_color: "#0d9488", domain: "trading212.com" },
-                      lists: { settings_page: %i[ordered] }
+                      lists: {
+                        settings_page: %i[ordered],
+                        accounts_index: ->(items) { items.ordered.with_attached_logo.includes(:trading212_accounts).sort_by(&:created_at) }
+                      }
 
   def self.supported_account_types
     %w[Investment]

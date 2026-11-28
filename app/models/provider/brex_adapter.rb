@@ -8,7 +8,8 @@ class Provider::BrexAdapter < Provider::Base
                       metadata: { region: "US", kinds: %w[Bank], maturity: :beta, logo_text: "BX", logo_color: "#059669", domain: "brex.com" },
                       lists: {
                         settings_page: %i[active ordered],
-                        settings_panel: ->(items) { items.active.ordered.includes(:syncs, :brex_accounts) }
+                        settings_panel: ->(items) { items.active.ordered.includes(:syncs, :brex_accounts) },
+                        accounts_index: ->(items) { items.ordered.with_attached_logo.includes(:accounts, brex_accounts: :account_provider) }
                       }
 
   def self.supported_account_types

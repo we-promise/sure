@@ -7,7 +7,11 @@ class Provider::FioAdapter < Provider::Base
   Provider::Factory.register("FioAccount", self)
   declares_connection key: "fio", name: "Fio banka", panel: true,
                       metadata: { region: "CZ", kinds: %w[Bank], maturity: :alpha, logo_text: "FI", logo_color: "#1d4ed8", domain: "fio.cz" },
-                      lists: { settings_page: %i[active ordered], settings_panel: %i[active ordered] }
+                      lists: {
+                        settings_page: %i[active ordered],
+                        settings_panel: %i[active ordered],
+                        accounts_index: ->(items) { items.active.ordered.with_attached_logo.includes(:fio_accounts) }
+                      }
 
   # Fio's statement header carries no account type, so the user picks one during setup.
   # Current and savings accounts are Depository; a token issued for a mortgage, loan or
