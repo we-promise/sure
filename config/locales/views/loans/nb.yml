@@ -6,18 +6,144 @@ nb:
     form:
       interest_rate: Rente
       interest_rate_placeholder: '5.25'
-      initial_balance: Opprinnelig lånebalanse
+      initial_balance: Opprinnelig lånebeløp
       rate_type: Rentetype
       term_months: Løpetid (måneder)
       term_months_placeholder: '360'
+      none: Ingen
+      subtype_prompt: Velg lånetype
+      subtype_none: Ingen
+      rate_type_adjustable: Justerbar
+      rate_type_fixed: Fast
+      rate_type_variable: Flytende
+      rate_changes: Renteendringer
+      rate_changes_hint: Hver rad angir renten som gjelder fra virkningsdatoen til neste rad. Hvis du oppgir en dato på nytt, erstattes den raden i stedet for at det legges til en ny.
+      rate_changes_empty: Ingen renteendringer registrert. Lånet løper med renten ovenfor.
+      rate_change_effective_date: Gjelder fra
+      rate_change_rate: Rente
+      rate_change_add: Legg til renteendring
+      rate_change_remove: Fjern
+      start_date: Utbetalingsdato
+      start_date_hint: "Datoen lånet ble utbetalt. Saldohistorikken for et nytt lån starter på denne datoen, ikke på datoen for startsaldoen. La feltet stå tomt for å bruke datoen for startsaldoen."
+      day_count_convention: "Renteberegning"
+      day_count_convention_actual_365: "Faktisk/365"
+      day_count_convention_actual_actual: "Faktisk/faktisk"
+      day_count_convention_hint: "Hvordan långiveren måler hver periode mot et år. Faktisk/365 beregner etter månedens lengde og er standard for britiske og australske boliglån. 30/360 beregner en flat tolvdel, slik Sure alltid har gjort."
+      day_count_convention_thirty_360: "30/360 (en flat tolvdel)"
+      down_payment: "Egenkapital"
+      insurance_rate: "Forsikringssats"
+      insurance_rate_placeholder: "0.36"
+      insurance_rate_hint: "En årlig sats som belastes månedlig sammen med terminbeløpet. Med fast forsikringssum beregnes den av opprinnelig saldo, med synkende av det som gjenstår."
+      insurance_rate_type: "Forsikringstype"
+      insurance_rate_type_decreasing_life: "Synkende"
+      insurance_rate_type_level_term: "Fast forsikringssum"
+      principal_only_transfers: "Koblede overføringer er bare avdrag"
+      principal_only_transfers_hint: "Slå på dette hvis du bare overfører avdraget og registrerer rentene separat. La det være av hvis den koblede overføringen er hele terminbeløpet."
     new:
       title: Angi lånedetaljer
     overview:
       interest_rate: Rente
       monthly_payment: Månedlig betaling
-      not_applicable: Ikke Aktuelt
-      original_principal: Opprinnelig hovedstol
-      remaining_principal: Gjenværende hovedstol
+      not_applicable: Ikke aktuelt
+      original_principal: Opprinnelig lånebeløp
+      remaining_principal: Gjenværende lånebeløp
       term: Løpetid
       type: Type
       unknown: Ukjent
+      original_payoff_date: Opprinnelig sluttdato
+    tabs:
+      schedule:
+        date: Dato
+        description: Beregnet ut fra opprinnelig lånebeløp, rente og løpetid, fra og med %{start_date}. Ekstra innbetalinger er ikke tatt med.
+        variable_rate_notice: Renten på dette lånet endres over tid. Nedbetalingsplanen beregnes på nytt ved hver registrerte endring, slik at opprinnelig sluttdato beholdes og terminbeløpet justeres. En endring som ikke er registrert ennå, vil forskyve disse tallene.
+        opening_payment: Første terminbeløp
+        interest: Renter
+        monthly_payment: Månedlig betaling
+        number: Nr.
+        payment: Terminbeløp
+        principal: Avdrag
+        remaining_balance: Restgjeld
+        total_cost: Total kostnad
+        total_interest: Totale renter
+        forecasted_payoff_date: "Beregnet sluttdato"
+        forecasted_payoff_not_converged: "Ikke nedbetalt med nåværende terminbeløp"
+        not_applicable: "I/A"
+      overview:
+        interest_rate: Rente
+        monthly_payment: Månedlig betaling
+        not_applicable: I/A
+        original_payoff_date: Opprinnelig sluttdato
+        original_principal: Opprinnelig lånebeløp
+        remaining_principal: Gjenværende lånebeløp
+        term: Løpetid
+        type: Type
+        unknown: Ukjent
+        edit_loan_details: Rediger lånedetaljer
+        insurance_rate_only: "%{rate} per år"
+        leverage: "Gjeldsgrad"
+        leverage_band_conservative: "Forsiktig"
+        leverage_band_high: "Høy"
+        leverage_band_moderate: "Moderat"
+        leverage_multiple: "%{ratio}x"
+        total_cost: "Total kostnad"
+        total_cost_with_insurance: "Total kostnad inkl. forsikring"
+        total_insurance: "Forsikring"
+      extra_repayments:
+        amount_label: "Ekstra innbetaling"
+        amount_placeholder: "0.00"
+        apply: "Beregn"
+        baseline_not_cleared: "Med nåværende terminbeløp er lånet ikke nedbetalt innen opprinnelig sluttdato, og %{balloon} ville fortsatt stått igjen. Derfor finnes det ingen tidligere dato eller rentebesparelse å sammenligne med. Med dette ekstrabeløpet er lånet nedbetalt på datoen ovenfor."
+        clear: "Tøm"
+        comparison_basis: "Sammenlignet med å betale nåværende terminbeløp uten noe ekstra, regnet fra dagens saldo."
+        dated_note: "Ekstra innbetalinger hver uke eller annenhver uke regnes med fra neste termin etter at de er betalt, så rentebesparelsen er om noe undervurdert."
+        extra_not_cleared: "Selv med dette ekstrabeløpet er lånet ikke nedbetalt innen opprinnelig sluttdato. Prøv et større beløp."
+        frequencies:
+          fortnightly: "Annenhver uke"
+          monthly: "Månedlig"
+          weekly: "Ukentlig"
+        frequency_label: "Hvor ofte"
+        interest_saved: "Spart rente"
+        intro: "Se hvor mye raskere lånet blir nedbetalt, og hvor mye rente du sparer, hvis du betaler et ekstra beløp hver uke, annenhver uke eller hver måned i tillegg til terminbeløpene."
+        invalid_amount: "Skriv inn et beløp på null eller mer, med tall."
+        invalid_frequency: "Velg ukentlig, annenhver uke eller månedlig."
+        months_sooner:
+          zero: "Nedbetalt i samme måned"
+          one: "%{count} måned tidligere"
+          other: "%{count} måneder tidligere"
+        no_scheduled_repayments: "Det gjenstår ingen planlagte terminer på dette lånet, men det står fortsatt igjen en saldo. Derfor finnes det ingen termin å legge et ekstrabeløp til."
+        not_applicable: "Det er ingenting igjen å betale på dette lånet, så det er ingen ekstra innbetaling å beregne."
+        payoff_with_extra: "Nedbetalt med ekstrabeløp"
+        total_cost: "Total kostnad fra i dag"
+        total_cost_not_cleared: "Ikke nedbetalt innen opprinnelig sluttdato"
+        total_cost_saved: "%{amount} mindre enn uten ekstrabeløpet"
+        variable_rate_notice: "Renten på dette lånet endres over tid. Tallene tar med renteendringene som allerede er registrert. En endring som ikke er registrert ennå, vil forskyve dem."
+      repayment_progress:
+        instalment: "Termin %{number} · %{date}"
+        insurance: "Forsikring"
+        interest: "Renter"
+        of_original: "av %{amount}"
+        principal: "Avdrag"
+        repaid: "Nedbetalt"
+        total: "Totalt"
+    subtypes:
+      auto:
+        long: "Billån"
+        short: "Billån"
+      business:
+        long: "Bedriftslån"
+        short: "Bedriftslån"
+      home_equity:
+        long: "Lån med sikkerhet i bolig"
+        short: "Boligkreditt"
+      line_of_credit:
+        long: "Kassekreditt"
+        short: "Kassekreditt"
+      mortgage:
+        long: "Boliglån"
+        short: "Boliglån"
+      other:
+        long: "Annet lån"
+        short: "Annet lån"
+      student:
+        long: "Studielån"
+        short: "Studielån"

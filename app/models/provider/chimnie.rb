@@ -23,19 +23,6 @@ class Provider::Chimnie < Provider
 
   UPRN_FORMAT = /\A\d{1,12}\z/
 
-  # Runs a hook immediately before every HTTP attempt, including retries, so
-  # each one is throttled and counted against the monthly budget.
-  class BeforeEachAttempt < Faraday::Middleware
-    def initialize(app, hook)
-      super(app)
-      @hook = hook
-    end
-
-    def on_request(_env)
-      @hook.call
-    end
-  end
-
   def initialize(api_key)
     @api_key = api_key # pipelock:ignore
   end
@@ -145,7 +132,7 @@ class Provider::Chimnie < Provider
           exceptions: Faraday::Retry::Middleware::DEFAULT_EXCEPTIONS + [ Faraday::ConnectionFailed, Faraday::TooManyRequestsError ]
         })
         # After the retry middleware, so it runs for each attempt.
-        faraday.use BeforeEachAttempt, -> {
+        faraday.use RateLimitable::BeforeEachAttempt, ->(_env) {
           throttle_request
           record_monthly_request!
         }

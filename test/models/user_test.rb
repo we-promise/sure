@@ -16,6 +16,118 @@ class UserTest < ActiveSupport::TestCase
     clear_performed_jobs
   end
 
+  test "onboarding answers keep only known tools and make nothing yet exclusive" do
+    user = users(:family_admin)
+
+    user.save_onboarding_tools_and_ai(tools: %w[ynab made_up], other_tool: "Ignored", ai_mode: "builtin")
+    assert_equal [ "ynab" ], user.onboarding_tools
+    assert_nil user.onboarding_other_tool
+
+    user.save_onboarding_tools_and_ai(tools: %w[nothing_yet ynab other], other_tool: "Sheets", ai_mode: "none")
+    assert_equal [ "nothing_yet" ], user.reload.onboarding_tools
+    assert_nil user.onboarding_other_tool
+  end
+
+  test "onboarding keeps the other tool only when other is chosen, trimmed and capped" do
+    user = users(:family_admin)
+
+    user.save_onboarding_tools_and_ai(tools: %w[other], other_tool: "  #{"x" * 100}  ", ai_mode: "none")
+    assert_equal "x" * User::ONBOARDING_OTHER_TOOL_MAX_LENGTH, user.reload.onboarding_other_tool
+  end
+
+  test "onboarding AI mode drives ai_enabled and falls back to no AI" do
+    user = users(:family_admin)
+
+    user.save_onboarding_tools_and_ai(tools: [], other_tool: nil, ai_mode: "builtin")
+    assert user.reload.ai_enabled
+
+    user.save_onboarding_tools_and_ai(tools: [], other_tool: nil, ai_mode: "made_up")
+    assert_equal "none", user.reload.onboarding_ai_mode
+    assert_not user.ai_enabled
+  end
+
+  test "without a saved answer the AI choice reflects the current switch" do
+    user = users(:family_admin)
+
+    user.update!(ai_enabled: true)
+    assert_equal "builtin", user.onboarding_ai_mode
+
+    user.update!(ai_enabled: false)
+    assert_equal "none", user.onboarding_ai_mode
+  end
+
+  test "a saved AI answer gives way when the switch changed since" do
+    user = users(:family_admin)
+    user.save_onboarding_tools_and_ai(tools: [], other_tool: nil, ai_mode: "builtin")
+
+    user.update!(ai_enabled: false)
+    assert_equal "none", user.onboarding_ai_mode
+
+    user.save_onboarding_tools_and_ai(tools: [], other_tool: nil, ai_mode: "external")
+    assert user.reload.ai_enabled
+    assert_equal "external", user.onboarding_ai_mode
+
+    user.update!(ai_enabled: false)
+    assert_equal "none", user.onboarding_ai_mode
+  end
+
+  test "an untouched AI choice leaves a switch changed after the page rendered" do
+    user = users(:family_admin)
+    user.update!(ai_enabled: false)
+
+    user.save_onboarding_tools_and_ai(tools: [], other_tool: nil, ai_mode: "builtin", rendered_ai_mode: "builtin")
+    assert_not user.reload.ai_enabled
+
+    user.save_onboarding_tools_and_ai(tools: [], other_tool: nil, ai_mode: "builtin", rendered_ai_mode: "none")
+    assert user.reload.ai_enabled
+  end
+
+  test "external onboarding enables admin consent without changing the household backend" do
+    user = users(:family_admin)
+    user.family.users.where(role: %w[admin super_admin]).update_all(ai_enabled: false)
+    user.reload
+    original_type = user.family.assistant_type
+    assert_not user.family.ai_consented?
+
+    user.save_onboarding_tools_and_ai(tools: [], other_tool: nil, ai_mode: "external", rendered_ai_mode: "none")
+
+    assert user.reload.ai_enabled
+    assert_equal "external", user.onboarding_ai_mode
+    assert user.family.ai_consented?
+    assert_equal original_type, user.family.reload.assistant_type
+  end
+
+  test "untouched external onboarding preserves a later opt out and explicit selection enables AI" do
+    user = users(:family_admin)
+    user.update!(ai_enabled: false)
+
+    user.save_onboarding_tools_and_ai(tools: [], other_tool: nil, ai_mode: "external", rendered_ai_mode: "external")
+    assert_not user.reload.ai_enabled
+    assert_equal "none", user.onboarding_ai_mode
+
+    user.save_onboarding_tools_and_ai(tools: [], other_tool: nil, ai_mode: "external", rendered_ai_mode: "none")
+    assert user.reload.ai_enabled
+    assert_equal "external", user.onboarding_ai_mode
+  end
+
+  test "guests keep AI on and aren't asked about it" do
+    guest = users(:intro_user)
+
+    guest.save_onboarding_tools_and_ai(tools: %w[ynab], other_tool: nil, ai_mode: "none")
+    guest.reload
+    assert guest.ai_enabled
+    assert_nil guest.preferences["onboarding_ai_mode"]
+    assert_equal [ "ynab" ], guest.onboarding_tools
+  end
+
+  test "onboarding answers don't touch other preferences" do
+    user = users(:family_admin)
+    user.update_show_balance_updates(false)
+
+    user.save_onboarding_tools_and_ai(tools: %w[ynab], other_tool: nil, ai_mode: "none")
+    assert_not user.reload.show_balance_updates?
+  end
+
   test "should be valid" do
     assert @user.valid?, @user.errors.full_messages.to_sentence
   end
@@ -1644,6 +1756,105 @@ class UserTest < ActiveSupport::TestCase
     assert @user.valid?
   end
 
+  test "changing the password revokes OAuth access tokens and grants but keeps API keys" do
+    user = users(:family_member)
+    api_key = ApiKey.create!( # pipelock:ignore
+      user: user,
+      name: "Test Key",
+      display_key: "test_password_key_#{SecureRandom.hex(8)}",
+      scopes: [ "read" ]
+    )
+    app = Doorkeeper::Application.create!(
+      name: "Test App #{SecureRandom.hex(4)}",
+      redirect_uri: "https://example.com/callback",
+      confidential: false
+    )
+    token = Doorkeeper::AccessToken.create!( # pipelock:ignore
+      application: app,
+      resource_owner_id: user.id,
+      scopes: "read_write",
+      expires_in: 1.year,
+      use_refresh_token: true
+    )
+    grant = Doorkeeper::AccessGrant.create!(
+      application: app,
+      resource_owner_id: user.id,
+      redirect_uri: app.redirect_uri,
+      expires_in: 10.minutes,
+      scopes: "read_write"
+    )
+    other_token = Doorkeeper::AccessToken.create!( # pipelock:ignore
+      application: app,
+      resource_owner_id: users(:family_admin).id,
+      scopes: "read_write",
+      expires_in: 1.year
+    )
+
+    user.update!(password: "NewSecure1!pass", password_confirmation: "NewSecure1!pass")
+
+    assert token.reload.revoked_at.present?
+    assert grant.reload.revoked_at.present?
+    assert api_key.reload.active?
+    assert_nil other_token.reload.revoked_at
+  end
+
+  test "updating a user without changing the password keeps OAuth access tokens" do
+    user = users(:family_member)
+    app = Doorkeeper::Application.create!(
+      name: "Test App #{SecureRandom.hex(4)}",
+      redirect_uri: "https://example.com/callback",
+      confidential: false
+    )
+    token = Doorkeeper::AccessToken.create!( # pipelock:ignore
+      application: app,
+      resource_owner_id: user.id,
+      scopes: "read_write",
+      expires_in: 1.year
+    )
+
+    user.update!(first_name: "Renamed")
+
+    assert_nil token.reload.revoked_at
+  end
+
+  test "changing the password revokes a token minted before the change commits" do
+    user = users(:family_member)
+    app = Doorkeeper::Application.create!(
+      name: "Test App #{SecureRandom.hex(4)}",
+      redirect_uri: "https://example.com/callback",
+      confidential: false
+    )
+    late_token = nil
+
+    User.transaction do
+      user.update!(password: "NewSecure1!pass", password_confirmation: "NewSecure1!pass")
+      # Stands in for a token issued without the user lock after the
+      # in-transaction sweep has run.
+      late_token = Doorkeeper::AccessToken.create!( # pipelock:ignore
+        application: app,
+        resource_owner_id: user.id,
+        scopes: "read_write",
+        expires_in: 1.year,
+        use_refresh_token: true
+      )
+    end
+
+    assert late_token.reload.revoked_at.present?
+  end
+
+  test "with_active_lock! rejects a password fingerprint taken before a password change" do
+    user = users(:family_member)
+    fingerprint = user.password_fingerprint
+
+    assert_equal :ok, user.with_active_lock!(password_fingerprint: fingerprint) { :ok }
+
+    User.find(user.id).update!(password: "NewSecure1!pass", password_confirmation: "NewSecure1!pass")
+
+    assert_raises(User::StaleCredentialsError) do
+      user.with_active_lock!(password_fingerprint: fingerprint) { flunk "must not run" }
+    end
+  end
+
   test "update_manual_account_order keeps other groups and only accessible accounts" do
     @user.update_manual_account_order("credit_card", [ accounts(:credit_card).id ])
     foreign = families(:empty).accounts.create!(name: "Foreign", currency: "USD", balance: 0, accountable: Depository.new, owner: users(:empty))
@@ -1677,5 +1888,27 @@ class UserTest < ActiveSupport::TestCase
   test "update_manual_account_order rejects unknown groups" do
     assert_not @user.update_manual_account_order("transactions", [ accounts(:depository).id ])
     assert_equal({}, @user.reload.manual_account_order)
+  end
+
+  test "reports biggest expenses limit defaults to 10 and only returns an offered choice" do
+    @user.update_columns(preferences: {})
+    assert_equal 10, @user.reports_biggest_expenses_limit
+
+    @user.update_columns(preferences: { "reports_biggest_expenses_limit" => 25 })
+    assert_equal 25, @user.reload.reports_biggest_expenses_limit
+
+    @user.update_columns(preferences: { "reports_biggest_expenses_limit" => 7 })
+    assert_equal 10, @user.reload.reports_biggest_expenses_limit
+  end
+
+  test "update_reports_preferences stores an offered biggest expenses limit alongside the section keys" do
+    @user.update_columns(preferences: { "reports_section_order" => %w[net_worth] })
+
+    assert @user.update_reports_preferences("reports_biggest_expenses_limit" => "5")
+    assert_equal 5, @user.reload.preferences["reports_biggest_expenses_limit"]
+    assert_equal %w[net_worth], @user.preferences["reports_section_order"]
+
+    assert @user.update_reports_preferences("reports_biggest_expenses_limit" => "1000")
+    assert_equal 5, @user.reload.preferences["reports_biggest_expenses_limit"]
   end
 end

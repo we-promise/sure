@@ -143,7 +143,23 @@ class RecurringTransaction
         dates = incomes.map(&:due_on).uniq.first(periods_limit + 1)
         boundaries = ([ Date.current ] + dates).uniq
 
+        # A period runs from one boundary to the next, so the last payday only
+        # ends the window before it. A one-off with no payday after it would
+        # never be credited, so it opens a window of its own. That window stops
+        # at the horizon obligations are materialized through, so it never
+        # counts bills nothing has stored yet. The payday itself always stays
+        # inside it.
+        if dates.size <= periods_limit && one_off_payday?(incomes, dates.last)
+          materialized_through = Date.current + RecurringTransaction::OccurrenceGenerator::HORIZON_DAYS
+          boundaries << [ materialized_through, dates.last + 1 ].max
+        end
+
         boundaries.first(periods_limit + 2)
+      end
+
+      def one_off_payday?(incomes, date)
+        incomes.select { |occurrence| occurrence.due_on == date }
+               .all? { |occurrence| occurrence.recurring_transaction.one_off? }
       end
 
       def build_periods(boundaries, incomes)
@@ -257,7 +273,7 @@ class RecurringTransaction
 
       # Cash a bill can actually be paid from before the next paycheck: the
       # family's own deposit accounts, minus the tax-advantaged ones nobody
-      # spends rent out of. Credit cards share the `:cash` balance type but are
+      # spends rent out of and the ones excluded from reports. Credit cards share the `:cash` balance type but are
       # a liability, so they are not money on hand.
       #
       # nil, never zero, when there is nothing to read. Zero would assert the
@@ -266,7 +282,7 @@ class RecurringTransaction
       def cash_on_hand
         return @cash_on_hand if defined?(@cash_on_hand)
 
-        accounts = family.accounts.visible
+        accounts = family.accounts.visible.included_in_reports
                          .where(accountable_type: "Depository")
                          .merge(Account.accessible_by(user))
 

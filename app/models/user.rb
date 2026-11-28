@@ -28,6 +28,7 @@ class User < ApplicationRecord
   has_many :chats, dependent: :destroy
   has_many :api_keys, dependent: :destroy
   has_many :push_subscriptions, dependent: :destroy
+  has_many :web_push_subscriptions, dependent: :destroy
   has_many :webauthn_credentials, dependent: :destroy
   has_many :mobile_devices, dependent: :destroy
   has_many :invitations, foreign_key: :inviter_id, dependent: :destroy
@@ -314,6 +315,14 @@ class User < ApplicationRecord
 
   after_update_commit :purge_later, if: -> { saved_change_to_active?(from: true, to: false) }
   after_update_commit :revoke_all_access_tokens, if: -> { saved_change_to_active?(from: true, to: false) }
+  # Runs inside the update's transaction, so the user row stays locked until
+  # commit. Every endpoint that issues a token from an existing credential
+  # (/api/v1/auth/refresh and Oauth::TokensController) takes the same lock
+  # first, so none can mint a token this sweep misses. The sweep after commit
+  # catches grants issued without that lock, such as an authorization code
+  # created by /oauth/authorize while the change was in flight.
+  after_update :revoke_oauth_access, if: :saved_change_to_password_digest?
+  after_update_commit :revoke_oauth_access, if: :saved_change_to_password_digest?
 
   def deactivate
     return true unless active?
@@ -382,9 +391,7 @@ class User < ApplicationRecord
   # provider+uid) are not gated on #active?, so they must be torn down here for
   # revocation to be immediate; the async purge would otherwise leave a window.
   def revoke_all_credentials!
-    Doorkeeper::AccessToken
-      .where(resource_owner_id: id, revoked_at: nil)
-      .update_all(revoked_at: Time.current)
+    revoke_oauth_tokens!
     sessions.destroy_all
     api_keys.destroy_all
     mobile_devices.destroy_all
@@ -398,18 +405,27 @@ class User < ApplicationRecord
   # can never be confused with an unrelated persistence failure.
   class InactiveError < StandardError; end
 
+  # Raised by #with_active_lock! when the password changed between the
+  # caller's password check and the locked issuance step. The new password's
+  # revocation sweep has already run by then, so issuing would hand out a
+  # session or token for the old password that nothing revokes.
+  class StaleCredentialsError < StandardError; end
+
   # The one locked primitive for the actual authorization boundary: asserts
   # this user is eligible for new session/token issuance *right now*, under
   # a row lock, immediately before minting. Callers may additionally check
   # #active? earlier for a fast, friendly rejection (skip an MFA/device
   # round trip) — that's a UX optimization only, never a substitute for
   # this check, however "obviously" already-checked the user seems.
-  def with_active_lock!
+  # Pass the #password_fingerprint taken when the password was checked to
+  # also reject issuance after a concurrent password change.
+  def with_active_lock!(password_fingerprint: nil)
     lock_acquired = false
 
     with_lock do
       lock_acquired = true
       raise InactiveError unless active?
+      raise StaleCredentialsError if password_fingerprint && password_fingerprint != self.password_fingerprint
       yield self
     end
   rescue ActiveRecord::RecordNotFound
@@ -513,6 +529,18 @@ class User < ApplicationRecord
     Array(provider.public_send(item_association.name)) if item_association
   end
 
+  # Revokes every Doorkeeper access token issued to this user (mobile app and
+  # third-party OAuth clients; a revoked token's refresh token is refused too)
+  # and every authorization grant not yet exchanged for one. Returns the
+  # number of tokens and grants revoked.
+  def revoke_oauth_tokens!
+    now = Time.current
+    [
+      Doorkeeper::AccessToken.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: now),
+      Doorkeeper::AccessGrant.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: now)
+    ]
+  end
+
   # Revokes mobile/third-party API access alongside the web-session
   # invalidation above. Without this, a deactivated user's existing
   # Doorkeeper tokens and API keys stay valid on the wire — currently
@@ -524,8 +552,7 @@ class User < ApplicationRecord
   # before deactivation could otherwise be exchanged for a fresh token
   # afterward.
   def revoke_all_access_tokens
-    tokens_revoked = Doorkeeper::AccessToken.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: Time.current)
-    grants_revoked = Doorkeeper::AccessGrant.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: Time.current)
+    tokens_revoked, grants_revoked = revoke_oauth_tokens!
     keys_revoked = api_keys.active.visible.update_all(revoked_at: Time.current)
 
     if tokens_revoked > 0 || grants_revoked > 0 || keys_revoked > 0
@@ -534,6 +561,26 @@ class User < ApplicationRecord
         "and #{keys_revoked} API key(s) for deactivated user_id=#{id}"
       )
     end
+  end
+
+  # A new password must lock out whoever signed in to the mobile app or an
+  # OAuth client with the old one: their access and refresh tokens would
+  # otherwise stay valid for up to 30 days and keep renewing. API keys are
+  # created deliberately for integrations and do not depend on the password,
+  # so they stay.
+  def revoke_oauth_access
+    tokens_revoked, grants_revoked = revoke_oauth_tokens!
+
+    if tokens_revoked > 0 || grants_revoked > 0
+      Rails.logger.info(
+        "[AUTH] Revoked #{tokens_revoked} access token(s) and #{grants_revoked} authorization grant(s) " \
+        "after password change for user_id=#{id}"
+      )
+    end
+  end
+
+  def password_fingerprint
+    Digest::SHA256.hexdigest(password_digest.to_s)
   end
 
   def purge
@@ -656,6 +703,74 @@ class User < ApplicationRecord
 
   def account_order
     AccountOrder.find(default_account_order) || AccountOrder.default
+  end
+
+  # Answers to onboarding's Tools/AI step: where the user is coming from and
+  # how they want AI. They don't import anything or configure a provider.
+  ONBOARDING_TOOLS = %w[
+    actual_budget banktivity copilot_money firefly_iii gnucash lunch_money maybe
+    monarch_money money_manager_ex moneywiz pocketsmith quicken_classic quicken_simplifi ynab other
+  ].freeze
+  ONBOARDING_NO_TOOLS = "nothing_yet".freeze
+  ONBOARDING_AI_MODES = %w[none builtin external].freeze
+  ONBOARDING_OTHER_TOOL_MAX_LENGTH = 80
+
+  def onboarding_tools
+    tools = preferences&.dig("onboarding_tools")
+    tools.is_a?(Array) ? tools : []
+  end
+
+  def onboarding_other_tool
+    preferences&.dig("onboarding_other_tool").presence
+  end
+
+  # The saved answer, unless the AI switch has changed since: then the switch wins, so
+  # resubmitting the step without touching it never turns AI (or household consent) on or off.
+  def onboarding_ai_mode
+    mode = preferences&.dig("onboarding_ai_mode")
+    current = ai_enabled ? "builtin" : "none"
+    return current unless ONBOARDING_AI_MODES.include?(mode)
+
+    (mode != "none") == ai_enabled ? mode : current
+  end
+
+  # "Nothing yet" excludes every other tool and unknown values are dropped.
+  # Built-in and external AI enable this user's AI features; only no AI turns them off.
+  # The household's assistant settings still select the conversation backend.
+  # For an admin that switch is also the household's AI consent (Family#ai_consented?).
+  # Guests always have AI on, so they aren't asked.
+  # rendered_ai_mode is the choice the page showed: when the user left it as it was,
+  # the AI switch stays as it is now, even if it changed after the page rendered.
+  def save_onboarding_tools_and_ai(tools:, other_tool:, ai_mode:, rendered_ai_mode: nil)
+    chosen = Array(tools).map(&:to_s)
+    chosen = chosen.include?(ONBOARDING_NO_TOOLS) ? [ ONBOARDING_NO_TOOLS ] : chosen & ONBOARDING_TOOLS
+    other = other_tool.to_s.strip.first(ONBOARDING_OTHER_TOOL_MAX_LENGTH).presence if chosen.include?("other")
+    mode = ONBOARDING_AI_MODES.include?(ai_mode.to_s) ? ai_mode.to_s : "none"
+
+    transaction do
+      with_locked_preferences do |prefs|
+        prefs["onboarding_tools"] = chosen
+        prefs["onboarding_ai_mode"] = mode unless guest?
+        other ? prefs["onboarding_other_tool"] = other : prefs.delete("onboarding_other_tool")
+      end
+      attributes = { set_onboarding_goals_at: Time.current, onboarded_at: Time.current }
+      attributes[:ai_enabled] = mode != "none" unless guest? || mode == rendered_ai_mode.to_s
+      update!(attributes)
+    end
+  end
+
+  # Whether the activity feed of a linked account always lists the balance
+  # updates its syncs leave behind (see Account#hides_balance_updates_by_default?).
+  # Off until turned on in Settings > Preferences. The activity Filter menu can
+  # show them for one view without changing this.
+  def show_balance_updates?
+    preferences&.dig("show_balance_updates") == true
+  end
+
+  # @param value [Boolean, String] a form value such as "true" or "false"
+  def update_show_balance_updates(value)
+    shown = ActiveModel::Type::Boolean.new.cast(value) == true
+    with_locked_preferences { |prefs| prefs["show_balance_updates"] = shown }
   end
 
   MANUAL_ACCOUNT_ORDER_LIMIT = 500
@@ -870,12 +985,26 @@ class User < ApplicationRecord
     section_order("reports")
   end
 
+  REPORTS_BIGGEST_EXPENSES_LIMITS = [ 5, 10, 25 ].freeze
+  DEFAULT_REPORTS_BIGGEST_EXPENSES_LIMIT = 10
+
+  def reports_biggest_expenses_limit
+    stored = preferences&.[]("reports_biggest_expenses_limit")
+    REPORTS_BIGGEST_EXPENSES_LIMITS.include?(stored) ? stored : DEFAULT_REPORTS_BIGGEST_EXPENSES_LIMIT
+  end
+
   def update_reports_preferences(prefs)
-    update_section_preferences(
+    return false unless update_section_preferences(
       "reports",
       order: prefs["reports_section_order"],
       collapsed: prefs["reports_collapsed_sections"]
     )
+
+    # A limit outside the offered choices is dropped, like any other bad value.
+    limit = Integer(prefs["reports_biggest_expenses_limit"].to_s, exception: false)
+    return true unless REPORTS_BIGGEST_EXPENSES_LIMITS.include?(limit)
+
+    with_locked_preferences { |updated_prefs| updated_prefs["reports_biggest_expenses_limit"] = limit }
   end
 
   # Transactions preferences management
@@ -904,6 +1033,10 @@ class User < ApplicationRecord
   # Returns whether clicking outside a modal is prevented from closing it.
   def disable_modal_click_outside?
     preferences&.dig("disable_modal_click_outside") == true
+  end
+
+  def push_budget_warnings_enabled?
+    preferences&.dig("push_budget_warnings_enabled") == true
   end
 
   def preview_features_enabled?

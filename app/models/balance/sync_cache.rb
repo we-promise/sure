@@ -161,11 +161,11 @@ class Balance::SyncCache
       )
     end
 
-    # Which FX backend was configured when the rate came up missing, so support can filter
-    # these entries by provider. Read from the setting rather than `ExchangeRate.provider`,
-    # which raises on an unrecognized configuration — diagnostics must never fail the sync.
+    # Which FX backend was in use when the rate came up missing, so support can filter
+    # these entries by provider. `ExchangeRate.provider_name` raises on an unrecognized
+    # configuration — diagnostics must never fail the sync.
     def exchange_rate_provider_key
-      ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider
+      ExchangeRate.provider_name
     rescue StandardError
       nil
     end
