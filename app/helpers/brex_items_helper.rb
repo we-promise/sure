@@ -39,19 +39,6 @@ module BrexItemsHelper
     parts.join(t("brex_items.account_metadata.separator"))
   end
 
-  def brex_item_render_locals(brex_item, sync_stats_map: nil, account_counts_map: nil, institutions_count_map: nil)
-    counts = (account_counts_map || {})[brex_item.id] || {}
-
-    {
-      brex_item: brex_item,
-      stats: (sync_stats_map || {})[brex_item.id] || brex_item.syncs.ordered.first&.sync_stats || {},
-      unlinked_count: counts[:unlinked] || brex_item.unlinked_accounts_count,
-      linked_count: counts[:linked] || brex_item.linked_accounts_count,
-      total_count: counts[:total] || brex_item.total_accounts_count,
-      institutions_count: (institutions_count_map || {})[brex_item.id] || brex_item.connected_institutions.size
-    }
-  end
-
   def default_brex_depository_subtype(account_name)
     normalized_name = account_name.to_s.downcase
 

@@ -43,6 +43,9 @@ class ProviderItemCardsTest < ActiveSupport::TestCase
     end
   end
 
+  # Cards on the provider kit render their accounts in the shared component;
+  # ProviderItem::CardComponentTest renders one with a hidden account.
+
   # Every render of a card by partial name, including the provider generator's
   # template and ProviderItemsController's. Each must hand the card its accounts
   # explicitly.

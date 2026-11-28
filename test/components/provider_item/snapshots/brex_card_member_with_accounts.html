@@ -1,0 +1,145 @@
+<div id="brex_item_UUID">
+<details class="group bg-container p-4 shadow-border-xs rounded-xl" open="open">
+<summary class="list-none cursor-pointer focus-ring rounded-xl">
+<div class="w-full">
+<div class="flex items-center justify-between gap-2">
+<div class="flex items-center gap-2">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150">
+<path d="m9 18 6-6-6-6">
+</path>
+</svg>
+<span class="relative block overflow-hidden shrink-0 w-8 h-8 rounded-full">
+<span class="absolute inset-0" aria-hidden="true">
+<div style="background-color: color-mix(in oklab, #059669 10%, transparent); border-color: color-mix(in oklab, #059669 10%, transparent); color: #059669;" class="flex justify-center items-center shrink-0 w-8 h-8 rounded-full border w-full h-full" aria-hidden="true">
+<span class="text-center font-medium uppercase text-xs">BX</span>
+</div>
+</span>
+</span>
+<div class="pl-1 text-sm">
+<div class="flex items-center gap-2">
+<p class="font-medium text-primary">Test Brex Connection</p>
+</div>
+<p class="text-xs text-secondary">No institutions connected</p>
+<p class="text-secondary">Last synced about 3 hours ago - 1 account synced</p>
+</div>
+</div>
+</div>
+</div>
+</summary>
+<div class="mt-2">
+<div class="space-y-4 mt-4">
+<div class="bg-container-inset p-1 rounded-xl">
+<div class="flex items-center px-4 py-2 text-xs font-medium text-secondary">
+<p>Cash</p>
+<span class="text-subdued mx-2">&middot;</span>
+<p>1</p>
+<p class="ml-auto privacy-sensitive">$1,250.00</p>
+</div>
+<div class="bg-container rounded-lg shadow-border-xs overflow-hidden">
+<turbo-frame id="account_UUID">
+<div class="relative p-4 flex items-center justify-between gap-3 group/account hover:bg-surface-hover" data-controller="clickable-row" data-action="click->clickable-row#open" >
+<div class="flex items-center gap-3">
+<div class="relative shrink-0">
+<div style="background-color: color-mix(in oklab, #875BF7 10%, transparent); border-color: color-mix(in oklab, #875BF7 10%, transparent); color: #875BF7;" class="flex justify-center items-center shrink-0 w-8 h-8 rounded-full border" aria-hidden="true">
+<span class="text-center font-medium uppercase text-xs">B</span>
+</div>
+</div>
+<div>
+<div class="flex items-center gap-1.5">
+<a class="text-primary text-sm font-medium hover:underline" data-turbo-frame="_top" data-clickable-row-target="link" href="/accounts/UUID">Brex Operating</a>
+</div>
+<p class="text-sm text-secondary truncate">Cash</p>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<p class="text-sm font-medium privacy-sensitive text-primary">$1,250.00</p>
+<div data-controller="DS--menu" data-DS--menu-placement-value="bottom-end" data-DS--menu-offset-value="12" data-DS--menu-mobile-fullwidth-value="false">
+<button aria-haspopup="menu" aria-expanded="false" aria-controls="menu-ID" aria-label="More vertical" type="button" class="font-medium whitespace-nowrap focus-ring disabled:cursor-not-allowed aria-disabled:cursor-not-allowed aria-disabled:opacity-50 inline-flex items-center gap-1 rounded-lg justify-center w-9 h-9 pointer-coarse:w-11 pointer-coarse:h-11 hover:bg-container-inset-hover" data-DS--menu-target="button">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<circle cx="12" cy="12" r="1">
+</circle>
+<circle cx="12" cy="5" r="1">
+</circle>
+<circle cx="12" cy="19" r="1">
+</circle>
+</svg>
+</button>
+<div id="menu-ID" data-DS--menu-target="content" class="fixed px-2 lg:px-0 max-w-full hidden z-50" role="menu">
+<div class="mx-auto min-w-[200px] shadow-border-lg bg-container rounded-lg" style="max-width: 280px">
+<div class="py-1">
+<div class="px-1" role="none">
+<a class="flex items-center gap-2 p-2 rounded-md w-full focus-ring hover:bg-container-hover" data-turbo-frame="modal" role="menuitem" tabindex="-1" href="/depositories/UUID/edit">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M13 21h8">
+</path>
+<path d="m15 5 4 4">
+</path>
+<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z">
+</path>
+</svg>
+<span class="text-sm text-primary">Edit</span>
+</a>
+</div>
+<div class="px-1" role="none">
+<a class="flex items-center gap-2 p-2 rounded-md w-full focus-ring hover:bg-container-hover" data-turbo-frame="modal" role="menuitem" tabindex="-1" href="/accounts/UUID/sharing">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2">
+</path>
+<path d="M16 3.128a4 4 0 0 1 0 7.744">
+</path>
+<path d="M22 21v-2a4 4 0 0 0-3-3.87">
+</path>
+<circle cx="9" cy="7" r="4">
+</circle>
+</svg>
+<span class="text-sm text-primary">Sharing</span>
+</a>
+</div>
+<div role="separator">
+<hr class="border-divider my-1">
+</div>
+<div class="px-1" role="none">
+<form class="button_to" method="post" action="/accounts/UUID/toggle_active">
+<input type="hidden" name="_method" value="patch" />
+<button class="flex items-center gap-2 p-2 rounded-md w-full focus-ring hover:bg-container-hover" data-turbo-frame="_top" role="menuitem" tabindex="-1" type="submit">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<circle cx="15" cy="12" r="3">
+</circle>
+<rect width="20" height="14" x="2" y="5" rx="7">
+</rect>
+</svg>
+<span class="text-sm text-primary">Disable account</span>
+</button>
+</form>
+</div>
+<div class="px-1" role="none">
+<form class="button_to" method="post" action="/accounts/UUID/toggle_exclude_from_reports">
+<input type="hidden" name="_method" value="patch" />
+<button class="flex items-center gap-2 p-2 rounded-md w-full focus-ring hover:bg-container-hover" data-turbo-frame="_top" role="menuitem" tabindex="-1" type="submit">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49">
+</path>
+<path d="M14.084 14.158a3 3 0 0 1-4.242-4.242">
+</path>
+<path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143">
+</path>
+<path d="m2 2 20 20">
+</path>
+</svg>
+<span class="text-sm text-primary">Exclude from all reports</span>
+</button>
+</form>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</turbo-frame>
+</div>
+</div>
+</div>
+</div>
+</details>
+</div>
