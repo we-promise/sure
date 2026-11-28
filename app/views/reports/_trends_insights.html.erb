@@ -110,33 +110,16 @@
                 title: t("reports.trends.category_trend.data_table"),
                 body_class: "mt-3"
               ) do %>
-            <div class="overflow-x-auto privacy-sensitive">
-              <table class="w-full text-xs">
-                <caption class="sr-only"><%= t("reports.trends.category_trend.data_table_caption") %></caption>
-                <thead>
-                  <tr>
-                    <th scope="col" class="py-1 pr-3 text-left font-medium text-secondary">
-                      <%= t("reports.trends.category_trend.data_table_period") %>
-                    </th>
-                    <% trend_series.each do |series| %>
-                      <th scope="col" class="py-1 pl-3 text-right font-medium text-secondary"><%= series[:name] %></th>
-                    <% end %>
-                  </tr>
-                </thead>
-                <tbody>
-                  <% trend_series.first[:values].each_with_index do |point, index| %>
-                    <tr>
-                      <th scope="row" class="py-1 pr-3 text-left font-normal text-secondary whitespace-nowrap"><%= point[:label] %></th>
-                      <% trend_series.each do |series| %>
-                        <td class="py-1 pl-3 text-right text-primary whitespace-nowrap">
-                          <%= format_money(Money.new(series[:values][index][:value], Current.family.currency)) %>
-                        </td>
-                      <% end %>
-                    </tr>
-                  <% end %>
-                </tbody>
-              </table>
-            </div>
+            <%= render DS::Table.new(rows: trend_series.first[:values], label: t("reports.trends.category_trend.data_table_caption")) do |table| %>
+              <% table.with_column(t("reports.trends.category_trend.data_table_period"), row_header: true, class: "whitespace-nowrap") do |point| %>
+                <%= point[:label] %>
+              <% end %>
+              <% trend_series.each do |series| %>
+                <% table.with_column(series[:name], numeric: true, class: "privacy-sensitive") do |_point, index| %>
+                  <%= format_money(Money.new(series[:values][index][:value], Current.family.currency)) %>
+                <% end %>
+              <% end %>
+            <% end %>
           <% end %>
         </div>
       <% elsif selected_category_values.any? %>
