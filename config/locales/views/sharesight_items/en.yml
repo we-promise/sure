@@ -33,7 +33,7 @@ en:
         Top-ups and withdrawals in the funding account whose name or notes contain any of these (comma-separated)
         are mirrored here and linked as transfers.
       cash_anchor_amount: Cash at the broker
-      cash_anchor_on: On
+      cash_anchor_on: "On"
       cash_anchor_help: >-
         For cash Sharesight can't see: the balance on that date, rolled forward through everything booked here since.
         Update it whenever you check the broker.

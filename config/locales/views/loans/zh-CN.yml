@@ -3,6 +3,7 @@ zh-CN:
   loans:
     edit:
       edit: 编辑%{account}
+      stale_rate_schedule: 此表单已过期。请重新加载贷款页面后再次编辑，本次修改未保存。
     form:
       interest_rate: 利率
       interest_rate_placeholder: '5.25'
@@ -125,3 +126,25 @@ zh-CN:
         type: 类型
         unknown: 未知
         edit_loan_details: 编辑贷款详情
+    subtypes:
+      auto:
+        long: 汽车贷款
+        short: 汽车贷款
+      business:
+        long: 商业贷款
+        short: 商业贷款
+      home_equity:
+        long: 房屋净值贷款
+        short: 房屋净值
+      line_of_credit:
+        long: 信用额度
+        short: 信用额度
+      mortgage:
+        long: 抵押贷款
+        short: 抵押贷款
+      other:
+        long: 其他贷款
+        short: 其他贷款
+      student:
+        long: 学生贷款
+        short: 学生贷款

@@ -59,6 +59,11 @@
         </dl>
       <% end %>
 
+      <% roll_note = t("properties.new.avm_roll_value_notes.#{provider_key}", provider: provider_name, default: "") %>
+      <% if roll_note.present? %>
+        <p class="text-sm text-secondary"><%= roll_note %></p>
+      <% end %>
+
       <% if no_property_record && preview.external_id.blank? %>
         <p class="text-sm text-secondary"><%= t("properties.new.avm_preview_no_record", provider: provider_name) %></p>
       <% end %>

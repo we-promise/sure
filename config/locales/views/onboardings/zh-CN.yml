@@ -5,7 +5,7 @@ zh-CN:
       sign_out: 退出登录
       setup: 设置
       preferences: 偏好设置
-      goals: 目标
+      tools: 工具/AI
       start: 开始
     logout:
       sign_out: 退出登录
@@ -38,17 +38,48 @@ zh-CN:
       currency: 货币
       date_format: 日期格式
       submit: 完成
-    goals:
-      title: 您使用这里的目的是什么？
-      subtitle: 请选择一个或多个您希望使用 %{product_name} 作为个人财务工具实现的目标。
-      unified_accounts: 在一个地方查看我的所有账户
-      cashflow: 理解现金流和支出
-      budgeting: 管理财务计划和预算
-      partner: 与伴侣一起管理财务
-      investments: 跟踪投资
-      ai_insights: 让 AI 帮我理解财务状况
-      optimization: 分析并优化账户
-      reduce_stress: 减轻财务压力或焦虑
+    tools:
+      title: 欢迎，把这里当成自己家。
+      subtitle: 做几个选择，让 %{product_name} 更贴合您。
+      starting_point:
+        eyebrow: 您的起点
+        title: 您之前用过哪些工具？
+        description: 选择您用来管理家庭财务的工具。
+        select: 选择您的工具
+        other_placeholder: 其他工具（可选）
+        hint: 可多选。这有助于我们为您推荐起点，并不代表支持从这些工具导入。
+        tools:
+          nothing_yet: 还没用过
+          other: 其他
+      ai:
+        eyebrow: 您的 AI 偏好
+        title: 您希望如何使用 %{product_name}？
+        description: 由您做主，选择最适合您的方式。
+        default: 默认
+        modes:
+          none:
+            title: 不使用 AI
+            description: 不使用应用内助手来管理财务。
+          builtin:
+            title: 内置 AI
+            description: 开启应用内助手，使用此实例的 AI 提供商。
+          external:
+            title: 使用您自己的 AI 智能体
+            description: 使用您自己的助手，经您授权后连接。
+        panels:
+          admin_on: 作为管理员，此选择也代表您的家庭同意在后台运行的 AI 功能，例如分类。
+          admin_off: 作为管理员，此选择也会撤回您对在后台运行的 AI 功能（例如分类）的同意。只有在其他管理员开启了 AI 时，这些功能才会保持开启。
+          none:
+            title: 您的助手将保持关闭。
+            body: 这将为您的账户关闭应用内助手。
+          builtin:
+            title: 您的助手将开启。
+            body: 这将为您的账户开启应用内助手。它使用哪个 AI 提供商、是否可用，仍取决于此实例的 AI 设置。
+            not_configured: 此实例尚未设置 AI 提供商。管理员可以在“设置 → 自托管”中添加。
+            unavailable: 您家庭当前的 AI 设置不运行应用内助手，因此在管理员更改设置之前，它不会响应。
+          external:
+            title: 准备好后再连接您的 AI 智能体。
+            body: 这会为您的账户保持 AI 开启。当您的家庭配置为外部聊天时，对话将在同一聊天界面中使用您配置的外部助手，而不是 %{product_name} 的内置助手。%{product_name} 仍作为您数据的主要记录系统，负责导入、分类等其他流程。您的 AI 智能体可以通过 MCP 或 sure-cli 与其交互；如需连接，请前往“设置 → MCP”。此选择不会配置聊天服务，也不会创建、更改或删除任何连接。
       submit: 下一步
     trial:
       title: 试用 Sure 45 天
