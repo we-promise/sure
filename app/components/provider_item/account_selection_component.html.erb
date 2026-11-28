@@ -1,0 +1,65 @@
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: existing_account? ? selection_t("title", account_name: account.name) : selection_t("title")) %>
+
+    <% dialog.with_body do %>
+      <div class="space-y-4">
+        <p class="text-sm text-secondary">
+          <%= existing_account? ? selection_t("description") : selection_t("description", product_name: helpers.product_name) %>
+        </p>
+
+        <%= form_with url: form_url,
+                      method: :post,
+                      data: { turbo_frame: "_top" },
+                      class: "space-y-4" do %>
+          <%= hidden_field_tag :"#{provider_key}_item_id", item.id %>
+          <% if existing_account? %>
+            <%= hidden_field_tag :account_id, account.id %>
+          <% else %>
+            <%= hidden_field_tag :accountable_type, accountable_type %>
+          <% end %>
+          <%= hidden_field_tag :return_to, return_to %>
+
+          <div class="space-y-2">
+            <% options.each do |option| %>
+              <label class="flex items-start gap-3 p-3 border <%= option.blank_name? ? "border-destructive bg-destructive/10" : "border-primary" %> rounded-lg <%= option.blank_name? ? "cursor-not-allowed opacity-60" : "hover:bg-subtle cursor-pointer" %> transition-colors">
+                <% if existing_account? %>
+                  <%= radio_button_tag "#{provider_key}_account_id", option.id, false, disabled: option.blank_name?, class: "mt-1" %>
+                <% else %>
+                  <%= check_box_tag "account_ids[]", option.id, false, disabled: option.blank_name?, class: "mt-1" %>
+                <% end %>
+                <div class="flex-1">
+                  <div class="font-medium text-sm <%= option.blank_name? ? "text-destructive" : "text-primary" %>">
+                    <% if option.blank_name? %>
+                      <%= selection_t("no_name_placeholder") %>
+                    <% else %>
+                      <%= option.name %>
+                    <% end %>
+                  </div>
+                  <div class="text-xs text-secondary mt-1">
+                    <%= option.metadata %>
+                  </div>
+                  <% if option.blank_name? %>
+                    <div class="text-xs text-destructive mt-1">
+                      <%= selection_t("configure_name_in_#{provider_key}") %>
+                    </div>
+                  <% end %>
+                </div>
+              </label>
+            <% end %>
+          </div>
+
+          <div class="flex gap-2 justify-end pt-4">
+            <%= render DS::Link.new(text: selection_t("cancel"), href: cancel_path, variant: :secondary, frame: "_top") %>
+            <%= render DS::Button.new(
+              text: selection_t(existing_account? ? "link_account" : "link_accounts"),
+              variant: :primary,
+              type: :submit,
+              disabled: !selectable?
+            ) %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>
