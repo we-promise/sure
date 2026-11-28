@@ -21,6 +21,8 @@ class Settings::HostingsController < ApplicationController
   before_action :ensure_super_admin_for_onboarding, only: :update
   before_action :ensure_super_admin, only: :reset_market_data
 
+  helper_method :scalable_market_data_configured?
+
   def show
     @breadcrumbs = [
       [ t("breadcrumbs.home"), root_path ],
@@ -118,13 +120,19 @@ class Settings::HostingsController < ApplicationController
       Setting.exchange_rate_provider = hosting_params[:exchange_rate_provider]
     end
 
-    if hosting_params.key?(:securities_provider)
-      Setting.securities_provider = hosting_params[:securities_provider]
+    legacy_securities_provider = hosting_params[:securities_provider]
+    if hosting_params.key?(:securities_provider) && legacy_securities_provider != Provider::ScalableCapitalMarketData::KEY
+      Setting.securities_provider = legacy_securities_provider
     end
 
-    if hosting_params.key?(:securities_providers)
-      new_providers = Array(hosting_params[:securities_providers]).reject(&:blank?) & Security.valid_price_providers
+    scalable_selection = scalable_market_data_selection
+    if hosting_params.key?(:securities_providers) || scalable_selection
       old_providers = Setting.enabled_securities_providers
+      scalable_key = Provider::ScalableCapitalMarketData::KEY
+      submitted_providers = hosting_params.fetch(:securities_providers, old_providers)
+      new_providers = (Array(submitted_providers) & Security.valid_price_providers) - [ scalable_key ]
+      enable_scalable = scalable_selection ? scalable_selection == "1" : old_providers.include?(scalable_key)
+      new_providers << scalable_key if enable_scalable
 
       Setting.securities_providers = new_providers.join(",")
 
@@ -377,10 +385,23 @@ class Settings::HostingsController < ApplicationController
   end
 
   private
+
+    def scalable_market_data_configured?
+      family_id = ScalableCapitalItem.configured_family_id
+      family_id.present? && family_id == Current.family&.id
+    end
+
+    def scalable_market_data_selection
+      value = hosting_params[:scalable_capital_market_data_enabled]
+      return unless %w[0 1].include?(value) && scalable_market_data_configured?
+      return if ENV["SECURITIES_PROVIDERS"].present? || ENV["SECURITIES_PROVIDER"].present?
+
+      value
+    end
     # Strong parameters for the self-hosting settings form.
     def hosting_params
       return ActionController::Parameters.new unless params.key?(:setting)
-      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :demo_family_refresh_enabled, :demo_family_refresh_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :tinkoff_invest_api_key, :mansa_api_key, :rentcast_api_key, :realie_api_key, :chimnie_api_key, :terrascoutx_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :anthropic_access_token, :anthropic_base_url, :anthropic_model, :jev_api_key, :jev_endpoint, :jev_model, :llm_provider, :llm_context_window, :llm_max_response_tokens, :llm_max_items_per_call, :openai_request_timeout, :ai_response_timeout, :ai_health_probe_timeout, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :market_data_sync_enabled, :market_data_sync_time, :page_cache_days, :page_cache_max_mb, :page_cache_cooldown_minutes, :external_assistant_url, :external_assistant_token, :external_assistant_model, securities_providers: [])
+      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :demo_family_refresh_enabled, :demo_family_refresh_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :tinkoff_invest_api_key, :mansa_api_key, :rentcast_api_key, :realie_api_key, :chimnie_api_key, :terrascoutx_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :anthropic_access_token, :anthropic_base_url, :anthropic_model, :jev_api_key, :jev_endpoint, :jev_model, :llm_provider, :llm_context_window, :llm_max_response_tokens, :llm_max_items_per_call, :openai_request_timeout, :ai_response_timeout, :ai_health_probe_timeout, :exchange_rate_provider, :securities_provider, :scalable_capital_market_data_enabled, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :market_data_sync_enabled, :market_data_sync_time, :page_cache_days, :page_cache_max_mb, :page_cache_cooldown_minutes, :external_assistant_url, :external_assistant_token, :external_assistant_model, securities_providers: [])
     end
 
     def load_external_assistant_models

@@ -66,6 +66,7 @@ x-rails-env: &rails_env
   ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY: ${ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY:-}
   ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT: ${ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT:-}
   SELF_HOSTED: "true"
+  SCALABLE_CAPITAL_FAMILY_ID: ${SCALABLE_CAPITAL_FAMILY_ID:-}
   RAILS_FORCE_SSL: "false"
   RAILS_ASSUME_SSL: "false"
   DB_HOST: db
@@ -103,6 +104,7 @@ services:
     image: ghcr.io/we-promise/sure:${SURE_IMAGE_TAG:-stable}
     volumes:
       - app-storage:/rails/storage
+      - scalable-cli-state:/home/rails/.config/scalable-cli
     ports:
       - ${PORT:-3000}:3000
       # To also publish on IPv6 (dual-stack), uncomment the line below AND
@@ -129,6 +131,7 @@ services:
     command: bundle exec sidekiq
     volumes:
       - app-storage:/rails/storage
+      - scalable-cli-state:/home/rails/.config/scalable-cli
     restart: unless-stopped
     depends_on:
       db:
@@ -239,6 +242,7 @@ services:
 
 volumes:
   app-storage:
+  scalable-cli-state:
   postgres-data:
   redis-data:
 

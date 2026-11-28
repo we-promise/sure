@@ -1,0 +1,1201 @@
+require "test_helper"
+
+class ScalableCapitalItem::SyncerTest < ActiveSupport::TestCase
+  setup do
+    @family = families(:dylan_family)
+    @item = @family.scalable_capital_items.create!(portfolio_id: "portfolio", savings_id: "savings")
+    ScalableCapitalItem.stubs(:configured_family_id).returns(@family.id)
+    @client = mock
+    Security.stubs(:search_provider).returns([])
+    travel_to Time.utc(2026, 11, 21, 12)
+  end
+
+  test "imports separate cash accounts, trades, paired settlements and exact ticker cost basis" do
+    isin = "IE00B4L5Y983"
+    correct = Security.new(ticker: "EUNL", name: "Example ETF", search_isin: isin, search_currency: "EUR",
+                           country_code: "DE", exchange_operating_mic: "XETR")
+    unrelated = Security.new(ticker: "WRONG", search_isin: "US0378331005", search_currency: "EUR",
+                             country_code: "DE", exchange_operating_mic: "XETR")
+    Security.expects(:search_provider)
+      .with(isin, country_code: "DE", technical_failure: kind_of(Proc), exclude_providers: [ Provider::ScalableCapitalMarketData::KEY ])
+      .once.returns([ unrelated, correct ])
+
+    stub_snapshot
+    run_sync
+    checkpoint = @item.reload.broker_synced_through
+    travel 1.day
+    stub_snapshot
+    @client.expects(:trade).never
+    @client.expects(:broker_transactions)
+      .with("portfolio", since: checkpoint - 1.second, before: Time.current)
+      .yields(broker({}), broker_events + [ cash_event("new-deposit", "DEPOSIT", amount: "25", at: checkpoint) ])
+    run_sync
+
+    broker = @item.scalable_capital_accounts.brokerage.first.account
+    cash = @item.scalable_capital_accounts.cash.first.account
+    savings = @item.scalable_capital_accounts.savings.first.account
+    assert_equal 3, @item.accounts.count
+    assert_equal "Investment", broker.accountable_type
+    assert_equal "Depository", cash.accountable_type
+    assert_equal "Depository", savings.accountable_type
+    assert_equal 1000.to_d, broker.reload.balance
+    assert_equal 0.to_d, broker.cash_balance
+    assert_equal 255.25.to_d, cash.reload.balance
+    assert_equal 50.to_d, savings.reload.balance
+    assert_equal Time.current, @item.reload.broker_synced_through
+    assert_equal Time.current, @item.savings_synced_through
+    assert_equal "person", @item.broker_account_id
+
+    holding = broker.holdings.where.not(account_provider_id: nil).order(:date).last
+    assert_equal "EUNL", holding.ticker
+    assert_equal 2.5.to_d, holding.qty
+    assert_equal 1000.to_d, holding.amount
+    assert_equal 110.to_d, holding.cost_basis
+    assert_equal holding.security_id, @item.security_ids.fetch(isin)
+
+    trades = broker.entries.where(entryable_type: "Trade").order(:external_id)
+    assert_equal 2, trades.size
+    assert_equal [ 301.to_d, -98.to_d ], trades.map(&:amount)
+    assert_equal [ 2.5.to_d, -1.to_d ], trades.map { |entry| entry.entryable.qty }
+    assert_equal [ 1.to_d, 2.to_d ], trades.map { |entry| entry.entryable.fee }
+    assert_equal [ holding.security_id ], trades.map { |entry| entry.entryable.security_id }.uniq
+    assert_equal 0.to_d, broker.entries.where(source: "scalable_capital").sum(:amount)
+
+    %w[buy sell].each do |id|
+      cash_leg = cash.entries.find_by!(external_id: "settlement:#{id}")
+      investment_leg = broker.entries.find_by!(external_id: "settlement:#{id}")
+      assert_equal(-investment_leg.amount, cash_leg.amount)
+      assert_equal investment_leg.entryable.transfer, cash_leg.entryable.transfer
+      assert_predicate cash_leg.entryable.transfer, :confirmed?
+      refute_predicate cash_leg.entryable.transfer, :investment_contribution?
+    end
+
+    assert_equal 1, cash.entries.where(entryable_type: "Transaction", external_id: "dividend").count
+    assert_equal(-2.5.to_d, cash.entries.find_by!(external_id: "dividend").amount)
+    assert_equal(-25.to_d, cash.entries.find_by!(external_id: "new-deposit").amount)
+    assert_equal 0.99.to_d, cash.entries.find_by!(external_id: "fee").amount
+    assert_equal(-1.25.to_d, savings.entries.find_by!(external_id: "interest").amount)
+    assert_equal(-20.to_d, cash.entries.find_by!(external_id: "cash-transfer-in").amount)
+    outgoing = savings.entries.find_by!(external_id: "cash-transfer-out")
+    assert_equal 20.to_d, outgoing.amount
+    @family.auto_match_transfers!(account: savings)
+    assert_equal outgoing.entryable.transfer, cash.entries.find_by!(external_id: "cash-transfer-in").entryable.transfer
+    assert_not_nil outgoing.entryable.transfer
+    assert_nil cash.entries.find_by(external_id: "pending")
+    assert_nil cash.entries.find_by(external_id: "cancelled")
+  end
+
+  test "using Scalable securities prices keeps a snapshot ISIN queryable when no verified ticker is available" do
+    provider_key = Provider::ScalableCapitalMarketData::KEY
+    Setting.stubs(:enabled_securities_providers).returns([ provider_key ])
+    Security.expects(:search_provider).with("IE00B4L5Y983", country_code: "DE", technical_failure: kind_of(Proc),
+                                           exclude_providers: [ provider_key ]).once.returns([])
+
+    stub_snapshot
+    run_sync
+
+    account = @item.scalable_capital_accounts.brokerage.sole.account
+    security = account.holdings.where.not(account_provider_id: nil).sole.security
+    assert_equal "IE00B4L5Y983", security.ticker
+    assert_equal provider_key, security.price_provider
+    refute_predicate security, :offline?
+  end
+
+  test "enabling Scalable pricing reactivates a mapped ISIN absent from the incremental feed" do
+    isin = position.fetch("isin")
+    stub_snapshot
+    run_sync
+
+    security = Security.find(@item.reload.security_ids.fetch(isin))
+    broker = @item.scalable_capital_accounts.brokerage.sole.account
+    assert_predicate security, :offline?
+    assert_nil security.offline_reason
+    assert_nil security.price_provider
+    protected = Security.create!(ticker: "US0378331005", offline: true, offline_reason: "health_check_failed")
+    assigned = Security.create!(ticker: "DE0007164600", offline: true, price_provider: "yahoo_finance")
+    @item.update!(security_ids: @item.security_ids.merge(protected.ticker => protected.id, assigned.ticker => assigned.id))
+
+    key = Provider::ScalableCapitalMarketData::KEY
+    Setting.stubs(:enabled_securities_providers).returns([ key ])
+    travel 1.day
+    stub_snapshot(positions: [], securities_value: "0")
+    stub_broker_history
+    Security.expects(:search_provider).never
+    @client.expects(:trade).never
+
+    run_sync
+
+    assert_equal security.id, @item.reload.security_ids.fetch(isin)
+    assert_equal [ security.id ], broker.trades.distinct.pluck(:security_id)
+    assert_equal [ security.id ], broker.holdings.distinct.pluck(:security_id)
+    refute_predicate security.reload, :offline?
+    assert_equal key, security.price_provider
+    assert_equal "health_check_failed", protected.reload.offline_reason
+    assert_equal "yahoo_finance", assigned.reload.price_provider
+    assert_predicate assigned, :offline?
+  end
+
+  test "the first sync after reconnecting can reuse and activate an unmapped ISIN" do
+    isin = position.fetch("isin")
+    security = Security.create!(ticker: isin, offline: true)
+    key = Provider::ScalableCapitalMarketData::KEY
+    Setting.stubs(:enabled_securities_providers).returns([ key ])
+    assert_empty @item.security_ids
+    stub_snapshot
+
+    run_sync
+
+    assert_equal security.id, @item.reload.security_ids.fetch(isin)
+    assert_equal key, security.reload.price_provider
+    refute_predicate security, :offline?
+  end
+
+  test "a legacy exchange listing keeps its ID and prices when Scalable resolves the canonical listing" do
+    isin = position.fetch("isin")
+    legacy = Security.create!(ticker: "EUNL", exchange_operating_mic: "XETR")
+    legacy.update_column(:exchange_operating_mic, "GER")
+    price = legacy.prices.create!(currency: "EUR", date: Date.current - 1, price: 89)
+    listing = Security.new(ticker: "EUNL", exchange_operating_mic: "XETR", search_isin: isin)
+    Security.stubs(:search_provider).returns([ listing ])
+    stub_snapshot
+
+    assert_no_difference -> { Security.where(ticker: "EUNL").count } do
+      run_sync
+    end
+
+    assert_equal "XETR", legacy.reload.exchange_operating_mic
+    assert_equal legacy.id, @item.reload.security_ids.fetch(isin)
+    assert_equal price.id, legacy.prices.sole.id
+  end
+
+  test "uses the canonical exchange listing if a legacy alias also exists" do
+    isin = position.fetch("isin")
+    legacy = Security.create!(ticker: "EUNL", exchange_operating_mic: "XETR")
+    legacy.update_column(:exchange_operating_mic, "GER")
+    canonical = Security.create!(ticker: "EUNL", exchange_operating_mic: "XETR")
+    Security.stubs(:search_provider).returns([ Security.new(ticker: "EUNL", exchange_operating_mic: "GER", search_isin: isin) ])
+    stub_snapshot
+
+    run_sync
+
+    assert_equal canonical.id, @item.reload.security_ids.fetch(isin)
+    assert_equal "GER", legacy.reload.exchange_operating_mic
+  end
+
+  test "listing searches release the CLI and stale imports retry from the latest committed checkpoint" do
+    stub_snapshot
+    event = cash_event("overlap", "DEPOSIT", amount: "10", at: 1.minute.ago)
+    stub_broker_history(*broker_events, event)
+    overlapping_sync_started = false
+    Security.stubs(:search_provider).with do |isin, _options|
+      assert_equal position.fetch("isin"), isin
+      ScalableCapitalItem.with_connection do |connection|
+        key = ScalableCapitalItem::CLI_LOCK_KEY
+        refute connection.select_value(<<~SQL.squish), "the CLI lock must be released during market-data lookup"
+          SELECT EXISTS (SELECT 1 FROM pg_locks
+            WHERE locktype = 'advisory' AND pid = pg_backend_pid()
+              AND classid = #{key >> 32} AND objid = #{key & 0xffffffff})
+        SQL
+      end
+      unless overlapping_sync_started
+        overlapping_sync_started = true
+        travel 1.hour
+        stub_broker_history(*broker_events, event.merge("amount" => "25"))
+        overlapping_item = ScalableCapitalItem.find(@item.id)
+        ScalableCapitalItem::Syncer.new(overlapping_item, client: @client).perform_sync(overlapping_item.syncs.create!)
+        checkpoint = overlapping_item.reload.broker_synced_through
+        travel 1.second
+        @client.expects(:broker_transactions).with("portfolio", since: checkpoint - 1.second, before: Time.current).yields(broker({}), [])
+      end
+      true
+    end.returns([])
+
+    run_sync
+
+    assert overlapping_sync_started
+    assert_equal Time.current, @item.reload.broker_synced_through
+    assert_equal 2, @item.scalable_capital_accounts.brokerage.sole.account.trades.count
+    cash = @item.scalable_capital_accounts.cash.sole.account
+    assert_equal(-25.to_d, cash.entries.where(external_id: "overlap").sole.amount)
+  end
+
+  test "retries a stale snapshot even if an intervening same-second import keeps its checkpoints" do
+    stub_snapshot
+    run_sync
+    checkpoint = @item.reload.broker_synced_through
+    mapping = @item.security_ids
+    generation = @item.import_generation
+    cash = @item.scalable_capital_accounts.cash.sole.account
+
+    stub_snapshot(positions: [ position, position.merge("isin" => "US0378331005") ])
+    @client.expects(:cash).with("portfolio").returns(broker({ "cash_balance" => "200" }), broker({ "cash_balance" => "300" })).times(3)
+    Security.expects(:search_provider).with do |isin, _options|
+      assert_equal "US0378331005", isin
+      @client.stubs(:holdings).with("portfolio").returns(broker({ "items" => [ position ] }))
+      other = ScalableCapitalItem.find(@item.id)
+      ScalableCapitalItem::Syncer.new(other, client: @client).perform_sync(other.syncs.create!)
+      assert_equal checkpoint, other.reload.broker_synced_through
+      assert_equal mapping, other.security_ids
+      assert_equal generation + 1, other.import_generation
+      true
+    end.once.returns([])
+
+    run_sync
+
+    assert_equal 300.to_d, cash.reload.cash_balance
+    assert_equal checkpoint, @item.reload.broker_synced_through
+    assert_equal mapping, @item.security_ids
+    assert_equal generation + 2, @item.import_generation
+  end
+
+  test "imports the CLI's filled SINGLE trades and only books a final IPO allocation" do
+    stub_snapshot
+    buy = cash_event("buy", "SECURITY_TRANSACTION").merge("security_transaction_type" => "SINGLE", "side" => "BUY")
+    sell = cash_event("sell", "SECURITY_TRANSACTION").merge("security_transaction_type" => "SINGLE", "side" => "SELL")
+    ipo = cash_event("ipo", "SECURITY_TRANSACTION").merge("security_transaction_type" => "IPO")
+    pending = ipo.merge("id" => "pending-ipo", "status" => "PENDING")
+    stub_broker_trades(buy, sell, ipo, pending)
+    @client.expects(:trade).with("portfolio", "pending-ipo").never
+    @client.stubs(:trade).with("portfolio", "ipo").returns(broker(trade("ipo", "BUY", "2", "25", "51")))
+
+    run_sync
+
+    brokerage = @item.scalable_capital_accounts.brokerage.sole.account
+    assert_equal %w[buy ipo sell], brokerage.entries.trades.order(:external_id).pluck(:external_id)
+    assert_equal 51.to_d, brokerage.entries.trades.find_by!(external_id: "ipo").amount
+    assert_equal(-51.to_d, brokerage.entries.find_by!(external_id: "settlement:ipo").amount)
+  end
+
+  test "keeps standalone security taxes and does not duplicate a fee included in settlement" do
+    stub_snapshot
+    tax = cash_event("standalone-tax", "TAX", amount: "3").merge("cash_transaction_type" => "TAX", "related_isin" => "IE00B4L5Y983")
+    fee = cash_event("linked-fee", "FEE", amount: "1").merge("cash_transaction_type" => "FEE", "related_isin" => "IE00B4L5Y983")
+    stub_broker_history(broker_events.first, tax, fee, cash_event("pocket-money", "POCKET_MONEY", amount: "1.50"))
+    @client.stubs(:trade).with("portfolio", "standalone-tax").returns(broker({ "id" => "standalone-tax", "linked_transaction_ids" => [] }))
+    @client.stubs(:trade).with("portfolio", "linked-fee").returns(broker({ "id" => "linked-fee", "linked_transaction_ids" => [ "buy" ] }))
+    buy = trade("buy", "BUY", "2.5", "120", "301")
+    buy["security_trade"]["trade_transaction_amounts"] = { "transaction_fee" => "1", "market_valuation" => "300" }
+    @client.stubs(:trade).with("portfolio", "buy").returns(broker(buy))
+
+    run_sync
+
+    cash = @item.scalable_capital_accounts.cash.sole.account
+    assert_equal 3.to_d, cash.entries.find_by!(external_id: "standalone-tax").amount
+    assert_equal(-1.5.to_d, cash.entries.find_by!(external_id: "pocket-money").amount)
+    refute cash.entries.exists?(external_id: "linked-fee")
+  end
+
+  test "imports both verified priced exchange legs once without a cash settlement" do
+    stub_snapshot
+    swap_out = cash_event("out", "SECURITY_TRANSACTION").merge("summary_type" => "BrokerNonTradeSecurityTransactionSummary",
+      "non_trade_security_transaction_type" => "SWAP_OUT")
+    swap_in = swap_out.merge("id" => "in", "non_trade_security_transaction_type" => "SWAP_IN")
+    stub_broker_history(swap_out, swap_in)
+    [ [ "out", "in", "SWAP_OUT", "US0378331005", "2", "50" ], [ "in", "out", "SWAP_IN", "IE00B4L5Y983", "1", "100" ] ].each do |id, linked_id, type, isin, qty, price|
+      @client.expects(:trade).with("portfolio", id).once.returns(broker({
+        "id" => id, "currency" => "EUR", "is_pending" => false, "is_cancellation" => false,
+        "last_event_datetime" => swap_out.fetch("last_event_datetime"), "linked_transaction_ids" => [ linked_id ],
+        "non_trade_security" => { "isin" => isin, "non_trade_security_transaction_type" => type,
+                                  "quantity" => qty, "average_price" => price, "total_amount" => "100" }
+      }))
+    end
+
+    run_sync
+
+    brokerage = @item.scalable_capital_accounts.brokerage.sole.account
+    trades = brokerage.entries.trades.order(:external_id).map(&:trade)
+    assert_equal [ 1.to_d, -2.to_d ], trades.map(&:qty)
+    assert_equal [ "Exchange", "Exchange" ], trades.map(&:investment_activity_label)
+    assert_predicate trades.last, :disposal?
+    assert_empty brokerage.entries.where(external_id: %w[settlement:in settlement:out])
+  end
+
+  test "syncs a selected junior savings source on its own without brokerage reads" do
+    @item.update!(portfolio_id: nil, savings_id: nil, broker_account_id: "person",
+                  selected_sources: [ { kind: "savings", id: "junior", label: "Junior Savings", owner_kind: "junior" } ])
+    @client.stubs(:identity).returns("person")
+    @client.expects(:overview).never
+    envelope = savings({ "balance" => "15" }, id: "junior").merge("account" => { "owner_kind" => "junior", "is_active" => true })
+    @client.stubs(:overnight).with("junior").returns(envelope)
+    @client.expects(:overnight_transactions).with("junior", all_of(has_key(:since), has_key(:before))).yields(envelope, [ cash_event("interest", "INTEREST") ])
+
+    run_sync
+
+    account = @item.scalable_capital_accounts.savings.sole
+    assert_equal "savings:junior", account.source_key
+    assert_equal 15.to_d, account.account.balance
+    assert_equal Time.current.iso8601, @item.reload.selected_sources.sole.fetch("synced_through")
+    assert_empty @item.scalable_capital_accounts.brokerage
+  end
+
+  test "keeps separate holdings, cash legs, and checkpoints for selected broker portfolios" do
+    @item.update!(portfolio_id: nil, savings_id: nil, broker_account_id: "person", selected_sources: %w[portfolio portfolio-2].map do |id|
+      { kind: "brokerage", id: id, owner_kind: "personal" }
+    end)
+    stub_snapshot
+    @client.stubs(:identity).returns("person")
+    @client.expects(:overnight).never
+    second_broker = ->(result) { broker(result).merge("portfolio_id" => "portfolio-2") }
+    @client.stubs(:overview).with("portfolio-2").returns(second_broker.call("valuation" => { "crypto" => "0" }))
+    @client.stubs(:holdings).with("portfolio-2").returns(second_broker.call("items" => [ position ]))
+    @client.stubs(:cash).with("portfolio-2").returns(second_broker.call("cash_balance" => "19"))
+    @client.stubs(:broker_transactions).with("portfolio-2", all_of(has_key(:since), has_key(:before)))
+      .yields(second_broker.call({}), [ broker_events.first ])
+    @client.stubs(:trade).with("portfolio-2", "buy").returns(second_broker.call(trade("buy", "BUY", "1", "120", "121")))
+
+    run_sync
+
+    first_brokerage = @item.scalable_capital_accounts.brokerage.find_by!(source_key: "brokerage:portfolio").account
+    second_brokerage = @item.scalable_capital_accounts.brokerage.find_by!(source_key: "brokerage:portfolio-2").account
+    second_cash = @item.scalable_capital_accounts.cash.find_by!(source_key: "brokerage:portfolio-2").account
+    assert_equal 301.to_d, first_brokerage.entries.trades.find_by!(external_id: "buy").amount
+    assert_equal 121.to_d, second_brokerage.entries.trades.find_by!(external_id: "buy").amount
+    settlement = second_brokerage.entries.find_by!(external_id: "settlement:buy").transaction.transfer
+    assert_equal second_cash, settlement.from_account
+    assert_equal [ Time.current.iso8601 ] * 2, @item.reload.selected_sources.pluck("synced_through")
+  end
+
+  test "imports a completed trade with final fill status" do
+    stub_snapshot
+    detail = trade("buy", "BUY", "2.5", "120", "301")
+    detail.fetch("security_trade")["status"] = "FINAL_FILL"
+    @client.stubs(:trade).with("portfolio", "buy").returns(broker(detail))
+    run_sync
+
+    account = @item.scalable_capital_accounts.brokerage.sole.account
+    buy = account.entries.trades.find_by!(external_id: "buy")
+    assert_equal 301.to_d, buy.amount
+    assert_equal 1.to_d, buy.entryable.fee
+    assert_equal Time.current, @item.reload.broker_synced_through
+  end
+
+  test "preserves net sale proceeds and fees when a tax credit raises the settlement above gross" do
+    stub_snapshot
+    detail = trade("sell", "SELL", "3", "34", "105")
+    detail.fetch("security_trade")["trade_transaction_amounts"] = {
+      "market_valuation" => "102", "transaction_fee" => "0.75", "venue_fee" => "0.25", "tax_amount" => "-4"
+    }
+    @client.stubs(:trade).with("portfolio", "sell").returns(broker(detail))
+    run_sync
+
+    accounts = @item.scalable_capital_accounts
+    sale = accounts.brokerage.sole.account.entries.trades.find_by!(external_id: "sell")
+    assert_equal(-105.to_d, sale.amount)
+    assert_equal 34.to_d, sale.entryable.price
+    assert_equal 1.to_d, sale.entryable.fee
+    assert_equal(-105.to_d, accounts.cash.sole.account.entries.find_by!(external_id: "settlement:sell").amount)
+  end
+
+  test "books a trade on its execution date even if its final status changes later" do
+    stub_snapshot
+    detail = trade("buy", "BUY", "2.5", "120", "301")
+    detail["history"] = [
+      { "state" => "SETTLED", "timestamp" => "2026-11-19T23:30:00Z" },
+      { "state" => "FILLED", "timestamp" => "2026-11-19T18:00:00Z" },
+      { "state" => "PARTIAL_FILL", "timestamp" => "2026-11-19T17:00:00Z" }
+    ]
+    @client.stubs(:trade).with("portfolio", "buy").returns(broker(detail))
+    run_sync
+
+    account = @item.scalable_capital_accounts.brokerage.sole.account
+    buy = account.entries.trades.find_by!(external_id: "buy")
+    assert_equal Date.new(2026, 11, 19), buy.date
+    assert_equal Time.utc(2026, 11, 19, 18), buy.occurred_at
+    assert_equal Time.current, buy.created_at
+  end
+
+  test "uses execution order for same-day FIFO even when an earlier buy settles in a later sync" do
+    holding = position.merge("quantity" => "1")
+    earlier_buy = Time.current - 3.hours
+    sale_time = Time.current - 2.hours
+    later_buy = Time.current - 1.hour
+
+    stub_snapshot(positions: [ holding ])
+    stub_broker_trades(
+      cash_event("buy-later", "BUY", at: later_buy),
+      cash_event("sell", "SELL", at: sale_time)
+    )
+    @client.stubs(:trade).with("portfolio", "buy-later").returns(broker(trade("buy-later", "BUY", "1", "80", "80")))
+    @client.stubs(:trade).with("portfolio", "sell").returns(broker(trade("sell", "SELL", "1", "100", "100")))
+    run_sync
+
+    travel 30.minutes
+    stub_snapshot(positions: [ holding ])
+    stub_broker_trades(cash_event("buy", "BUY", at: Time.current - 1.minute))
+    detail = trade("buy", "BUY", "1", "50", "50")
+    detail["history"] = [ { "state" => "FINAL_FILL", "timestamp" => earlier_buy.iso8601 } ]
+    @client.stubs(:trade).with("portfolio", "buy").returns(broker(detail))
+    run_sync
+
+    account = @item.scalable_capital_accounts.brokerage.sole.account
+    account.update!(cost_basis_method: "fifo")
+    Holding::Materializer.new(account, strategy: :reverse).materialize_holdings
+    sale = account.entries.trades.find_by!(external_id: "sell")
+    buy = account.entries.trades.find_by!(external_id: "buy")
+
+    assert_equal [ "buy", "sell", "buy-later" ], account.entries.trades.chronological.pluck(:external_id)
+    disposal = HoldingLotDisposal.find_by!(sale_entry: sale)
+    assert_equal 50.to_d, disposal.unit_cost
+    assert_equal buy.id, disposal.lot_source_entry_id
+    assert_equal [ buy.id ], sale.entryable.lot_choices.pluck(:id)
+  end
+
+  test "applies default household sharing to every new Scalable account" do
+    admin = users(:family_admin)
+    member = users(:family_member)
+    @family.update!(default_account_sharing: "shared")
+    @item.update!(owner: admin)
+    stub_snapshot
+    run_sync
+
+    assert_equal 3, @item.accounts.accessible_by(member).count
+    @item.accounts.each do |account|
+      assert_equal admin.id, account.owner_id
+      assert_equal "read_write", account.account_shares.find_by!(user: member).permission
+    end
+  end
+
+  test "preserves private household sharing on new Scalable accounts" do
+    @family.update!(default_account_sharing: "private")
+    @item.update!(owner: users(:family_admin))
+    stub_snapshot
+    run_sync
+
+    assert_equal 3, @item.accounts.count
+    assert_empty @item.accounts.accessible_by(users(:family_member))
+  end
+
+  test "brokerage holdings and balance use the inventory observation" do
+    date = Time.current.in_time_zone("Europe/Berlin").to_date
+    stub_snapshot(valuation_at: 1.day.ago, positions: [ position.merge("valuation" => "400") ])
+    run_sync
+
+    broker = @item.scalable_capital_accounts.brokerage.sole.account
+    holding = broker.holdings.where.not(account_provider_id: nil).sole
+    assert_predicate broker, :has_current_anchor?
+    assert_equal date, broker.current_anchor_date
+    assert_equal date, holding.date
+    assert_equal 400.to_d, broker.balance
+    assert_equal broker.balance, holding.amount
+  end
+
+  test "an earlier inventory observation cannot overwrite a newer balance anchor" do
+    stub_snapshot
+    run_sync
+    broker = @item.scalable_capital_accounts.brokerage.sole.account
+    date = broker.current_anchor_date
+
+    travel(-1.day)
+    stub_snapshot(positions: [])
+    run_sync
+
+    assert_equal date, broker.reload.current_anchor_date
+    assert_equal 1000.to_d, broker.balance
+    assert_equal 2.5.to_d, broker.holdings.where.not(account_provider_id: nil).sole.qty
+  end
+
+  test "temporary security lookup failure retries without duplicating holdings or trades" do
+    isin = position.fetch("isin")
+    stub_snapshot
+    with_failed_security_lookup(isin) { run_sync }
+
+    placeholder = Security.find(@item.reload.security_ids.fetch(isin))
+    assert_predicate placeholder, :offline?
+    assert_equal "resolution_pending", placeholder.offline_reason
+
+    listing = Security.create!(ticker: "EUNL", name: "Example ETF", exchange_operating_mic: "XETR",
+                               offline: true, offline_reason: "resolution_pending", failed_fetch_count: 2, failed_fetch_at: 1.day.ago)
+    listing.search_isin = isin
+    listing.search_currency = "EUR"
+    listing.price_provider = "yahoo_finance"
+    Security.expects(:search_provider)
+      .with(isin, country_code: "DE", technical_failure: kind_of(Proc), exclude_providers: [ Provider::ScalableCapitalMarketData::KEY ])
+      .once.returns([ listing ])
+    travel 1.day
+    stub_snapshot
+    @client.expects(:trade).never
+    run_sync
+
+    broker = @item.scalable_capital_accounts.brokerage.sole.account
+    assert_equal listing.id, @item.reload.security_ids.fetch(isin)
+    assert_equal [ 2.5.to_d, 2.5.to_d ], broker.holdings.where.not(account_provider_id: nil).order(:date).pluck(:qty)
+    assert_equal [ listing.id ], broker.holdings.distinct.pluck(:security_id)
+    assert_equal [ listing.id, listing.id ], broker.trades.pluck(:security_id)
+    assert_not Security.exists?(placeholder.id)
+    refute_predicate listing.reload, :offline?
+    assert_nil listing.offline_reason
+    assert_equal 0, listing.failed_fetch_count
+    assert_nil listing.failed_fetch_at
+    assert_equal "yahoo_finance", listing.price_provider
+
+    Security.expects(:search_provider).never
+    travel 1.day
+    stub_snapshot
+    run_sync
+
+    assert_equal listing.id, @item.reload.security_ids.fetch(isin)
+    assert_equal 2, broker.trades.count
+  end
+
+  test "verified listings with an unrelated offline reason stay offline" do
+    isin = position.fetch("isin")
+    listing = Security.create!(ticker: "EUNL", exchange_operating_mic: "XETR",
+                               offline: true, offline_reason: "health_check_failed")
+    listing.search_isin = isin
+    Security.expects(:search_provider)
+      .with(isin, country_code: "DE", technical_failure: kind_of(Proc), exclude_providers: [ Provider::ScalableCapitalMarketData::KEY ])
+      .once.returns([ listing ])
+    stub_snapshot
+    run_sync
+
+    assert_equal listing.id, @item.reload.security_ids.fetch(isin)
+    assert_predicate listing.reload, :offline?
+    assert_equal "health_check_failed", listing.offline_reason
+  end
+
+  test "retries a trade-only ISIN after its history window has passed" do
+    isin = position.fetch("isin")
+    stub_snapshot(positions: [], securities_value: "0")
+    with_failed_security_lookup(isin) { run_sync }
+
+    placeholder = Security.find(@item.reload.security_ids.fetch(isin))
+    listing = Security.new(ticker: "EUNL", name: "Example ETF", search_isin: isin, exchange_operating_mic: "XETR")
+    Security.expects(:search_provider)
+      .with(isin, country_code: "DE", technical_failure: kind_of(Proc), exclude_providers: [ Provider::ScalableCapitalMarketData::KEY ])
+      .once.returns([ listing ])
+    travel 1.day
+    stub_snapshot(positions: [], securities_value: "0")
+    @client.expects(:trade).never
+    run_sync
+
+    assert_equal placeholder.id, @item.reload.security_ids.fetch(isin)
+    assert_equal "EUNL", placeholder.reload.ticker
+    refute_predicate placeholder, :offline?
+    assert_nil placeholder.offline_reason
+  end
+
+  test "caches an ISIN after a successful lookup confirms no listing" do
+    isin = position.fetch("isin")
+    stub_snapshot
+    with_failed_security_lookup(isin) { run_sync }
+
+    placeholder = Security.find(@item.reload.security_ids.fetch(isin))
+    Security.expects(:search_provider)
+      .with(isin, country_code: "DE", technical_failure: kind_of(Proc), exclude_providers: [ Provider::ScalableCapitalMarketData::KEY ])
+      .once.returns([])
+    travel 1.day
+    stub_snapshot
+    run_sync
+    assert_nil placeholder.reload.offline_reason
+
+    Security.expects(:search_provider).never
+    travel 1.day
+    stub_snapshot
+    run_sync
+    assert_equal placeholder.id, @item.reload.security_ids.fetch(isin)
+  end
+
+  test "zero Tagesgeld waits for a positive balance and existing account can return to zero" do
+    @item.update!(savings_id: nil)
+    stub_snapshot(savings_balance: "0")
+    run_sync
+
+    assert_empty @item.scalable_capital_accounts.savings
+    assert_nil @item.reload.savings_id
+    assert_nil @item.savings_synced_through
+
+    travel 1.day
+    stub_snapshot(savings_balance: "50")
+    run_sync
+    savings = @item.scalable_capital_accounts.savings.sole.account
+    assert_equal "savings", @item.reload.savings_id
+    assert_equal 50.to_d, savings.balance
+
+    travel 1.day
+    stub_snapshot(savings_balance: "0")
+    run_sync
+    assert_equal savings.id, @item.scalable_capital_accounts.savings.sole.account.id
+    assert_equal 0.to_d, savings.reload.balance
+  end
+
+  test "changed CLI identity fails before writing financial data" do
+    @item.update!(broker_account_id: "original")
+    @client.expects(:overview).with("portfolio").returns(broker({}, account_id: "different"))
+    assert_raises(Provider::ScalableCapital::AuthenticationError) { run_sync }
+    assert_predicate @item.reload, :requires_update?
+    assert_empty @item.accounts
+  end
+
+  test "unconfigured household cannot run subprocess reads" do
+    ScalableCapitalItem.stubs(:configured_family_id).returns(families(:empty).id)
+    @client.expects(:overview).never
+    assert_raises(Provider::ScalableCapital::Error) { run_sync }
+    assert_empty @item.accounts
+  end
+
+  test "failed or mismatched savings history is atomic across the connection" do
+    stub_snapshot(savings_history_id: "wrong")
+    assert_raises(Provider::ScalableCapital::InvalidResponse) { run_sync }
+    assert_empty @item.accounts
+    assert_nil @item.reload.broker_synced_through
+  end
+
+  test "a failed follow-up leaves existing balances and both checkpoints intact" do
+    stub_snapshot
+    run_sync
+    previous = @item.reload.attributes.slice("broker_synced_through", "savings_synced_through")
+    # A newer broker cash value must not be committed when savings history fails.
+    travel 1.day
+    stub_snapshot(savings_history_id: "wrong")
+    @client.stubs(:cash).with("portfolio").returns(broker({ "cash_balance" => "999" }))
+    assert_raises(Provider::ScalableCapital::InvalidResponse) { run_sync }
+
+    assert_equal previous, @item.reload.attributes.slice(*previous.keys)
+    assert_equal 255.25.to_d, @item.scalable_capital_accounts.cash.sole.account.balance
+  end
+
+  test "an in-window replay updates the original row with the same provider ID" do
+    stub_snapshot
+    run_sync
+    account = @item.scalable_capital_accounts.cash.sole.account
+    original = account.entries.find_by!(external_id: "dividend")
+
+    travel 1.day
+    stub_snapshot
+    stub_broker_history(cash_event("dividend", "DISTRIBUTION", amount: "2.75", at: 1.hour.ago))
+    run_sync
+
+    replayed = account.entries.where(external_id: "dividend").sole
+    assert_equal original.id, replayed.id
+    assert_equal(-2.75.to_d, replayed.amount)
+  end
+
+  test "a one-sided cash correction detaches an invalid transfer without removing its entries or fee" do
+    stub_snapshot
+    run_sync
+    cash = @item.scalable_capital_accounts.cash.sole.account
+    savings = @item.scalable_capital_accounts.savings.sole.account
+    inflow = cash.entries.find_by!(external_id: "cash-transfer-in")
+    outflow = savings.entries.find_by!(external_id: "cash-transfer-out")
+    @family.auto_match_transfers!(account: savings)
+    transfer = outflow.transaction.transfer
+    transfer.confirm! if transfer.pending?
+    fee = cash.entries.create!(entryable: Transaction.new(transfer_id: transfer.id), date: inflow.date,
+                               amount: 1, currency: "EUR", name: "Separate transfer fee")
+
+    travel 1.day
+    stub_snapshot
+    stub_broker_history(cash_event("cash-transfer-in", "CASH_TRANSFER_IN", amount: "25", at: 1.hour.ago))
+    queries = capture_sql_queries { run_sync }
+
+    transfer_lock = queries.index { |sql| sql.start_with?('SELECT "transfers".*') && sql.include?("FOR UPDATE") }
+    entry_write = queries.index { |sql| sql.start_with?('UPDATE "entries"') }
+    assert_not_nil transfer_lock
+    assert_not_nil entry_write
+    assert_operator transfer_lock, :<, entry_write
+    assert_equal(-25.to_d, inflow.reload.amount)
+    assert_equal 20.to_d, outflow.reload.amount
+    assert_not Transfer.exists?(transfer.id)
+    assert_nil inflow.transaction.transfer
+    assert_nil outflow.transaction.transfer
+    assert_equal 1.to_d, fee.reload.amount
+    assert_nil fee.transaction.transfer_id
+  end
+
+  test "matching cash corrections across feeds retain the original valid transfer" do
+    stub_snapshot
+    run_sync
+    cash = @item.scalable_capital_accounts.cash.sole.account
+    savings = @item.scalable_capital_accounts.savings.sole.account
+    inflow = cash.entries.find_by!(external_id: "cash-transfer-in")
+    outflow = savings.entries.find_by!(external_id: "cash-transfer-out")
+    @family.auto_match_transfers!(account: savings)
+    transfer = outflow.transaction.transfer
+    transfer.confirm! if transfer.pending?
+
+    travel 1.day
+    stub_snapshot
+    stub_broker_history(cash_event("cash-transfer-in", "CASH_TRANSFER_IN", amount: "25", at: 1.hour.ago))
+    stub_savings_history(cash_event("cash-transfer-out", "CASH_TRANSFER_OUT", amount: "25", at: 1.hour.ago))
+    run_sync
+
+    assert_equal(-25.to_d, inflow.reload.amount)
+    assert_equal 25.to_d, outflow.reload.amount
+    assert_equal transfer, inflow.transaction.transfer
+    assert_equal transfer, outflow.transaction.transfer
+    assert_predicate transfer.reload, :valid?
+  end
+
+  test "zero cash corrections update existing provider entries without creating new ones" do
+    stub_snapshot
+    stub_broker_history(
+      cash_event("corrected-deposit", "DEPOSIT", amount: "25"),
+      cash_event("locked-deposit", "DEPOSIT", amount: "30")
+    )
+    run_sync
+    cash = @item.scalable_capital_accounts.cash.sole.account
+    deposit = cash.entries.find_by!(external_id: "corrected-deposit")
+    locked = cash.entries.find_by!(external_id: "locked-deposit")
+    locked.lock_attr!(:amount)
+    original_date = deposit.date
+
+    travel 1.day
+    stub_snapshot
+    stub_broker_history(
+      cash_event("corrected-deposit", "DEPOSIT", amount: "0", at: 1.hour.ago),
+      cash_event("locked-deposit", "DEPOSIT", amount: "0", at: 1.hour.ago),
+      cash_event("new-zero", "DEPOSIT", amount: "0", at: 1.hour.ago)
+    )
+    run_sync
+
+    assert_equal 0.to_d, deposit.reload.amount
+    assert_equal original_date, deposit.date
+    assert_equal deposit.id, cash.entries.where(external_id: "corrected-deposit").sole.id
+    assert_equal(-30.to_d, locked.reload.amount)
+    refute cash.entries.exists?(external_id: "new-zero")
+  end
+
+  test "a zero-net replay clears both settlement legs and a later correction reuses them" do
+    stub_snapshot
+    run_sync
+    brokerage = @item.scalable_capital_accounts.brokerage.sole.account
+    cash = @item.scalable_capital_accounts.cash.sole.account
+    broker_leg = brokerage.entries.find_by!(external_id: "settlement:sell")
+    cash_leg = cash.entries.find_by!(external_id: "settlement:sell")
+    transfer = broker_leg.transaction.transfer
+    fee = cash.entries.create!(entryable: Transaction.new(transfer_id: transfer.id), date: cash_leg.date,
+                               amount: 1, currency: "EUR", name: "Separate transfer fee")
+
+    travel 1.day
+    stub_snapshot
+    stub_broker_trades(cash_event("sell", "SELL", at: 1.hour.ago))
+    @client.stubs(:trade).with("portfolio", "sell").returns(broker(trade("sell", "SELL", "1", "100", "0")))
+    run_sync
+
+    assert_equal 0.to_d, brokerage.entries.trades.find_by!(external_id: "sell").amount
+    assert_equal [ 0.to_d, 0.to_d ], [ broker_leg.reload.amount, cash_leg.reload.amount ]
+    refute Transfer.exists?(transfer.id)
+    assert_nil fee.reload.transaction.transfer_id
+    assert_equal 1.to_d, fee.amount
+
+    travel 1.day
+    stub_snapshot
+    stub_broker_trades(cash_event("sell", "SELL", at: 1.hour.ago))
+    @client.stubs(:trade).with("portfolio", "sell").returns(broker(trade("sell", "SELL", "1", "100", "95")))
+    run_sync
+
+    assert_equal [ 95.to_d, -95.to_d ], [ broker_leg.reload.amount, cash_leg.reload.amount ]
+    assert_equal broker_leg.transaction.transfer, cash_leg.transaction.transfer
+    assert_predicate broker_leg.transaction.transfer, :confirmed?
+    assert_equal broker_leg.id, brokerage.entries.where(external_id: "settlement:sell").sole.id
+    assert_equal cash_leg.id, cash.entries.where(external_id: "settlement:sell").sole.id
+  end
+
+  test "a trade side correction repairs the existing settlement without duplicating its legs" do
+    stub_snapshot
+    run_sync
+    brokerage = @item.scalable_capital_accounts.brokerage.sole.account
+    cash = @item.scalable_capital_accounts.cash.sole.account
+    original_trade = brokerage.entries.trades.find_by!(external_id: "sell")
+    broker_leg = brokerage.entries.find_by!(external_id: "settlement:sell")
+    cash_leg = cash.entries.find_by!(external_id: "settlement:sell")
+    original_transfer = broker_leg.transaction.transfer
+    fee = cash.entries.create!(entryable: Transaction.new(transfer_id: original_transfer.id), date: cash_leg.date,
+                               amount: 1, currency: "EUR", name: "Separate transfer fee")
+
+    travel 1.day
+    stub_snapshot
+    stub_broker_trades(cash_event("sell", "BUY", at: 1.hour.ago))
+    @client.stubs(:trade).with("portfolio", "sell").returns(broker(trade("sell", "BUY", "1", "100", "103")))
+    run_sync
+
+    assert_equal 103.to_d, original_trade.reload.amount
+    assert_equal 1.to_d, original_trade.trade.qty
+    assert_equal [ -103.to_d, 103.to_d ], [ broker_leg.reload.amount, cash_leg.reload.amount ]
+    refute Transfer.exists?(original_transfer.id)
+    transfer = broker_leg.transaction.transfer
+    assert_equal transfer, cash_leg.transaction.transfer
+    assert_equal broker_leg.entryable_id, transfer.inflow_transaction_id
+    assert_equal cash_leg.entryable_id, transfer.outflow_transaction_id
+    assert_predicate transfer, :confirmed?
+    assert_predicate transfer, :valid?
+    refute_predicate transfer, :investment_contribution?
+    assert_equal "funds_movement", broker_leg.transaction.kind
+    assert_equal "funds_movement", cash_leg.transaction.kind
+    assert_nil fee.reload.transaction.transfer_id
+    assert_equal 1.to_d, fee.amount
+
+    travel 1.day
+    stub_snapshot
+    stub_broker_trades(cash_event("sell", "BUY", at: 1.hour.ago))
+    @client.stubs(:trade).with("portfolio", "sell").returns(broker(trade("sell", "BUY", "1", "100", "105")))
+    run_sync
+
+    assert_equal [ -105.to_d, 105.to_d ], [ broker_leg.reload.amount, cash_leg.reload.amount ]
+    assert_equal transfer, broker_leg.transaction.transfer
+    assert_equal transfer, cash_leg.transaction.transfer
+    assert_equal original_trade.id, brokerage.entries.trades.where(external_id: "sell").sole.id
+    assert_equal broker_leg.id, brokerage.entries.where(external_id: "settlement:sell").sole.id
+    assert_equal cash_leg.id, cash.entries.where(external_id: "settlement:sell").sole.id
+  end
+
+  test "a corrected settlement retains both legs when a locked date prevents pairing" do
+    stub_snapshot
+    run_sync
+    brokerage = @item.scalable_capital_accounts.brokerage.sole.account
+    cash = @item.scalable_capital_accounts.cash.sole.account
+    broker_leg = brokerage.entries.find_by!(external_id: "settlement:sell")
+    cash_leg = cash.entries.find_by!(external_id: "settlement:sell")
+    original_transfer = broker_leg.transaction.transfer
+    broker_date = broker_leg.date
+    broker_leg.lock_attr!(:date)
+
+    travel 45.days
+    stub_snapshot
+    stub_broker_trades(cash_event("sell", "BUY", at: 1.hour.ago))
+    @client.stubs(:trade).with("portfolio", "sell").returns(broker(trade("sell", "BUY", "1", "100", "103")))
+    run_sync
+
+    assert_equal [ -103.to_d, 103.to_d ], [ broker_leg.reload.amount, cash_leg.reload.amount ]
+    assert_equal broker_date, broker_leg.date
+    assert_equal Date.current, cash_leg.date
+    refute Transfer.exists?(original_transfer.id)
+    assert_nil broker_leg.transaction.transfer
+    assert_nil cash_leg.transaction.transfer
+    assert_equal [ "funds_movement", "funds_movement" ], [ broker_leg.transaction.kind, cash_leg.transaction.kind ]
+    assert_equal Time.current, @item.reload.broker_synced_through
+  end
+
+  test "zero and nonzero replays preserve each trade with a protected settlement leg" do
+    stub_snapshot
+    run_sync
+    brokerage = @item.scalable_capital_accounts.brokerage.sole.account
+    cash = @item.scalable_capital_accounts.cash.sole.account
+    sale = brokerage.entries.trades.find_by!(external_id: "sell")
+    buy = brokerage.entries.trades.find_by!(external_id: "buy")
+    sale_broker_leg = brokerage.entries.find_by!(external_id: "settlement:sell")
+    sale_cash_leg = cash.entries.find_by!(external_id: "settlement:sell")
+    buy_broker_leg = brokerage.entries.find_by!(external_id: "settlement:buy")
+    buy_cash_leg = cash.entries.find_by!(external_id: "settlement:buy")
+    sale_transfer = sale_broker_leg.transaction.transfer
+    buy_transfer = buy_broker_leg.transaction.transfer
+    sale_broker_leg.lock_attr!(:amount)
+    buy_cash_leg.update!(user_modified: true)
+
+    travel 1.day
+    stub_snapshot
+    stub_broker_trades(cash_event("sell", "SELL", at: 1.hour.ago), cash_event("buy", "BUY", at: 1.hour.ago))
+    @client.stubs(:trade).with("portfolio", "sell").returns(broker(trade("sell", "SELL", "1", "100", "0")))
+    @client.stubs(:trade).with("portfolio", "buy").returns(broker(trade("buy", "BUY", "2.5", "120", "305")))
+    run_sync
+
+    assert_equal [ -98.to_d, 98.to_d, -98.to_d ], [ sale, sale_broker_leg, sale_cash_leg ].map { |entry| entry.reload.amount }
+    assert_equal [ 301.to_d, -301.to_d, 301.to_d ], [ buy, buy_broker_leg, buy_cash_leg ].map { |entry| entry.reload.amount }
+    assert_equal sale_transfer, sale_cash_leg.transaction.transfer
+    assert_equal buy_transfer, buy_broker_leg.transaction.transfer
+    assert_equal Time.current, @item.reload.broker_synced_through
+  end
+
+  test "a settlement correction detaches an unbalanced transfer to an unlinked cash account" do
+    stub_snapshot
+    run_sync
+    brokerage = @item.scalable_capital_accounts.brokerage.sole.account
+    cash_source = @item.scalable_capital_accounts.cash.sole
+    cash = cash_source.account
+    broker_leg = brokerage.entries.find_by!(external_id: "settlement:sell")
+    cash_leg = cash.entries.find_by!(external_id: "settlement:sell")
+    transfer = broker_leg.transaction.transfer
+    cash_date = cash_leg.date
+    fee = cash.entries.create!(entryable: Transaction.new(transfer_id: transfer.id), date: cash_date,
+                               amount: 1, currency: "EUR", name: "Separate transfer fee")
+    cash_source.account_provider.destroy!
+    assert_predicate cash.reload, :manual?
+
+    travel 1.day
+    stub_snapshot
+    stub_broker_trades(cash_event("sell", "SELL", at: 1.hour.ago))
+    run_sync
+    assert_predicate transfer.reload, :valid?
+
+    travel 1.day
+    stub_snapshot
+    stub_broker_trades(cash_event("sell", "SELL", at: 1.hour.ago))
+    @client.stubs(:trade).with("portfolio", "sell").returns(broker(trade("sell", "SELL", "1", "100", "90")))
+    run_sync
+
+    assert_equal(-90.to_d, brokerage.entries.trades.find_by!(external_id: "sell").amount)
+    assert_equal 90.to_d, broker_leg.reload.amount
+    assert_equal "funds_movement", broker_leg.transaction.kind
+    refute Transfer.exists?(transfer.id)
+    assert_equal(-98.to_d, cash_leg.reload.amount)
+    assert_equal cash_date, cash_leg.date
+    assert_equal "funds_movement", cash_leg.transaction.kind
+    assert_nil fee.reload.transaction.transfer_id
+    assert_equal 1.to_d, fee.amount
+    assert_nil cash_source.reload.account
+  end
+
+  test "an unreadable timestamp on a supported event preserves checkpoints for a retry" do
+    stub_snapshot
+    run_sync
+    checkpoints = @item.reload.attributes.slice("broker_synced_through", "savings_synced_through")
+    account = @item.scalable_capital_accounts.cash.sole.account
+
+    travel 1.day
+    stub_snapshot
+    corrected = cash_event("corrected-deposit", "DEPOSIT", amount: "25", at: 1.hour.ago)
+    unsupported = cash_event("unsupported", "UNSUPPORTED").merge("last_event_datetime" => "invalid")
+    stub_broker_history(corrected.merge("last_event_datetime" => "invalid"), unsupported)
+    assert_raises(Provider::ScalableCapital::InvalidResponse) { run_sync }
+    assert_equal checkpoints, @item.reload.attributes.slice(*checkpoints.keys)
+    refute account.entries.exists?(external_id: "corrected-deposit")
+
+    travel 1.hour
+    stub_snapshot
+    stub_broker_history(corrected, unsupported)
+    run_sync
+
+    assert_equal(-25.to_d, account.entries.where(external_id: "corrected-deposit").sole.amount)
+    refute account.entries.exists?(external_id: "unsupported")
+    assert_equal Time.current, @item.reload.broker_synced_through
+  end
+
+  test "a malformed cash amount preserves checkpoints and the corrected event imports on retry" do
+    stub_snapshot
+    run_sync
+    checkpoints = @item.reload.attributes.slice("broker_synced_through", "savings_synced_through")
+    account = @item.scalable_capital_accounts.cash.sole.account
+
+    travel 1.day
+    stub_snapshot
+    deposit = cash_event("corrected-amount", "DEPOSIT", amount: "25", at: 1.hour.ago)
+    [ nil, "invalid", "NaN" ].each do |malformed_amount|
+      stub_broker_history(deposit.merge("amount" => malformed_amount))
+      error = assert_raises(Provider::ScalableCapital::InvalidResponse) { run_sync }
+      assert_match(/unreadable amount/, error.message)
+      assert_equal checkpoints, @item.reload.attributes.slice(*checkpoints.keys)
+      refute account.entries.exists?(external_id: "corrected-amount")
+    end
+
+    travel 1.hour
+    stub_snapshot
+    zero = cash_event("zero-amount", "DEPOSIT", amount: "0", at: 1.minute.ago)
+    unsupported = cash_event("unsupported-amount", "UNSUPPORTED", amount: nil, at: 1.minute.ago)
+    stub_broker_history(deposit, zero, unsupported)
+    run_sync
+
+    assert_equal(-25.to_d, account.entries.where(external_id: "corrected-amount").sole.amount)
+    refute account.entries.exists?(external_id: [ "zero-amount", "unsupported-amount" ])
+    assert_equal Time.current, @item.reload.broker_synced_through
+    assert_equal Time.current, @item.savings_synced_through
+  end
+
+  test "incomplete details for a settled trade preserve checkpoints for retry" do
+    stub_snapshot
+    run_sync
+    checkpoints = @item.reload.attributes.slice("broker_synced_through", "savings_synced_through")
+    account = @item.scalable_capital_accounts.brokerage.sole.account
+
+    travel 1.day
+    stub_snapshot
+    buy = cash_event("corrected-buy", "BUY", at: 1.hour.ago)
+    stub_broker_trades(buy)
+    pending_detail = trade("corrected-buy", "BUY", "1", "30", "30").merge("is_pending" => true)
+    missing_net = trade("corrected-buy", "BUY", "1", "30", nil)
+    inconsistent_net = trade("corrected-buy", "BUY", "1", "30", "25")
+    [ pending_detail, missing_net, inconsistent_net ].each do |detail|
+      @client.stubs(:trade).with("portfolio", "corrected-buy").returns(broker(detail))
+      assert_raises(Provider::ScalableCapital::InvalidResponse) { run_sync }
+      assert_equal checkpoints, @item.reload.attributes.slice(*checkpoints.keys)
+      refute account.entries.exists?(external_id: "corrected-buy")
+    end
+
+    travel 1.hour
+    stub_snapshot
+    cancelled = cash_event("cancelled-trade", "BUY", at: 30.minutes.ago)
+    zero_net_sale = cash_event("zero-net-sale", "SELL", at: 15.minutes.ago)
+    stub_broker_trades(buy, cancelled, zero_net_sale)
+    @client.stubs(:trade).with("portfolio", "corrected-buy").returns(broker(trade("corrected-buy", "BUY", "1", "30", "30")))
+    @client.stubs(:trade).with("portfolio", "cancelled-trade")
+      .returns(broker(trade("cancelled-trade", "BUY", "1", "10", nil).merge("is_cancellation" => true)))
+    @client.stubs(:trade).with("portfolio", "zero-net-sale")
+      .returns(broker(trade("zero-net-sale", "SELL", "1", "1", "0")))
+    run_sync
+
+    assert_equal 30.to_d, account.entries.trades.where(external_id: "corrected-buy").sole.amount
+    refute account.entries.exists?(external_id: "cancelled-trade")
+    assert_equal 0.to_d, account.entries.trades.where(external_id: "zero-net-sale").sole.amount
+    assert_equal Time.current, @item.reload.broker_synced_through
+    assert_equal Time.current, @item.savings_synced_through
+  end
+
+  test "an incomplete settled security transfer preserves checkpoints for retry" do
+    stub_snapshot
+    run_sync
+    checkpoints = @item.reload.attributes.slice("broker_synced_through", "savings_synced_through")
+    account = @item.scalable_capital_accounts.brokerage.sole.account
+
+    travel 1.day
+    stub_snapshot
+    transfer = cash_event("corrected-transfer", "TRANSFER_IN", at: 1.hour.ago).merge(
+      "summary_type" => "BrokerNonTradeSecurityTransactionSummary", "non_trade_security_transaction_type" => "TRANSFER_IN",
+      "isin" => position.fetch("isin"), "quantity" => "2")
+    stub_broker_history(transfer.merge("quantity" => nil))
+    assert_raises(Provider::ScalableCapital::InvalidResponse) { run_sync }
+    assert_equal checkpoints, @item.reload.attributes.slice(*checkpoints.keys)
+    refute account.entries.exists?(external_id: "corrected-transfer")
+
+    travel 1.hour
+    stub_snapshot
+    stub_broker_history(transfer)
+    run_sync
+
+    imported = account.entries.trades.where(external_id: "corrected-transfer").sole.entryable
+    assert_equal 2.to_d, imported.qty
+    assert_equal "Transfer", imported.investment_activity_label
+    assert_equal Time.current, @item.reload.broker_synced_through
+    assert_equal Time.current, @item.savings_synced_through
+  end
+
+  test "a savings write failure rolls back broker writes and the retry imports each entry once" do
+    stub_snapshot
+    run_sync
+    checkpoints = @item.reload.attributes.slice("broker_synced_through", "savings_synced_through")
+    cash = @item.scalable_capital_accounts.cash.sole.account
+    savings = @item.scalable_capital_accounts.savings.sole.account
+    travel 1.day
+    deposit = cash_event("retry-deposit", "DEPOSIT", amount: "25", at: 1.hour.ago)
+
+    # This value parses as a balance, but PostgreSQL rejects its precision
+    # when the savings account is updated after the broker cash account.
+    stub_snapshot(savings_balance: "100000000000000000000")
+    @client.stubs(:cash).with("portfolio").returns(broker({ "cash_balance" => "280.25" }))
+    stub_broker_history(deposit)
+    error = assert_raises(Provider::ScalableCapital::Error) { run_sync }
+    assert_equal "Could not persist Scalable Capital data", error.message
+    assert_equal checkpoints, @item.reload.attributes.slice(*checkpoints.keys)
+    assert_equal 255.25.to_d, cash.reload.balance
+    assert_equal 50.to_d, savings.reload.balance
+    refute cash.entries.exists?(external_id: "retry-deposit")
+
+    stub_snapshot(savings_balance: "55")
+    @client.stubs(:cash).with("portfolio").returns(broker({ "cash_balance" => "280.25" }))
+    stub_broker_history(deposit)
+    run_sync
+
+    assert_equal 280.25.to_d, cash.reload.balance
+    assert_equal 55.to_d, savings.reload.balance
+    assert_equal(-25.to_d, cash.entries.where(external_id: "retry-deposit").sole.amount)
+    assert_equal Time.current, @item.reload.broker_synced_through
+    assert_equal Time.current, @item.savings_synced_through
+  end
+
+  test "closing a holding writes a zero snapshot and preserves historical quantity" do
+    stub_snapshot
+    run_sync
+    travel 1.day
+    stub_snapshot(positions: [], securities_value: "0")
+    run_sync
+
+    account = @item.scalable_capital_accounts.brokerage.first.account
+    assert_equal [ 2.5.to_d, 0.to_d ], account.holdings.where.not(account_provider_id: nil).order(:date).pluck(:qty)
+
+    travel 1.day
+    stub_snapshot(positions: [], securities_value: "0")
+    assert_no_difference -> { account.holdings.where.not(account_provider_id: nil).count } do
+      run_sync
+    end
+  end
+
+  private
+
+    def run_sync
+      sync = @item.syncs.create!
+      ScalableCapitalItem::Syncer.new(@item, client: @client).perform_sync(sync)
+    end
+
+    def with_failed_security_lookup(isin)
+      Security.stubs(:search_provider).with do |symbol, options|
+        next false unless symbol == isin
+
+        options.fetch(:technical_failure).call(nil)
+        true
+      end.returns([])
+      yield
+    ensure
+      Security.unstub(:search_provider)
+    end
+
+    def stub_snapshot(positions: [ position ], securities_value: "1000", savings_history_id: "savings",
+                      savings_balance: "50", valuation_at: Time.current)
+      @client.stubs(:overview).with("portfolio").returns(broker({
+        "timestamps" => { "valuation_timestamp_utc" => valuation_at.iso8601 },
+        "valuation" => { "total" => "1255.25", "securities" => securities_value, "crypto" => "0" }
+      }))
+      @client.stubs(:cash).with("portfolio").returns(broker({ "cash_balance" => "255.25" }))
+      @client.stubs(:holdings).with("portfolio").returns(broker({ "items" => positions }))
+      @client.stubs(:trade).with("portfolio", "buy").returns(broker(trade("buy", "BUY", "2.5", "120", "301")))
+      @client.stubs(:trade).with("portfolio", "sell").returns(broker(trade("sell", "SELL", "1", "100", "98")))
+      @client.stubs(:overnight).with(@item.reload.savings_id).returns(savings({ "balance" => savings_balance }))
+      @client.stubs(:broker_transactions).with("portfolio", all_of(has_key(:since), has_key(:before))).yields(broker({}), broker_events)
+      stub_savings_history(
+        cash_event("interest", "INTEREST", amount: "1.25"),
+        cash_event("cash-transfer-out", "CASH_TRANSFER_OUT", amount: "20"),
+        id: savings_history_id
+      )
+    end
+
+    def stub_savings_history(*events, id: "savings")
+      @client.stubs(:overnight_transactions).with("savings", all_of(has_key(:since), has_key(:before)))
+        .yields(savings({}, id: id), events)
+    end
+
+    def stub_broker_trades(*events)
+      stub_broker_history(*events.map { |event| event.merge("summary_type" => "BrokerSecurityTransactionSummary") })
+    end
+
+    def stub_broker_history(*events)
+      @client.stubs(:broker_transactions).with("portfolio", all_of(has_key(:since), has_key(:before))).yields(broker({}), events)
+    end
+
+    def broker_events
+      [
+        cash_event("buy", "BUY").merge("summary_type" => "BrokerSecurityTransactionSummary"),
+        cash_event("sell", "SELL").merge("summary_type" => "BrokerSecurityTransactionSummary"),
+        cash_event("dividend", "DISTRIBUTION", amount: "2.50"),
+        cash_event("fee", "FEE", amount: "0.99"),
+        cash_event("cash-transfer-in", "CASH_TRANSFER_IN", amount: "20"),
+        cash_event("pending", "INTEREST").merge("status" => "PENDING"),
+        cash_event("cancelled", "INTEREST").merge("is_cancellation" => true)
+      ]
+    end
+
+    def position
+      { "isin" => "IE00B4L5Y983", "name" => "Example ETF", "quantity" => "2.5", "valuation" => "1000",
+        "valuation_currency" => "EUR", "fifo_price" => "110" }
+    end
+
+    def broker(result, account_id: "person")
+      { "account_id" => account_id, "portfolio_id" => "portfolio", "result" => result }
+    end
+
+    def savings(result, id: "savings")
+      { "savings_account_id" => id, "account" => { "owner_kind" => "personal", "is_active" => true }, "result" => result }
+    end
+
+    def cash_event(id, type, amount: "10", at: Time.iso8601("2026-11-19T23:30:00Z"))
+      { "id" => id, "type" => type, "currency" => "EUR", "status" => "SETTLED", "amount" => amount,
+        "is_cancellation" => false, "last_event_datetime" => at.iso8601 }
+    end
+
+    def trade(id, side, quantity, price, total)
+      {
+        "id" => id, "currency" => "EUR", "is_pending" => false, "is_cancellation" => false,
+        "security" => { "isin" => "IE00B4L5Y983", "name" => "Example ETF" },
+        "security_trade" => {
+          "side" => side, "status" => "FILLED", "number_of_shares" => { "filled" => quantity },
+          "average_price" => price, "total_amount" => total
+        }
+      }
+    end
+end

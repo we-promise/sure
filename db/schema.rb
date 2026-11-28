@@ -710,6 +710,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_27_120000) do
     t.jsonb "locked_attributes", default: {}
     t.string "name", null: false
     t.text "notes"
+    t.datetime "occurred_at"
     t.uuid "parent_entry_id"
     t.string "reconciled_status", default: "unreconciled", null: false
     t.string "plaid_id"
@@ -2363,6 +2364,34 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_27_120000) do
     t.index ["rule_group_id"], name: "index_rules_on_rule_group_id"
   end
 
+  create_table "scalable_capital_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "kind", null: false
+    t.uuid "scalable_capital_item_id", null: false
+    t.string "source_key"
+    t.datetime "updated_at", null: false
+    t.index ["scalable_capital_item_id", "kind", "source_key"], name: "index_scalable_capital_accounts_on_source", unique: true, nulls_not_distinct: true
+  end
+
+  create_table "scalable_capital_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "broker_account_id"
+    t.integer "broker_history_version", default: 0, null: false
+    t.datetime "broker_synced_through"
+    t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.bigint "import_generation", default: 0, null: false
+    t.uuid "owner_id"
+    t.string "portfolio_id"
+    t.string "savings_id"
+    t.datetime "savings_synced_through"
+    t.jsonb "security_ids", default: {}, null: false
+    t.jsonb "selected_sources", default: [], null: false
+    t.string "status", default: "good", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_scalable_capital_items_on_family_id", unique: true
+    t.index ["owner_id"], name: "index_scalable_capital_items_on_owner_id"
+  end
+
   create_table "securities", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "asset_class"
     t.string "asset_sub_class"
@@ -3337,6 +3366,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_27_120000) do
   add_foreign_key "rule_runs", "rules"
   add_foreign_key "rules", "families"
   add_foreign_key "rules", "rule_groups", on_delete: :nullify
+  add_foreign_key "scalable_capital_accounts", "scalable_capital_items"
+  add_foreign_key "scalable_capital_items", "families"
+  add_foreign_key "scalable_capital_items", "users", column: "owner_id", on_delete: :nullify
   add_foreign_key "security_audit_logs", "users", on_delete: :nullify
   add_foreign_key "security_prices", "securities"
   add_foreign_key "security_splits", "securities", on_delete: :cascade

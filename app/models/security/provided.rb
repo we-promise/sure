@@ -57,10 +57,10 @@ module Security::Provided
     # "no such security" — can pass a callback here instead of us changing
     # the return type for all callers (e.g. SecuritiesController just wants
     # the plain result array).
-    def search_provider(symbol, country_code: nil, exchange_operating_mic: nil, technical_failure: nil)
+    def search_provider(symbol, country_code: nil, exchange_operating_mic: nil, technical_failure: nil, exclude_providers: [])
       return [] if symbol.blank?
 
-      active_providers = providers.compact
+      active_providers = providers.compact.reject { |provider| exclude_providers.include?(provider_key_for(provider)) }
       return [] if active_providers.empty?
 
       params = {
@@ -242,7 +242,10 @@ module Security::Provided
       return assigned if assigned.present?
       return nil # assigned provider is unavailable — don't silently fall back
     end
-    self.class.providers.first
+    self.class.providers.find do |provider|
+      !provider.is_a?(Provider::ScalableCapitalMarketData) ||
+        (exchange_operating_mic.blank? && Provider::ScalableCapitalMarketData.supports_symbol?(ticker))
+    end
   end
 
   # Returns the health status of this security's provider link.
@@ -262,13 +265,21 @@ module Security::Provided
   def find_or_fetch_price(date: Date.current, cache: true)
     price = prices.find_by(date: date)
 
-    return price if price.present?
+    if price
+      return price unless scalable_cached_price_gap?(price)
+      unless price_provider == Provider::ScalableCapitalMarketData::KEY
+        return price if offline? || !scalable_fallback_candidate?
+
+        provider = price_data_provider
+        return price unless provider.is_a?(Provider::ScalableCapitalMarketData)
+      end
+    end
 
     # Don't fetch prices for offline securities (e.g., custom tickers from SimpleFIN)
     return nil if offline?
 
     # Make sure we have a data provider before fetching
-    provider = price_data_provider
+    provider ||= price_data_provider
     return nil unless provider.present?
     response = provider.fetch_security_price(
       symbol: ticker,
@@ -282,13 +293,44 @@ module Security::Provided
     end
 
     price = response.data
-    Security::Price.find_or_create_by!(
-      security_id: self.id,
-      date: price.date,
-      currency: price.currency
-    ) { |record| record.price = price.price } if cache
+    cache_fetched_price(price, scalable: provider.is_a?(Provider::ScalableCapitalMarketData)) if cache
     price
   end
+
+  def last_completed_scalable_price
+    unless price_provider == Provider::ScalableCapitalMarketData::KEY
+      return unless scalable_fallback_candidate? && price_data_provider.is_a?(Provider::ScalableCapitalMarketData)
+    end
+
+    prices.where(date: ...Date.current, provisional: false, carried_forward: false)
+          .order(date: :desc).first
+  end
+
+  def cache_fetched_price(price, scalable:)
+    # The live mid-quote can be replaced by a completed close during price import.
+    provisional = scalable && price.date == Date.current
+    record = Security::Price.find_or_create_by!(security_id: id, date: price.date, currency: price.currency) do |row|
+      row.price = price.price
+      row.provisional = provisional
+    end
+    return unless scalable && scalable_cached_price_gap?(record)
+
+    record.with_lock do
+      next unless scalable_cached_price_gap?(record)
+
+      record.update!(price: price.price, provisional: provisional, carried_forward: false)
+    end
+  end
+
+  def scalable_cached_price_gap?(price)
+    price.carried_forward? || (price.provisional? && price.date < Date.current)
+  end
+
+  def scalable_fallback_candidate?
+    price_provider.blank? && exchange_operating_mic.blank? && Provider::ScalableCapitalMarketData.supports_symbol?(ticker)
+  end
+
+  private :cache_fetched_price, :scalable_cached_price_gap?, :scalable_fallback_candidate?
 
   # Throttled so a page with many holdings missing today's price doesn't
   # flood the debug log with one entry per request — at most one per

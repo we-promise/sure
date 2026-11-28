@@ -1,6 +1,7 @@
 ---
 de:
   shared:
+    last_close_as_of: "(Schlusskurs vom %{date})"
     confirm_modal:
       accept: Bestätigen
       body_html: "<p>Diese Entscheidung kann nicht rückgängig gemacht werden</p>"
