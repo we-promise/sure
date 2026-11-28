@@ -101,6 +101,25 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
     }
   end
 
+  # The text a money field starts with. A step: "any" field with no fixed
+  # precision (a trade's amount, price and fee) shows every stored decimal,
+  # padded to the currency's precision: money_field_controller leaves that
+  # text unrounded, so an auto-submitting form saves exactly what is shown.
+  # blank_zero leaves a zero empty, so typing a value needs no clearing first.
+  def money_field_text(value, currency, precision: nil, step: nil, blank_zero: false)
+    return if value.blank?
+
+    amount = value.respond_to?(:amount) ? value.amount : value
+    return if blank_zero && amount.to_d.zero?
+
+    places = precision.presence || currency.default_precision
+    return sprintf("%.#{places}f", amount) unless precision.blank? && step.to_s == "any"
+
+    whole, fraction = amount.to_d.round(10).to_s("F").split(".")
+    fraction = fraction.to_s.sub(/0+\z/, "").ljust(places, "0")
+    fraction.empty? ? whole : "#{whole}.#{fraction}"
+  end
+
   def toggle(method, options = {}, checked_value = "1", unchecked_value = "0")
     field_id = field_id(method)
     field_name = field_name(method)

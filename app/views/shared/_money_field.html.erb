@@ -65,12 +65,11 @@
           inline: true,
           placeholder: options[:placeholder] || "100",
           inputmode: "decimal",
-          value: if options[:value]
-            sprintf("%.#{options[:precision].presence || currency.default_precision}f", options[:value])
-          elsif form.object && form.object.respond_to?(amount_method)
-            val = form.object.public_send(amount_method)
-            sprintf("%.#{options[:precision].presence || currency.default_precision}f", val) if val.present?
-          end,
+          value: form.money_field_text(
+            options[:value] || (form.object.public_send(amount_method) if form.object.respond_to?(amount_method)),
+            currency,
+            **options.slice(:precision, :step, :blank_zero)
+          ),
           step: options[:step] || currency.step,
           disabled: options[:disabled],
           autofocus: options[:autofocus],
