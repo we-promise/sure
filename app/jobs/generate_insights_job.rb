@@ -3,7 +3,6 @@ class GenerateInsightsJob < ApplicationJob
   ACCOUNT_SCOPE_KEYS = %w[accounts_digest account_id].freeze
 
   queue_as :scheduled
-  sidekiq_options lock: :until_executed, on_conflict: :log
 
   # Without args (cron): fans out one job per family.
   # With family_id: generates and upserts that family's insights.

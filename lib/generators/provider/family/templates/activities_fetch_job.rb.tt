@@ -8,10 +8,6 @@ class <%= class_name %>ActivitiesFetchJob < ApplicationJob
   MAX_RETRIES = 6
   RETRY_INTERVAL = 10.seconds
 
-  sidekiq_options lock: :until_executed,
-                  lock_args_method: ->(args) { args.first },
-                  on_conflict: :log
-
   def perform(<%= file_name %>_account, start_date: nil, retry_count: 0)
     @<%= file_name %>_account = <%= file_name %>_account
     @start_date = start_date || 3.years.ago.to_date

@@ -12,11 +12,6 @@ class SnaptradeActivitiesFetchJob < ApplicationJob
 
   queue_as :default
 
-  # Prevent concurrent jobs for the same account - only one fetch at a time
-  sidekiq_options lock: :until_executed,
-                  lock_args_method: ->(args) { [ args.first.id ] },
-                  on_conflict: :log
-
   # Configuration for retry behavior
   # SnapTrade asks to poll an account no more than every 15 seconds.
   RETRY_DELAY = 15.seconds

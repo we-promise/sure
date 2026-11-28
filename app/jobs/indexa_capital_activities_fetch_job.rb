@@ -3,10 +3,6 @@
 class IndexaCapitalActivitiesFetchJob < ApplicationJob
   queue_as :default
 
-  sidekiq_options lock: :until_executed,
-                  lock_args_method: ->(args) { args.first },
-                  on_conflict: :log
-
   # Indexa Capital API does not provide an activities/transactions endpoint.
   # This job simply clears the pending flag and broadcasts updates.
   def perform(indexa_capital_account, start_date: nil, retry_count: 0)

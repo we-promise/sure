@@ -3,7 +3,6 @@
 # (SyncAllJob) is untouched; this runs in between it.
 class SyncScheduledItemsJob < ApplicationJob
   queue_as :scheduled
-  sidekiq_options lock: :until_executed, on_conflict: :log
 
   def perform
     SyncSchedule.due.find_each do |schedule|

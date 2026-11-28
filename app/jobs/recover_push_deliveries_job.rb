@@ -3,7 +3,6 @@
 # next insight generation.
 class RecoverPushDeliveriesJob < ApplicationJob
   queue_as :scheduled
-  sidekiq_options lock: :until_executed, on_conflict: :log
 
   def perform
     PushDelivery.recoverable.find_each(&:recover!)

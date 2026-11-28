@@ -10,7 +10,6 @@
 # single property, which skips the refresh interval.
 class SyncPropertyValuationsJob < ApplicationJob
   queue_as :scheduled
-  sidekiq_options lock: :until_executed, on_conflict: :log
 
   def perform(property_id: nil, force: false)
     registry = Provider::Registry.for_concept(:property_valuations)

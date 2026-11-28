@@ -8,10 +8,6 @@ class QuestradeActivitiesFetchJob < ApplicationJob
   MAX_RETRIES = 6
   RETRY_INTERVAL = 10.seconds
 
-  sidekiq_options lock: :until_executed,
-                  lock_args_method: ->(args) { args.first },
-                  on_conflict: :log
-
   def perform(questrade_account, start_date: nil, retry_count: 0)
     @questrade_account = questrade_account
     @start_date = start_date || 3.years.ago.to_date

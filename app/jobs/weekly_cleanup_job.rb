@@ -6,7 +6,6 @@
 # the per-admin chat creation is idempotent via WeeklyCleanupRun.
 class WeeklyCleanupJob < ApplicationJob
   queue_as :scheduled
-  sidekiq_options lock: :until_executed, on_conflict: :log
 
   # Without args (cron): fans out one job per family.
   # With family_id: generates this family's cleanup chats.

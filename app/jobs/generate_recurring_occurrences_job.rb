@@ -4,7 +4,6 @@
 # see fresh occurrences.
 class GenerateRecurringOccurrencesJob < ApplicationJob
   queue_as :scheduled
-  sidekiq_options lock: :until_executed, on_conflict: :log
 
   def perform(family_id = nil)
     if family_id.nil?
