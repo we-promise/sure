@@ -63,7 +63,7 @@ module SettingsHelper
     return { status: :off } unless Settings::ProvidersController::FAMILY_PANEL_KEYS.include?(key)
 
     items = instance_variable_get(:"@#{key}_items")
-    items = items&.select(&:oauth_configured?) if key == "snaptrade"
+    items = items&.select(&:credentials_configured?) if key == "snaptrade"
     return { status: :off } unless items&.any?
 
     case key

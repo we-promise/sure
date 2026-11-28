@@ -68,3 +68,18 @@ de:
     update:
       account_updated: Konto aktualisiert
       entry_updated: Eintrag aktualisiert
+    names:
+      current_account_value: "Aktueller Kontowert"
+      current_balance: "Aktueller Kontostand"
+      current_loan_balance: "Aktuelle Restschuld"
+      current_market_value: "Aktueller Marktwert"
+      manual_balance_update: "Manuelle Kontostandsänderung"
+      manual_principal_update: "Manuelle Änderung des Darlehensbetrags"
+      manual_value_update: "Manuelle Wertänderung"
+      opening_account_value: "Anfänglicher Kontowert"
+      opening_balance: "Eröffnungssaldo"
+      original_principal: "Ursprünglicher Darlehensbetrag"
+      original_purchase_price: "Ursprünglicher Kaufpreis"
+      synced_balance: "Synchronisierter Kontostand"
+      synced_principal: "Synchronisierter Darlehensbetrag"
+      synced_value: "Synchronisierter Wert"

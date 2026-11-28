@@ -1,0 +1,224 @@
+---
+pt-BR:
+  rules:
+    no_action: Nenhuma ação
+    no_condition: Nenhuma condição
+    notification_baseline_timed_out: Esta regra continua desativada. A verificação de quais transações ela já atende demorou demais e, sem essa verificação, ela enviaria um e-mail sobre todas elas. Simplifique as condições e ative-a novamente.
+    category_rule_cta:
+      close: Fechar
+      create_rule: Criar regra
+      description: Categorizar sempre as transações semelhantes?
+      not_today: Agora não
+      turn_off_suggestions: Desativar sugestões de regras
+      message: Atualizada para %{category_name}
+    classifier_rules:
+      category_classifier: Classificador de categorias
+      merchant_matcher: Identificador de estabelecimentos
+    filters:
+      search_label: Buscar regras
+      search_placeholder: Buscar por nome, condições e ações
+      reset: Limpar
+      button: Filtrar
+      done: Concluído
+      active_label: Filtros ativos
+      remove: Remover filtro %{filter}
+      status:
+        label: Status
+        all: Todos os status
+        active: Ativas
+        inactive: Inativas
+      action_type:
+        label: Ação
+        all: Todas as ações
+      condition_type:
+        label: Condição
+        all: Todas as condições
+      account:
+        label: Conta
+        all: Todas as contas
+      group:
+        label: Grupo
+        all: Todos os grupos
+        none: Sem grupo
+    group:
+      rules_count:
+        one: "%{count} regra"
+        other: "%{count} regras"
+      inactive_count:
+        one: "%{count} inativa"
+        other: "%{count} inativas"
+      empty: Nenhuma regra neste grupo ainda. Escolha o grupo no formulário de uma regra.
+      activate_all: Ativar todas as regras
+      deactivate_all: Desativar todas as regras
+      rename: Renomear
+      delete: Excluir grupo
+      delete_confirm_title: Excluir o grupo “%{name}”?
+      delete_confirm_body: As regras continuam onde estão, sem grupo. Nenhuma regra é excluída.
+    rule:
+      edit: Editar
+      re_apply_rule: Reaplicar regra
+      delete: Excluir
+      then: ENTÃO
+      and_more_conditions:
+        one: e mais %{count} condição
+        other: e mais %{count} condições
+      and_more_actions:
+        one: e mais %{count} ação
+        other: e mais %{count} ações
+      action_label_to: "%{label} para %{value}"
+      all_past_and_future: Todas as %{resource} passadas e futuras
+      on_or_after: "%{resource} a partir de %{date}"
+      stop_processing: Interrompe
+      stop_processing_hint: As regras mais abaixo não alteram as transações que correspondem a esta regra.
+      apply_immediately: Imediata
+      apply_immediately_hint: Também é executada logo depois que uma transação é criada ou editada manualmente, em uma edição em massa, em Categorizar, pela API ou pelo assistente, junto com as regras ativas acima dela.
+    form:
+      rule_name_label: Nome da regra (opcional)
+      rule_name_placeholder: Insira um nome para esta regra
+      add_condition: Adicionar condição
+      add_condition_group: Adicionar grupo de condições
+      add_action: Adicionar ação
+      all_past_and_future: Todas as %{resource} passadas e futuras
+      starting_from: A partir de
+      then: ENTÃO
+      stop_processing_label: Parar de processar as regras seguintes
+      stop_processing_description: As regras mais abaixo na lista não alteram as transações que correspondem a esta regra.
+      apply_immediately_label: Aplicar imediatamente a transações novas e alteradas
+      apply_immediately_description: É executada logo depois que uma transação é criada ou editada manualmente, em uma edição em massa, em Categorizar, pela API ou pelo assistente, e continua rodando na execução noturna.
+      group_label: Grupo (opcional)
+      group_select_label: Grupo
+      no_group: Sem grupo
+      new_group_label: Ou novo grupo
+      new_group_placeholder: Nome de um novo grupo
+      group_hint: Os grupos apenas organizam a lista. Uma regra dentro de um grupo é executada na posição que o grupo ocupa na lista.
+    index:
+      page_title: Regras
+      delete_all_rules: Excluir todas as regras
+      new_rule: Nova regra
+      ai_cost_warning: Ações de regras com IA geram custos. Filtre da forma mais específica possível para evitar custos desnecessários.
+      rules_heading: Regras
+      order_hint: As regras são executadas de cima para baixo, incluindo as regras dentro de grupos. Depois que uma regra define um campo em uma transação, as regras mais abaixo não alteram esse campo. As tags são adicionadas por todas as regras correspondentes. Arraste regras e grupos para alterar a ordem.
+      new_group: Novo grupo
+      reorder_group: Mover o grupo %{name}. Pressione Enter ou Espaço para selecioná-lo e use as setas para movê-lo.
+      filters:
+        no_matches: Nenhuma regra corresponde à busca ou aos filtros.
+        drag_disabled: A ordenação fica desativada enquanto houver uma busca ou um filtro ativo. Limpe-os para alterar a ordem.
+      fold_rule: Recolher ou expandir a regra %{name}
+      reorder_rule: Mover a regra %{name}. Pressione Enter ou Espaço para selecioná-la e use as setas para movê-la.
+      no_rules_title: Nenhuma regra ainda
+      no_rules_description: Crie regras para aplicar ações às suas transações e a outros dados a cada sincronização de conta.
+    confirm:
+      title: Confirmar alterações
+      title_with_name: Confirmar alterações em “%{name}”
+      apply_notice_html: Você está prestes a aplicar esta regra a <span class="text-primary font-medium">%{count} %{resource}</span> que atendem aos critérios definidos na regra. Confirme se deseja prosseguir com esta alteração.
+      rules_above_notice:
+        one: A regra ativa acima dela é executada primeiro, então o resultado é o mesmo da execução completa.
+        other: As %{count} regras ativas acima dela são executadas primeiro, então o resultado é o mesmo da execução completa.
+      ai_cost_title: Estimativa de custo de IA
+      ai_cost_with_estimate_html: "Isso usará IA para categorizar %{count} transação(ões). Custo estimado: <span class=\"font-semibold\">~$%{cost}</span>"
+      ai_cost_no_estimate_html: Isso usará IA para categorizar %{count} transação(ões).
+      cost_unavailable_model: Estimativa de custo indisponível para o modelo “%{model}”.
+      cost_unavailable_no_provider: Estimativa de custo indisponível (nenhum provedor de LLM configurado).
+      cost_warning: Pode haver custos. Consulte o provedor do modelo para ver os preços mais atualizados.
+      view_usage_history: Ver histórico de uso
+      confirm_changes: Confirmar alterações
+    actions:
+      to_label: para
+      value_placeholder: Insira um valor
+      split:
+        type_fixed: Valor fixo
+        type_percentage: Porcentagem
+        type_label: Tipo de divisão
+        add_split: Adicionar divisão
+        name_placeholder: Nome da divisão
+        share_label: Valor ou porcentagem da divisão
+        category_label: Categoria da divisão
+        merchant_label: Estabelecimento da divisão
+        tags_label: Tags da divisão
+        remove_split: Remover divisão
+        hint: "As divisões de valor fixo são subtraídas primeiro, como valores exatos. Em seguida, as divisões percentuais repartem o que sobrar. Se todas as divisões aqui usarem valor fixo, adicione também uma condição que corresponda a um valor exato de transação (ex.: Valor = 42,00), já que todas as transações correspondentes precisam ter o mesmo total para que os valores fixos fechem. Uma regra de divisão não pode ter outras ações."
+        fixed_summary_label: fixo
+        summary:
+          one: "%{count} divisão"
+          other: "%{count} divisões"
+    update:
+      success: Regra atualizada
+    destroy:
+      success: Regra excluída
+    destroy_all:
+      success: Todas as regras foram excluídas
+    apply_all:
+      button: Aplicar todas
+      confirm_title: Aplicar todas as regras
+      confirm_message: Você está prestes a aplicar %{count} regras que afetam %{transactions} transações distintas. Confirme se deseja prosseguir.
+      confirm_button: Confirmar e aplicar todas
+      success: Todas as regras foram colocadas na fila para execução
+      ai_cost_title: Estimativa de custo de IA
+      ai_cost_message: Isso usará IA para categorizar até %{transactions} transações.
+      estimated_cost: "Custo estimado: ~$%{cost}"
+      cost_unavailable_model: Estimativa de custo indisponível para o modelo “%{model}”.
+      cost_unavailable_no_provider: Estimativa de custo indisponível (nenhum provedor de LLM configurado).
+      cost_warning: Pode haver custos. Consulte o provedor do modelo para ver os preços mais atualizados.
+      view_usage: Ver histórico de uso
+    recent_runs:
+      title: Execuções recentes
+      description: Veja o histórico de execução das suas regras, incluindo status de sucesso/falha e contagem de transações.
+      unnamed_rule: Regra sem nome
+      columns:
+        date_time: Data/Hora
+        execution_type: Tipo
+        status: Status
+        rule_name: Nome da regra
+        transactions_counts:
+          queued: Na fila
+          processed: Processadas
+          modified: Alteradas
+          blocked: Bloqueadas
+      execution_types:
+        manual: Manual
+        scheduled: Automática
+        immediate: Imediata
+      statuses:
+        pending: Pendente
+        success: Sucesso
+        failed: Falhou
+    clear_ai_cache:
+      button: Redefinir cache de IA
+      confirm_title: Redefinir cache de IA?
+      confirm_body: Tem certeza de que deseja redefinir o cache de IA? Isso permitirá que as regras de IA processem novamente todas as transações e pode gerar custos adicionais de API.
+      confirm_button: Redefinir cache
+      success: O cache de IA está sendo limpo. Isso pode levar alguns instantes.
+    condition_filters:
+      transaction_additional_detail:
+        label: Detalhes adicionais (chave=valor)
+      transaction_type:
+        income: Receita
+        expense: Despesa
+        transfer: Transferência
+        equal_to: Igual a
+      operators:
+        contains: Contém
+        does_not_contain: Não contém
+        starts_with: Começa com
+        ends_with: Termina com
+        matches_regex: Corresponde à regex
+        equal_to: Igual a
+        is_equal_to: É igual a
+        not_equal_to: Diferente de
+        is_empty: Está vazio
+        is_not_empty: Não está vazio
+        greater_than: Maior que
+        greater_or_equal_to: Maior ou igual a
+        less_than: Menor que
+        less_than_or_equal_to: Menor ou igual a
+  rule:
+    conditions:
+      condition_group:
+        and_prefix: e
+        match: atender a
+        all: todas
+        any: qualquer uma
+        of_the_following_conditions: das seguintes condições
+        add_condition: Adicionar condição
+      condition:
+        value_placeholder: Insira um valor

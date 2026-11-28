@@ -1,0 +1,205 @@
+---
+id:
+  redbark_items:
+    default_name: "Koneksi Redbark"
+    # Model method strings (i18n for item_model.rb)
+    sync_status:
+      no_accounts: "Tidak ada rekening ditemukan"
+      synced:
+        one: "%{count} rekening disinkronkan"
+        other: "%{count} rekening disinkronkan"
+      synced_with_setup: "%{linked} disinkronkan, %{unlinked} perlu pengaturan"
+    institution_summary:
+      none: "Tidak ada institusi terhubung"
+      count:
+        one: "%{count} institusi"
+        other: "%{count} institusi"
+    errors:
+      provider_not_configured: "Penyedia Redbark belum dikonfigurasi"
+
+    # Syncer status messages
+    sync:
+      status:
+        importing: "Mengimpor rekening dari Redbark..."
+        processing: "Memproses transaksi..."
+        calculating: "Menghitung saldo..."
+        importing_data: "Mengimpor data rekening..."
+        checking_setup: "Memeriksa konfigurasi rekening..."
+        needs_setup: "%{count} rekening perlu pengaturan..."
+      success: "Sinkronisasi dimulai"
+
+    # Panel (settings view)
+    panel:
+      step_1: "Buat kunci API di app.redbark.com pada bagian Settings"
+      step_2: "Masukkan kunci API Anda di bawah ini lalu klik tombol Simpan"
+      step_3: "Setelah koneksi berhasil, buka tab Rekening untuk mengatur rekening baru"
+      optional: "(Opsional)"
+      optional_with_default: "(opsional, default ke %{default_value})"
+      save_button: "Simpan Konfigurasi"
+      update_button: "Perbarui Konfigurasi"
+      fields:
+        api_key:
+          label: "Kunci API"
+          placeholder_new: "rbk_live_..."
+          placeholder_update: "Masukkan kunci API baru untuk memperbarui"
+
+    # CRUD success messages
+    create:
+      success: "Koneksi Redbark berhasil dibuat"
+    update:
+      success: "Koneksi Redbark diperbarui"
+    destroy:
+      success: "Koneksi Redbark dihapus"
+      unlink_failed:
+        one: "Tidak dapat melepas tautan %{count} rekening. Silakan coba lagi."
+        other: "Tidak dapat melepas tautan %{count} rekening. Silakan coba lagi."
+    index:
+      title: "Koneksi Redbark"
+
+    # Loading states
+    loading:
+      loading_message: "Memuat rekening Redbark..."
+      loading_title: "Memuat"
+
+    # Provider item display (used in _item partial)
+    redbark_item:
+      accounts_need_setup: "Rekening perlu pengaturan"
+      delete: "Hapus koneksi"
+      deletion_in_progress: "penghapusan sedang berlangsung..."
+      error: "Kesalahan"
+      more_accounts_available:
+        one: "%{count} rekening lagi tersedia"
+        other: "%{count} rekening lagi tersedia"
+      no_accounts_description: "Koneksi ini belum memiliki rekening tertaut."
+      no_accounts_title: "Tidak ada rekening"
+      provider_name: "Redbark"
+      requires_update: "Koneksi perlu diperbarui"
+      setup_action: "Atur Rekening Baru"
+      setup_description: "%{linked} dari %{total} rekening tertaut. Pilih jenis rekening untuk rekening Redbark yang baru diimpor."
+      setup_needed: "Rekening baru siap diatur"
+      status: "Disinkronkan %{timestamp} lalu"
+      status_never: "Belum pernah disinkronkan"
+      status_with_summary: "Terakhir disinkronkan %{timestamp} lalu - %{summary}"
+      syncing: "Menyinkronkan..."
+      total: "Total"
+      unlinked: "Belum tertaut"
+      update_credentials: "Perbarui kredensial"
+
+    # Select accounts view
+    select_accounts:
+      accounts_selected: "rekening dipilih"
+      api_error: "Kesalahan API: %{message}"
+      cancel: "Batal"
+      configure_name_in_provider: "Tidak dapat mengimpor - silakan konfigurasikan nama rekening di Redbark"
+      description: "Pilih rekening yang ingin Anda tautkan ke akun %{product_name} Anda."
+      link_accounts: "Tautkan rekening yang dipilih"
+      no_accounts_found: "Tidak ada rekening ditemukan. Silakan periksa konfigurasi kunci API Anda."
+      no_api_key: "Kunci API Redbark belum dikonfigurasi. Silakan konfigurasikan di Pengaturan."
+      no_credentials_configured: "Silakan konfigurasikan kredensial Redbark Anda terlebih dahulu di Pengaturan Penyedia."
+      no_name_placeholder: "(Tanpa nama)"
+      title: "Pilih Rekening Redbark"
+
+    # Select existing account view
+    select_existing_account:
+      account_already_linked: "Rekening ini sudah ditautkan ke penyedia lain"
+      all_accounts_already_linked: "Semua rekening Redbark sudah tertaut"
+      api_error: "Kesalahan API: %{message}"
+      balance_label: "Saldo:"
+      cancel: "Batal"
+      cancel_button: "Batal"
+      configure_name_in_provider: "Tidak dapat mengimpor - silakan konfigurasikan nama rekening di Redbark"
+      connect_hint: "Hubungkan rekening Redbark untuk mengaktifkan sinkronisasi otomatis."
+      description: "Pilih rekening Redbark untuk ditautkan dengan rekening ini. Transaksi akan disinkronkan dan dideduplikasi secara otomatis."
+      header: "Tautkan dengan Redbark"
+      link_account: "Tautkan rekening"
+      link_button: "Tautkan rekening ini"
+      linking_to: "Menautkan ke:"
+      no_account_specified: "Tidak ada rekening yang ditentukan"
+      no_accounts: "Tidak ada rekening Redbark yang belum tertaut ditemukan."
+      no_accounts_found: "Tidak ada rekening Redbark ditemukan. Silakan periksa konfigurasi kunci API Anda."
+      no_api_key: "Kunci API Redbark belum dikonfigurasi. Silakan konfigurasikan di Pengaturan."
+      no_credentials_configured: "Silakan konfigurasikan kredensial Redbark Anda terlebih dahulu di Pengaturan Penyedia."
+      no_name_placeholder: "(Tanpa nama)"
+      settings_link: "Buka Pengaturan Penyedia"
+      subtitle: "Pilih rekening Redbark"
+      title: "Tautkan %{account_name} dengan Redbark"
+
+    # Link existing account
+    link_existing_account:
+      account_already_linked: "Rekening ini sudah ditautkan ke penyedia lain"
+      api_error: "Kesalahan API: %{message}"
+      invalid_account_name: "Tidak dapat menautkan rekening dengan nama kosong"
+      provider_account_already_linked: "Rekening Redbark ini sudah ditautkan ke rekening lain"
+      provider_account_not_found: "Rekening Redbark tidak ditemukan"
+      missing_parameters: "Parameter yang diperlukan tidak lengkap"
+      no_api_key: "Kunci API Redbark tidak ditemukan. Silakan konfigurasikan di Pengaturan Penyedia."
+      success: "Berhasil menautkan %{account_name} dengan Redbark"
+
+    # Setup accounts wizard
+    setup_accounts:
+      account_type_label: "Jenis Rekening:"
+      accounts_count:
+        one: "%{count} rekening tersedia"
+        other: "%{count} rekening tersedia"
+      all_accounts_linked: "Semua rekening Redbark Anda telah diatur."
+      api_error: "Kesalahan API: %{message}"
+      creating: "Membuat rekening..."
+      fetch_failed: "Gagal Mengambil Rekening"
+      import_selected: "Impor rekening yang dipilih"
+      instructions: "Pilih rekening yang ingin Anda impor dari Redbark. Anda dapat memilih beberapa rekening."
+      no_accounts: "Tidak ada rekening yang belum tertaut ditemukan dari koneksi Redbark ini."
+      no_accounts_to_setup: "Tidak Ada Rekening untuk Diatur"
+      no_api_key: "Kunci API Redbark belum dikonfigurasi. Silakan periksa pengaturan koneksi Anda."
+      select_all: "Pilih semua"
+      account_types:
+        skip: "Lewati rekening ini"
+        depository: "Rekening Giro atau Tabungan"
+        credit_card: "Kartu Kredit"
+        loan: "Pinjaman atau KPR"
+        other_asset: "Aset Lainnya"
+      subtype_labels:
+        depository: "Subjenis Rekening:"
+        credit_card: ""
+        loan: "Jenis Pinjaman:"
+        other_asset: ""
+      subtype_messages:
+        credit_card: "Kartu kredit akan diatur secara otomatis sebagai rekening kartu kredit."
+        other_asset: "Tidak ada opsi tambahan yang diperlukan untuk Aset Lainnya."
+      subtypes:
+        depository:
+          checking: "Giro"
+          savings: "Tabungan"
+          hsa: "Rekening Tabungan Kesehatan (HSA)"
+          cd: "Sertifikat Deposito (CD)"
+          money_market: "Pasar Uang"
+        loan:
+          mortgage: "KPR"
+          student: "Pinjaman Pelajar"
+          auto: "Pinjaman Kendaraan"
+          other: "Pinjaman Lainnya"
+      balance: "Saldo"
+      cancel: "Batal"
+      done: "Selesai"
+      choose_account_type: "Pilih jenis rekening yang tepat untuk setiap rekening Redbark:"
+      create_accounts: "Buat Rekening"
+      creating_accounts: "Membuat Rekening..."
+      historical_data_range: "Rentang Data Historis:"
+      subtitle: "Pilih jenis rekening yang tepat untuk rekening yang Anda impor"
+      sync_start_date_help: "Pilih seberapa jauh ke belakang Anda ingin menyinkronkan riwayat transaksi."
+      sync_start_date_label: "Mulai menyinkronkan transaksi dari:"
+      title: "Atur Rekening Redbark Anda"
+
+    setup_required:
+      title: Hubungkan Redbark terlebih dahulu
+      not_configured_title: Redbark belum terhubung
+      not_configured_description: Tambahkan kunci API Redbark Anda di Pengaturan Penyedia, lalu kembali ke sini untuk menautkan rekening.
+      go_to_provider_settings: Buka pengaturan penyedia
+
+    # Complete account setup
+    complete_account_setup:
+      all_skipped: "Semua rekening dilewati. Tidak ada rekening yang dibuat."
+      creation_failed: "Gagal membuat rekening: %{error}"
+      creation_failed_generic: "Gagal membuat rekening."
+      setup_failed: "%{count} rekening tidak dapat dibuat. Tidak ada hal lain yang diubah - perbaiki masalahnya dan coba lagi."
+      no_accounts: "Tidak ada rekening untuk diatur."
+      success: "Berhasil membuat %{count} rekening."

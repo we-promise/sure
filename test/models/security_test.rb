@@ -199,6 +199,18 @@ class SecurityTest < ActiveSupport::TestCase
     end
   end
 
+  test "find_by_ticker_and_exchange upgrades rows stored under Yahoo's Canadian codes" do
+    { "VAN" => "XTSX", "CNQ" => "XCNQ", "NEO" => "NEOE" }.each do |raw, mic|
+      legacy = Security.create!(ticker: "ABC#{raw}", exchange_operating_mic: mic)
+      legacy.update_columns(exchange_operating_mic: raw)
+
+      found = Security.find_by_ticker_and_exchange(ticker: "ABC#{raw}", exchange_operating_mic: mic)
+
+      assert_equal legacy.id, found&.id, "#{raw} row should be found for #{mic}"
+      assert_equal mic, found.reload.exchange_operating_mic
+    end
+  end
+
   test "saving a legacy GER row keeps its MIC when an XETR row already exists" do
     Security.create!(ticker: "SXR8.DE", exchange_operating_mic: "XETR")
     legacy = Security.new(ticker: "SXR8.DE", exchange_operating_mic: "GER")
@@ -417,5 +429,53 @@ class SecurityTest < ActiveSupport::TestCase
     security = Security.new(ticker: "AAPL", exchange_operating_mic: "XNAS")
 
     assert_nil security.crypto_base_asset
+  end
+
+  # The convert-to-trade picker lists every security in the account. Each
+  # asking for the same rate was a lookup per security, and with the rate
+  # missing a provider call per security.
+  test "securities quoted in the same currency on the same day share one rate lookup" do
+    aapl, msft = securities(:aapl), securities(:msft)
+    [ aapl, msft ].each do |security|
+      security.stubs(:find_or_fetch_price).returns(Security::Price.new(price: 200, currency: "USD", date: Date.current))
+    end
+    ExchangeRate.expects(:find_or_fetch_rate)
+      .with(from: "USD", to: "EUR", date: Date.current).once
+      .returns(ExchangeRate.new(rate: 0.9))
+
+    rates = {}
+    assert_equal Money.new(180, "EUR"), aapl.current_price_in("EUR", rates: rates)
+    assert_equal Money.new(180, "EUR"), msft.current_price_in("EUR", rates: rates)
+  end
+
+  test "a shared missing rate converts nothing and is not looked up again" do
+    aapl, msft = securities(:aapl), securities(:msft)
+    [ aapl, msft ].each do |security|
+      security.stubs(:find_or_fetch_price).returns(Security::Price.new(price: 200, currency: "USD", date: Date.current))
+    end
+    ExchangeRate.expects(:find_or_fetch_rate).once.returns(nil)
+
+    rates = {}
+    assert_nil aapl.current_price_in("EUR", rates: rates)
+    assert_nil msft.current_price_in("EUR", rates: rates)
+  end
+
+  test "a quote from an earlier day is converted at that day's rate" do
+    security = securities(:aapl)
+    quote_date = 3.days.ago.to_date
+    security.stubs(:find_or_fetch_price).returns(Security::Price.new(price: 200, currency: "USD", date: quote_date))
+    ExchangeRate.expects(:find_or_fetch_rate)
+      .with(from: "USD", to: "EUR", date: quote_date).once
+      .returns(ExchangeRate.new(rate: 0.9))
+
+    assert_equal Money.new(180, "EUR"), security.current_price_in("EUR")
+  end
+
+  test "a quote already in the currency asked for needs no rate" do
+    security = securities(:aapl)
+    security.stubs(:find_or_fetch_price).returns(Security::Price.new(price: 200, currency: "USD", date: Date.current))
+    ExchangeRate.expects(:find_or_fetch_rate).never
+
+    assert_equal Money.new(200, "USD"), security.current_price_in("USD")
   end
 end
