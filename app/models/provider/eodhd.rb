@@ -24,6 +24,12 @@ class Provider::Eodhd < Provider
     true
   end
 
+  # The same response carries `ETF_Data.Holdings` for a fund -- see
+  # `etf_constituents` below.
+  def supplies_constituents?
+    true
+  end
+
   # A fundamentals response is large and slow to start, so it gets a 60 s read
   # limit rather than the client's 20 s: each retry after a timeout bills
   # another ten calls.
@@ -250,9 +256,61 @@ class Provider::Eodhd < Provider
         exchange_operating_mic: exchange_operating_mic,
         sector: general.dig("Sector"),
         industry: general.dig("Industry"),
+        constituents: etf_constituents(parsed),
         fund_weights: fund_weights_from(parsed["ETF_Data"] || parsed["MutualFund_Data"], category: fund_category(parsed))
       )
     end
+  end
+
+  # A fund's own holdings, from the SAME fundamentals response the metadata and
+  # the classification already come from -- so they cost no additional request.
+  #
+  # EODHD keys the holdings hash by a suffixed ticker ("AAPL.US") and carries the
+  # bare one in `Code`. The bare ticker is what matches anything in `securities`,
+  # so the key is used only when `Code` is missing or not a string.
+  #
+  # An absent or null ETF_Data block, or an empty Holdings map or list, means
+  # the fund lists nothing. An ETF_Data block that is present but not a map is
+  # unreadable, as below.
+  # A block this cannot read returns UNREADABLE_CONSTITUENTS rather than raising,
+  # so the name, sector and classification in the same answer still land:
+  # `false` or a blank string, a list missing although `Holdings_Count` is
+  # positive, or a map with no readable entry. Answered as "no holdings" any of
+  # these would replace the fund's stored set with nothing and stamp it.
+  #
+  # Malformed entries are passed through rather than dropped here, so the
+  # importer logs them with the rows it skips.
+  def etf_constituents(parsed)
+    etf_data = parsed["ETF_Data"]
+    return nil if etf_data.nil?
+    return UNREADABLE_CONSTITUENTS unless etf_data.is_a?(Hash)
+
+    holdings = etf_data["Holdings"]
+    if holdings.nil? || holdings == {} || holdings == []
+      return etf_data["Holdings_Count"].to_s.to_i.positive? ? UNREADABLE_CONSTITUENTS : nil
+    end
+    return UNREADABLE_CONSTITUENTS unless holdings.is_a?(Hash)
+
+    entries = holdings.map do |key, holding|
+      next holding unless holding.is_a?(Hash)
+
+      # Keys are "TICKER.EXCHANGE"; a ticker can itself hold a dot (BRK.B), so
+      # only the last segment is the exchange.
+      key_ticker, _, key_exchange = key.to_s.rpartition(".")
+      key_ticker, key_exchange = key_exchange, nil if key_ticker.empty?
+      code = holding["Code"]
+      exchange = holding["Exchange"]
+      {
+        ticker: code.is_a?(String) && code.present? ? code : key_ticker,
+        exchange: exchange.is_a?(String) && exchange.present? ? exchange : key_exchange,
+        name: holding["Name"].presence,
+        weight: holding["Assets_%"]
+      }
+    end
+
+    return UNREADABLE_CONSTITUENTS if entries.none? { |entry| entry.is_a?(Hash) && entry[:ticker].present? }
+
+    entries
   end
 
   def fetch_security_price(symbol:, exchange_operating_mic: nil, date:)
