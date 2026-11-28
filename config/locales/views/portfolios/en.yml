@@ -1,6 +1,30 @@
 ---
 en:
   portfolios:
+    data_quality:
+      below_zero: Below zero from %{date}, lowest %{qty}
+      kinds:
+        missing_cost_basis:
+          description: No cost basis is stored or computable for these positions, so their return cannot be shown. Set one from the position.
+          title: Missing cost basis
+        negative_position:
+          description: These positions went below zero on some day. A purchase or transfer is probably missing; add it, or correct the trades that took the position below zero.
+          title: Positions below zero
+        provider:
+          description: The price provider for these securities is not healthy, so their values may not refresh.
+          title: Price provider issues
+        stale_price:
+          description: The latest price is older than %{days} days or there is no price at all, so the value may be out of date.
+          title: Stale prices
+      last_priced: Last priced %{date}
+      never_priced: Never priced
+      provider_statuses:
+        no_provider: No price provider configured
+        offline: Offline security
+        provider_unavailable: Assigned provider unavailable
+        stale: Recent fetches failed
+      read_only: Read-only
+      set_cost_basis: Set cost basis
     empty_state:
       add_account: Add an investment account
       description: Brokerage, retirement and crypto accounts you include in your finances and reports are listed here with their balance.
@@ -28,6 +52,7 @@ en:
       toggle_positions: Show positions in %{ticker}
     sections:
       accounts: Accounts
+      data_quality: Data quality
       holdings: Holdings
     show:
       section_aria: "%{title} section. Press Enter or Space to grab for reordering, then use arrow keys to move."
