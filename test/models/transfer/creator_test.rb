@@ -74,6 +74,71 @@ class Transfer::CreatorTest < ActiveSupport::TestCase
     assert_equal "funds_movement", inflow.kind
   end
 
+  test "names both legs after the label when one is given" do
+    transfer = Transfer::Creator.new(
+      family: @family,
+      source_account_id: @source_account.id,
+      destination_account_id: @destination_account.id,
+      date: @date,
+      amount: @amount,
+      label: "  Holiday savings  "
+    ).create
+
+    assert_equal "Holiday savings", transfer.outflow_transaction.entry.name
+    assert_equal "Holiday savings", transfer.inflow_transaction.entry.name
+    assert_equal "Holiday savings", transfer.label
+  end
+
+  test "keeps the default names when the label is blank" do
+    transfer = Transfer::Creator.new(
+      family: @family,
+      source_account_id: @source_account.id,
+      destination_account_id: @destination_account.id,
+      date: @date,
+      amount: @amount,
+      label: "   "
+    ).create
+
+    assert_equal "Transfer to #{@destination_account.name}", transfer.outflow_transaction.entry.name
+    assert_equal "Transfer from #{@source_account.name}", transfer.inflow_transaction.entry.name
+    assert_nil transfer.label
+  end
+
+  test "rejects a reused idempotency key when the label differs" do
+    attributes = {
+      family: @family,
+      source_account_id: @source_account.id,
+      destination_account_id: @destination_account.id,
+      date: @date,
+      amount: @amount,
+      idempotency_key: SecureRandom.uuid
+    }
+    Transfer::Creator.new(**attributes, label: "Holiday savings").create
+
+    assert_no_difference "Transfer.count" do
+      assert_raises Transfer::Creator::StaleIdempotencyKeyError do
+        Transfer::Creator.new(**attributes, label: "Rent").create
+      end
+    end
+  end
+
+  test "returns the existing transfer on a retry after an account is renamed" do
+    attributes = {
+      family: @family,
+      source_account_id: @source_account.id,
+      destination_account_id: @destination_account.id,
+      date: @date,
+      amount: @amount,
+      idempotency_key: SecureRandom.uuid
+    }
+    transfer = Transfer::Creator.new(**attributes).create
+    @destination_account.update!(name: "Renamed brokerage")
+
+    assert_no_difference "Transfer.count" do
+      assert_equal transfer, Transfer::Creator.new(**attributes).create
+    end
+  end
+
   test "creates investment contribution when transferring from depository to crypto" do
     crypto_account = accounts(:crypto)
 

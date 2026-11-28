@@ -9,6 +9,8 @@ zh-CN:
     destroy:
       success: 转账已移除
     form:
+      label: "备注名称（可选）"
+      label_placeholder: "例如：度假储蓄"
       amount: 金额
       bank_charges: 银行手续费
       outgoing_fee: 转出手续费
@@ -28,6 +30,8 @@ zh-CN:
     new:
       title: 新建转账
     show:
+      label: "备注名称"
+      label_placeholder: "例如：度假储蓄"
       delete: 移除转账
       delete_subtitle: 此操作仅移除转账记录，不会删除底层交易数据。
       delete_title: 确认移除转账？

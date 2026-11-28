@@ -9,6 +9,8 @@ nb:
     destroy:
       success: Overføring fjernet
     form:
+      label: "Beskrivelse (valgfritt)"
+      label_placeholder: "f.eks. Feriesparing"
       amount: Beløp
       date: Dato
       expense: Utgift
@@ -28,6 +30,8 @@ nb:
     new:
       title: Ny overføring
     show:
+      label: "Beskrivelse"
+      label_placeholder: "f.eks. Feriesparing"
       delete: Fjern overføring
       delete_subtitle: Dette fjerner overføringen. Det vil ikke slette de underliggende
         transaksjonene.

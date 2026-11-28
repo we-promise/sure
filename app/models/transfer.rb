@@ -26,6 +26,13 @@ class Transfer < ApplicationRecord
   before_destroy :lock_row, prepend: true
 
   class << self
+    # The names each leg gets when the user provides no label.
+    def default_leg_names(from_account:, to_account:)
+      prefix = to_account.liability? ? "Payment" : "Transfer"
+
+      { outflow: "#{prefix} to #{to_account.name}", inflow: "#{prefix} from #{from_account.name}" }
+    end
+
     # The outflow leg's kind for a transfer into this account. Transfer::Creator,
     # Family::DataImporter, auto-matching, rules and manual matches all call
     # it (the inflow leg is always funds_movement, see kind_for_leg).
@@ -85,6 +92,40 @@ class Transfer < ApplicationRecord
       acc ? "Payment to #{acc.name}" : "Payment"
     else
       acc ? "Transfer to #{acc.name}" : "Transfer"
+    end
+  end
+
+  # The text shared by both legs, such as the label entered when the transfer
+  # was created. Nil when the legs are named differently, as by default.
+  def label
+    outflow_name = outflow_transaction&.entry&.name
+    outflow_name if outflow_name == inflow_transaction&.entry&.name
+  end
+
+  def display_name
+    label || name
+  end
+
+  # Names both legs after the label and protects the names from provider syncs,
+  # even when the label is already their shared name. A blank label restores
+  # the default names, but only when there is a label to remove, so differing
+  # bank-provided names are never discarded.
+  def update_label!(new_label)
+    new_label = new_label.to_s.strip.presence
+    return if new_label.nil? && label.nil?
+
+    names = if new_label
+      { outflow: new_label, inflow: new_label }
+    else
+      Transfer.default_leg_names(from_account: from_account, to_account: to_account)
+    end
+
+    Transfer.transaction do
+      { outflow: outflow_transaction.entry, inflow: inflow_transaction.entry }.each do |leg, entry|
+        entry.update!(name: names.fetch(leg))
+        entry.lock_attr!(:name)
+        entry.mark_user_modified!
+      end
     end
   end
 

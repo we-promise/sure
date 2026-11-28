@@ -5,7 +5,7 @@ class Transfer::Creator
   # than a genuine double-submit. See #find_existing_transfer.
   StaleIdempotencyKeyError = Class.new(StandardError)
 
-  def initialize(family:, source_account_id:, destination_account_id:, date:, amount:, exchange_rate: nil, source_fee_amount: nil, destination_fee_amount: nil, tag_ids: nil, idempotency_key: nil)
+  def initialize(family:, source_account_id:, destination_account_id:, date:, amount:, exchange_rate: nil, source_fee_amount: nil, destination_fee_amount: nil, tag_ids: nil, label: nil, idempotency_key: nil)
     @family = family
     @source_account = family.accounts.find(source_account_id) # early throw if not found
     @destination_account = family.accounts.find(destination_account_id) # early throw if not found
@@ -14,6 +14,7 @@ class Transfer::Creator
     @source_fee_amount = source_fee_amount.to_d
     @destination_fee_amount = destination_fee_amount.to_d
     @tag_ids = Array(tag_ids).reject(&:blank?)
+    @label = label.to_s.strip.presence
     @idempotency_key = idempotency_key
 
     if exchange_rate.present?
@@ -93,7 +94,7 @@ class Transfer::Creator
   end
 
   private
-    attr_reader :family, :source_account, :destination_account, :date, :amount, :exchange_rate, :source_fee_amount, :destination_fee_amount, :tag_ids, :idempotency_key
+    attr_reader :family, :source_account, :destination_account, :date, :amount, :exchange_rate, :source_fee_amount, :destination_fee_amount, :tag_ids, :label, :idempotency_key
 
     # Scoped to source_account + idempotency_key so it only ever finds a
     # transfer this same key could plausibly refer to, but the key alone
@@ -131,6 +132,7 @@ class Transfer::Creator
         inflow_entry.account_id == destination_account.id &&
         outflow_entry.date == date &&
         outflow_entry.amount == amount &&
+        transfer.label == label &&
         inflow_entry.amount == inflow_converted_amount * -1 &&
         transfer.derived_source_fee_amount == source_fee_amount &&
         transfer.derived_destination_fee_amount == destination_fee_amount
@@ -165,7 +167,6 @@ class Transfer::Creator
     end
 
     def outflow_transaction
-      name = "#{name_prefix} to #{destination_account.name}"
       kind = outflow_transaction_kind
 
       Transaction.new(
@@ -175,7 +176,7 @@ class Transfer::Creator
           amount: amount,
           currency: source_account.currency,
           date: date,
-          name: name,
+          name: outflow_name,
           user_modified: true,
           **entry_idempotency_attrs(leg: :outflow)
         )
@@ -187,8 +188,6 @@ class Transfer::Creator
     end
 
     def inflow_transaction
-      name = "#{name_prefix} from #{source_account.name}"
-
       net_inflow = inflow_converted_amount
 
       Transaction.new(
@@ -197,7 +196,7 @@ class Transfer::Creator
           amount: net_inflow * -1,
           currency: destination_account.currency,
           date: date,
-          name: name,
+          name: inflow_name,
           user_modified: true,
           **entry_idempotency_attrs(leg: :inflow)
         )
@@ -236,6 +235,20 @@ class Transfer::Creator
 
     def find_or_create_fees_category(family)
       family.categories.find_or_create_by!(name: I18n.t("models.category.defaults.fees"))
+    end
+
+    # A user-provided label names both legs; otherwise each one names the
+    # account on the other side.
+    def outflow_name
+      label || default_leg_names.fetch(:outflow)
+    end
+
+    def inflow_name
+      label || default_leg_names.fetch(:inflow)
+    end
+
+    def default_leg_names
+      Transfer.default_leg_names(from_account: source_account, to_account: destination_account)
     end
 
     def inflow_converted_amount

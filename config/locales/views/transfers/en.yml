@@ -9,6 +9,8 @@ en:
     destroy:
       success: Transfer removed
     form:
+      label: "Label (optional)"
+      label_placeholder: "e.g. Holiday savings"
       amount: Amount
       bank_charges: Bank Charges
       outgoing_fee: Outgoing transfer fee
@@ -28,6 +30,8 @@ en:
     new:
       title: New transfer
     show:
+      label: "Label"
+      label_placeholder: "e.g. Holiday savings"
       delete: Remove transfer
       delete_subtitle: This removes the transfer.  It will not delete the underlying
         transactions.

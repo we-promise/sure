@@ -9,6 +9,8 @@ pt-BR:
     destroy:
       success: Transferência removida
     form:
+      label: "Descrição (opcional)"
+      label_placeholder: "ex.: Reserva para férias"
       amount: Valor
       bank_charges: Tarifas bancárias
       outgoing_fee: Tarifa de envio da transferência
@@ -28,6 +30,8 @@ pt-BR:
     new:
       title: Nova transferência
     show:
+      label: "Descrição"
+      label_placeholder: "ex.: Reserva para férias"
       delete: Remover transferência
       delete_subtitle: Isso remove a transferência. Não excluirá as transações
         subjacentes.

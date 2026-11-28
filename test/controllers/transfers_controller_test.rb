@@ -1,6 +1,8 @@
 require "test_helper"
 
 class TransfersControllerTest < ActionDispatch::IntegrationTest
+  include ActionView::RecordIdentifier
+
   include EntriesTestHelper
 
   setup do
@@ -1260,6 +1262,75 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal(-60, transfer.inflow_transaction.entry.reload.amount)
     assert_equal "Principal", transfer.reload.notes
   end
+
+  test "renames both legs from the transfer drawer" do
+    transfer = transfers(:one)
+
+    patch transfer_url(transfer), params: { transfer: { name: "  Holiday savings  " } }, as: :turbo_stream
+
+    assert_response :success
+    assert_equal "Holiday savings", transfer.reload.label
+    [ transfer.outflow_transaction.entry, transfer.inflow_transaction.entry ].each do |entry|
+      assert entry.user_modified?
+      assert entry.locked?(:name)
+    end
+    assert_select "turbo-stream[target=?]", dom_id(transfer, :title)
+    assert_select "turbo-stream[target=?]", dom_id(transfer.outflow_transaction.entry, :transfer_leg_name)
+  end
+
+  test "locks a submitted label that matches the legs' shared name" do
+    transfer = transfers(:one)
+    [ transfer.outflow_transaction.entry, transfer.inflow_transaction.entry ].each do |entry|
+      entry.update!(name: "Internal transfer")
+    end
+
+    patch transfer_url(transfer), params: { transfer: { name: "Internal transfer" } }, as: :turbo_stream
+
+    [ transfer.outflow_transaction.entry, transfer.inflow_transaction.entry ].each do |entry|
+      assert entry.reload.locked?(:name)
+      assert entry.user_modified?
+    end
+  end
+
+  test "restores the default names when the label is cleared" do
+    transfer = transfers(:one)
+    transfer.update_label!("Holiday savings")
+
+    patch transfer_url(transfer), params: { transfer: { name: "" } }, as: :turbo_stream
+
+    names = Transfer.default_leg_names(from_account: transfer.from_account, to_account: transfer.to_account)
+    assert_equal names[:outflow], transfer.reload.outflow_transaction.entry.name
+    assert_equal names[:inflow], transfer.inflow_transaction.entry.name
+  end
+
+  test "keeps differing leg names when a blank label is submitted" do
+    transfer = transfers(:one)
+    transfer.outflow_transaction.entry.update!(name: "VIR SEPA 123")
+    transfer.inflow_transaction.entry.update!(name: "VIREMENT RECU")
+
+    patch transfer_url(transfer), params: { transfer: { name: "" } }, as: :turbo_stream
+
+    assert_equal "VIR SEPA 123", transfer.reload.outflow_transaction.entry.name
+    assert_equal "VIREMENT RECU", transfer.inflow_transaction.entry.name
+  end
+
+  test "names both legs after the submitted label" do
+  assert_difference "Transfer.count", 1 do
+    post transfers_url, params: {
+      transfer: {
+        from_account_id: accounts(:depository).id,
+        to_account_id: accounts(:credit_card).id,
+        date: Date.current,
+        amount: 100,
+        name: "November card repayment"
+      }
+    }
+  end
+
+  transfer = Transfer.order(:created_at).last
+  assert_equal "November card repayment", transfer.outflow_transaction.entry.name
+  assert_equal "November card repayment", transfer.inflow_transaction.entry.name
+end
 
   private
     def create_dated_transfer(date:, amount: 2000)

@@ -712,11 +712,9 @@ class RecurringTransaction < ApplicationRecord
       account: source_account,
       destination_account: destination_account,
       merchant_id: nil,
-      # Transfer#name yields "Payment to ..." for liability destinations
-      # and "Transfer to ..." otherwise, matching Transfer::Creator's
-      # name_prefix logic so the recurring row reads consistently with
-      # the originating Transfer.
-      name: transfer.name,
+      # The transfer's label when it has one, otherwise "Payment to ..." for
+      # liability destinations and "Transfer to ..." (see Transfer#name).
+      name: transfer.display_name,
       # Same accounts and amount on another day of the month is another series;
       # the day in dedup_scope keeps their unique-index keys apart.
       dedup_scope: "day-#{expected_day}",

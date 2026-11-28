@@ -8,6 +8,8 @@ pt-PT:
     destroy:
       success: Transferência removida
     form:
+      label: "Descrição (opcional)"
+      label_placeholder: "ex.: Poupança para férias"
       amount: Montante
       bank_charges: Comissões Bancárias
       outgoing_fee: Comissão de transferência de saída
@@ -27,6 +29,8 @@ pt-PT:
     new:
       title: Nova transferência
     show:
+      label: "Descrição"
+      label_placeholder: "ex.: Poupança para férias"
       delete: Eliminar transferência
       delete_subtitle: Isto elimina a transferência. Não eliminará as transações
         subjacentes.

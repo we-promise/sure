@@ -8,6 +8,8 @@ zh-TW:
     destroy:
       success: 轉帳已移除
     form:
+      label: "名稱（選填）"
+      label_placeholder: "例如：旅遊儲蓄"
       amount: 金額
       bank_charges: 銀行費用
       outgoing_fee: 轉出手續費
@@ -27,6 +29,8 @@ zh-TW:
     new:
       title: 新增轉帳
     show:
+      label: "名稱"
+      label_placeholder: "例如：旅遊儲蓄"
       delete: 移除轉帳
       delete_subtitle: 這將會移除轉帳連結，但不會刪除其對應的原始交易紀錄。
       delete_title: 確定要移除轉帳嗎？
