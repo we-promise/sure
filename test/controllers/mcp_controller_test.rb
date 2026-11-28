@@ -590,7 +590,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       tool_names = JSON.parse(response.body)["result"]["tools"].map { |t| t["name"] }
 
       assert_includes tool_names, "get_rules"
-      %w[create_rule update_rule apply_rule preview_rule].each do |name|
+      %w[create_rule update_rule apply_rule preview_rule delete_rule].each do |name|
         assert_not_includes tool_names, name
       end
     end

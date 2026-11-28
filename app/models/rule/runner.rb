@@ -33,6 +33,30 @@ class Rule::Runner
     Digest::MD5.hexdigest("rule_runner:#{family_id}").to_i(16) % (2**62)
   end
 
+  # Same pattern as RecurringTransaction::Pipeline.with_family_lock: one
+  # leased connection for lock and unlock, because the unlock must run on the
+  # PostgreSQL session that took the lock. Returns true when the lock was
+  # acquired and the block ran. delete_rule takes it too, so a rule is never
+  # deleted while a run that loaded it is still applying it.
+  def self.with_family_lock(family_id)
+    lock_key = advisory_lock_key(family_id)
+    connection = ActiveRecord::Base.lease_connection
+    acquired = connection.select_value(
+      ActiveRecord::Base.sanitize_sql_array([ "SELECT pg_try_advisory_lock(?)", lock_key ])
+    )
+
+    return false unless acquired
+
+    begin
+      yield
+    ensure
+      connection.execute(
+        ActiveRecord::Base.sanitize_sql_array([ "SELECT pg_advisory_unlock(?)", lock_key ])
+      )
+    end
+    true
+  end
+
   def initialize(family, rules:, execution_type:, ignore_attribute_locks: false, transaction_ids: nil)
     @family = family
     @transaction_ids = transaction_ids&.map(&:to_s)
@@ -50,7 +74,7 @@ class Rule::Runner
     return [] if rule_ids.empty?
 
     rule_runs = nil
-    acquired = with_family_lock { rule_runs = run_rules }
+    acquired = self.class.with_family_lock(family.id) { rule_runs = run_rules }
     raise LockBusy, "Rules are already running for family #{family.id}" unless acquired
 
     rule_runs
@@ -216,27 +240,5 @@ class Rule::Runner
     rescue => e
       Rails.logger.error("Rule::Runner: Failed to record RuleRun for rule #{rule.id}: #{e.message}")
       rule_run
-    end
-
-    # Same pattern as RecurringTransaction::Pipeline.with_family_lock: one
-    # leased connection for lock and unlock, because the unlock must run on the
-    # PostgreSQL session that took the lock.
-    def with_family_lock
-      lock_key = self.class.advisory_lock_key(family.id)
-      connection = ActiveRecord::Base.lease_connection
-      acquired = connection.select_value(
-        ActiveRecord::Base.sanitize_sql_array([ "SELECT pg_try_advisory_lock(?)", lock_key ])
-      )
-
-      return false unless acquired
-
-      begin
-        yield
-      ensure
-        connection.execute(
-          ActiveRecord::Base.sanitize_sql_array([ "SELECT pg_advisory_unlock(?)", lock_key ])
-        )
-      end
-      true
     end
 end
