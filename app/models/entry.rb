@@ -783,7 +783,11 @@ class Entry < ApplicationRecord
         )
         if lock_attributes
           locked_at = Time.current
-          child_transaction.locked_attributes = split_attrs.slice(:category_id, :merchant_id).compact_blank.keys.index_with { locked_at }
+          chosen = split_attrs.slice(:category_id, :merchant_id).compact_blank
+          # A part sent the parent's merchant keeps what it would inherit anyway: the edit
+          # dialog and a client re-sending a split it read back send inherited merchants too.
+          chosen.delete(:merchant_id) if chosen[:merchant_id].to_s == entryable.try(:merchant_id).to_s
+          child_transaction.locked_attributes = chosen.keys.index_with { locked_at }
         end
 
         child_entries.create!(

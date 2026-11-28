@@ -347,6 +347,31 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     assert children.all? { |child| child.locked?(:category_id) }
   end
 
+  test "update leaves a merchant inherited from the parent unlocked" do
+    @entry.transaction.update!(merchant: merchants(:netflix))
+    @entry.split!([
+      { name: "Part 1", amount: 60 },
+      { name: "Part 2", amount: 40 }
+    ])
+
+    # The edit dialog sends each part's merchant back, inherited or chosen.
+    patch transaction_split_path(@entry), params: {
+      split: {
+        splits: [
+          { name: "Inherited", amount: "-60", category_id: "", merchant_id: merchants(:netflix).id },
+          { name: "Chosen", amount: "-40", category_id: "", merchant_id: merchants(:amazon).id }
+        ]
+      }
+    }
+
+    @entry.reload
+    inherited = @entry.child_entries.find_by!(name: "Inherited").entryable
+    chosen = @entry.child_entries.find_by!(name: "Chosen").entryable
+    assert_equal merchants(:netflix), inherited.merchant
+    assert_not inherited.locked?(:merchant_id), "the parent's merchant was not chosen for the part"
+    assert chosen.locked?(:merchant_id)
+  end
+
   test "update with mismatched amounts rejects" do
     @entry.split!([
       { name: "Part 1", amount: 60, category_id: nil },

@@ -92,7 +92,7 @@ RSpec.configure do |config|
                         name: { type: :string, nullable: true, description: 'Defaults to the parent name when omitted' },
                         amount: { type: :string, description: 'Same sign convention as the transaction amount' },
                         category_id: { type: :string, nullable: true, description: 'A category sent here is locked on the child, so later rule runs leave it alone' },
-                        merchant_id: { type: :string, nullable: true, description: "Omitted or null, the child takes the parent's merchant. A merchant sent here is locked on the child, so later rule runs leave it alone" },
+                        merchant_id: { type: :string, nullable: true, description: "Omitted or null, the child takes the parent's merchant. A merchant other than the parent's is locked on the child, so later rule runs leave it alone; the parent's merchant stays unlocked, as when omitted" },
                         tag_ids: { type: :array, items: { type: :string }, nullable: true, description: 'No tags when omitted' },
                         excluded: { type: :boolean, nullable: true }
                       }
