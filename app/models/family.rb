@@ -425,8 +425,8 @@ class Family < ApplicationRecord
     update!(bayes_settings: bayes_settings_object.merge(changes).to_stored)
   end
 
-  def auto_categorize_transactions_later(transactions, rule_run_id: nil)
-    AutoCategorizeJob.perform_later(self, transaction_ids: transactions.pluck(:id), rule_run_id: rule_run_id)
+  def auto_categorize_transactions_later(transactions, rule_run_id: nil, user_id: nil)
+    AutoCategorizeJob.perform_later(self, transaction_ids: transactions.pluck(:id), rule_run_id: rule_run_id, user_id: user_id)
   end
 
   # The LLM only: Bayes is its own rule (Category classifier), so what it
@@ -526,8 +526,8 @@ class Family < ApplicationRecord
     end
   end
 
-  def auto_detect_transaction_merchants_later(transactions, rule_run_id: nil)
-    AutoDetectMerchantsJob.perform_later(self, transaction_ids: transactions.pluck(:id), rule_run_id: rule_run_id)
+  def auto_detect_transaction_merchants_later(transactions, rule_run_id: nil, user_id: nil)
+    AutoDetectMerchantsJob.perform_later(self, transaction_ids: transactions.pluck(:id), rule_run_id: rule_run_id, user_id: user_id)
   end
 
   def auto_detect_transaction_merchants(transaction_ids)

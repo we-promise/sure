@@ -163,6 +163,7 @@ en:
     recent_runs:
       title: Recent Runs
       description: View the execution history of your rules including success/failure status and transaction counts.
+      counts_note: "For AI actions, Processed counts the transactions handed to the AI: it leaves out those whose field is locked (filled before by the AI or by hand) and those on accounts the person who ran the rule can't categorize, unless every member can see them. Runs after a sync hand over only accounts every member can see."
       unnamed_rule: Unnamed Rule
       columns:
         date_time: Date/Time

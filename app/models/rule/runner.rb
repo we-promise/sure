@@ -20,6 +20,11 @@
 # the others keep emailing from the nightly run (emails claim no attribute,
 # so skipping them changes nothing for the rules below).
 #
+# user is the person who started the run ("Apply rule", "Apply all", the edit
+# behind "apply immediately"), nil after a sync. Only the AI actions look at
+# it (see Rule::AiEnrichment). The jobs take the user's id and look it up, so a
+# member deleted while the job waits leaves nil instead of discarding the run.
+#
 # One run per family at a time, guarded by a PostgreSQL advisory lock. A busy
 # lock raises LockBusy so the calling job can retry instead of dropping the run.
 class Rule::Runner
@@ -33,8 +38,9 @@ class Rule::Runner
     Digest::MD5.hexdigest("rule_runner:#{family_id}").to_i(16) % (2**62)
   end
 
-  def initialize(family, rules:, execution_type:, ignore_attribute_locks: false, transaction_ids: nil)
+  def initialize(family, rules:, execution_type:, ignore_attribute_locks: false, transaction_ids: nil, user: nil)
     @family = family
+    @user = user
     @transaction_ids = transaction_ids&.map(&:to_s)
     @rule_ids = rules.map(&:id).to_set
     @execution_type = execution_type
@@ -62,7 +68,7 @@ class Rule::Runner
   end
 
   private
-    attr_reader :family, :rule_ids, :execution_type, :ignore_attribute_locks, :claimed_ids, :stopped_ids, :transaction_ids, :errors_by_rule_id
+    attr_reader :family, :user, :rule_ids, :execution_type, :ignore_attribute_locks, :claimed_ids, :stopped_ids, :transaction_ids, :errors_by_rule_id
 
     def run_rules
       rule_runs = []
@@ -141,7 +147,8 @@ class Rule::Runner
           rule_run: rule_run,
           scope: rule.scope_for_transaction_ids(matched_ids),
           claimed_ids: claimed_ids,
-          skip_action_types: skip_action_types
+          skip_action_types: skip_action_types,
+          user: user
         )
 
         rule_run.update!(**run_counts(result, queued: matched_ids.size, rule: rule))

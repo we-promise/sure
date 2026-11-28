@@ -55,6 +55,13 @@ class Rule::ActionExecutor
     true
   end
 
+  # Runs the action for +user+, the person running the rule, or nobody (user
+  # nil, e.g. after a sync). Rules act on the whole family; Rule::AiEnrichment
+  # narrows this.
+  def run(scope, user:, **options)
+    execute(scope, **options)
+  end
+
   def execute(scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
     raise NotImplementedError, "Action executor #{self.class.name} must implement #execute"
   end

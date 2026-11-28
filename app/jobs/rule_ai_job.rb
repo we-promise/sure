@@ -30,7 +30,7 @@ class RuleAiJob < ApplicationJob
   retry_on(*TRANSIENT_DB, attempts: ATTEMPTS) { |job, error| job.give_up(error) }
   discard_on(*DISCARDED) { |job, error| job.give_up(error) }
 
-  def perform(family, transaction_ids: [], rule_run_id: nil)
+  def perform(family, transaction_ids: [], rule_run_id: nil, user_id: nil)
     @transaction_ids = transaction_ids
     @rule_run_id = rule_run_id
     # The run is gone when its rule was deleted; Sidekiq runs a job again when
@@ -39,7 +39,11 @@ class RuleAiJob < ApplicationJob
 
     # Kept across retries (see serialize): a batch applied before its report
     # failed is reported, not sent again.
-    @modified_count = enrich(family, transaction_ids) if @modified_count.nil?
+    if @modified_count.nil?
+      # Access may have changed since the rule queued the batch (Rule::AiEnrichment).
+      user = family.users.find_by(id: user_id)
+      @modified_count = enrich(family, Rule::AiEnrichment.permitted_ids(family, transaction_ids, user:))
+    end
     rule_run&.complete_job!(job_id:, modified_count: @modified_count)
   rescue *TRANSIENT_DB
     raise

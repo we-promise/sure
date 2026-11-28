@@ -3,6 +3,7 @@ require "test_helper"
 class Assistant::Function::ApplyRuleTest < ActiveSupport::TestCase
   include EntriesTestHelper
   include ActiveJob::TestHelper
+  include AiRuleScopeTestHelper
 
   setup do
     @user = users(:family_admin)
@@ -29,6 +30,27 @@ class Assistant::Function::ApplyRuleTest < ActiveSupport::TestCase
     assert @rule.reload.active
     assert_equal @category, entry.entryable.reload.category
     assert_equal 1, @rule.rule_runs.count
+  end
+
+  # The assistant does not apply AI rules itself, but the active rules above
+  # the one it applies run first, AI actions included.
+  test "the AI rules above a rule a member applies leave out accounts not shared with them" do
+    member = users(:family_member)
+    probes = ai_scope_probes
+    ai_scope_rule(active: true)
+    rule = @family.rules.create!(
+      resource_type: "transaction",
+      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "AI scope probe" } ],
+      actions_attributes: [ { action_type: "set_transaction_category", value: @category.id } ]
+    )
+    token = Assistant::Function::PreviewRule.new(member).call("rule_id" => rule.id)[:preview][:preview_token]
+
+    result = perform_enqueued_jobs(only: RuleJob) do
+      Assistant::Function::ApplyRule.new(member).call("rule_id" => rule.id, "preview_token" => token)
+    end
+
+    assert result[:success], result.inspect
+    assert_equal probes.values_at(:shared, :member_private).sort, ai_batch_ids
   end
 
   # Activating a rule with an email action records its current matches as

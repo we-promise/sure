@@ -1,7 +1,9 @@
 require "test_helper"
 
 class Rule::RunnerTest < ActiveSupport::TestCase
-  include EntriesTestHelper, ActiveJob::TestHelper
+  include EntriesTestHelper
+  include ActiveJob::TestHelper
+  include AiRuleScopeTestHelper
 
   setup do
     @family = families(:empty)
@@ -194,7 +196,7 @@ class Rule::RunnerTest < ActiveSupport::TestCase
     Family.any_instance.stubs(:auto_categorize_transactions).returns(1)
 
     perform_enqueued_jobs do
-      Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual").run
+      Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual", user: users(:empty)).run
     end
 
     run = rule.rule_runs.sole
@@ -211,7 +213,7 @@ class Rule::RunnerTest < ActiveSupport::TestCase
     RuleRun.expects(:offer_immediate_result).once
 
     perform_enqueued_jobs do
-      Rule::Runner.new(@family, rules: [ rule ], execution_type: "immediate", transaction_ids: [ @whole_foods.id ]).run
+      Rule::Runner.new(@family, rules: [ rule ], execution_type: "immediate", transaction_ids: [ @whole_foods.id ], user: users(:empty)).run
     end
 
     run = rule.rule_runs.sole
@@ -224,7 +226,7 @@ class Rule::RunnerTest < ActiveSupport::TestCase
     rule = create_ai_rule("auto_categorize")
     Family.any_instance.stubs(:auto_categorize_transactions_later).returns(false)
 
-    Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual").run
+    Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual", user: users(:empty)).run
 
     run = rule.rule_runs.sole
     assert_equal "failed", run.status
@@ -239,7 +241,7 @@ class Rule::RunnerTest < ActiveSupport::TestCase
     Family.any_instance.expects(:auto_categorize_transactions_later).twice.returns(false).then.returns(true)
     RuleRun.any_instance.stubs(:fail_job!).raises(ActiveRecord::ConnectionNotEstablished, "connection lost")
 
-    Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual").run
+    Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual", user: users(:empty)).run
 
     run = rule.rule_runs.sole
     assert_equal "pending", run.status, "the queued batch still reports to the run"
@@ -255,7 +257,7 @@ class Rule::RunnerTest < ActiveSupport::TestCase
       .raises(ActiveRecord::Deadlocked, "deadlock detected").then.returns(nil)
     Rails.error.expects(:report).never
 
-    Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual").run
+    Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual", user: users(:empty)).run
 
     assert_equal 1, job_ids.uniq.size
   end
@@ -409,7 +411,97 @@ class Rule::RunnerTest < ActiveSupport::TestCase
     other&.close
   end
 
+  # An AI action hands the transactions to the provider, so it only takes
+  # those the person running the rule may categorize, plus the accounts every
+  # active member can see. A run nobody started takes only the latter.
+  test "AI actions take the accounts the member running the rule may categorize" do
+    probes = ai_scope_probes
+
+    run_ai_rule("auto_categorize", user: users(:family_member))
+
+    assert_equal probes.values_at(:shared, :member_private).sort, ai_batch_ids
+  end
+
+  test "AI actions run by an admin leave out a member's account not shared with them" do
+    probes = ai_scope_probes
+
+    run_ai_rule("auto_categorize", user: users(:family_admin))
+
+    assert_equal probes.values_at(:shared, :admin_private).sort, ai_batch_ids
+  end
+
+  test "AI actions in a run nobody started take only accounts every active member can see" do
+    probes = ai_scope_probes
+
+    run_ai_rule("auto_categorize", user: nil, execution_type: "scheduled")
+
+    assert_equal [ probes[:shared] ], ai_batch_ids
+  end
+
+  test "merchant detection takes the same accounts as AI categorization" do
+    probes = ai_scope_probes
+
+    run_ai_rule("auto_detect_merchants", user: users(:family_member))
+
+    assert_equal probes.values_at(:shared, :member_private).sort, ai_batch_ids(AutoDetectMerchantsJob)
+  end
+
+  test "AI actions skip an account once it stops being shared" do
+    probes = ai_scope_probes
+    account_shares(:depository_shared_with_member).destroy!
+
+    run_ai_rule("auto_categorize", user: users(:family_member))
+
+    assert_equal [ probes[:member_private] ], ai_batch_ids
+  end
+
+  test "an AI job leaves out an account whose share was revoked after it was queued" do
+    use_ai_routes
+    probes = ai_scope_probes
+    run_ai_rule("auto_categorize", user: users(:family_member))
+    account_shares(:depository_shared_with_member).destroy!
+
+    Family.any_instance.expects(:auto_categorize_transactions).with([ probes[:member_private] ]).returns(1)
+    perform_enqueued_jobs(only: AutoCategorizeJob)
+  end
+
+  test "an AI job run by nobody sends only accounts every active member can see" do
+    use_ai_routes
+    probes = ai_scope_probes
+    AutoDetectMerchantsJob.perform_later(families(:dylan_family), transaction_ids: probes.values)
+
+    Family.any_instance.expects(:auto_detect_transaction_merchants).with([ probes[:shared] ]).returns(1)
+    perform_enqueued_jobs(only: AutoDetectMerchantsJob)
+  end
+
+  test "AI actions leave out an account shared read-only with the member running the rule" do
+    families(:dylan_family).users.create!(email: "third-member@example.com", password: "Password123!", role: :member)
+    probes = ai_scope_probes
+    read_only = create_transaction(account: accounts(:credit_card), name: "AI scope probe read only").entryable_id
+
+    run_ai_rule("auto_categorize", user: users(:family_member))
+
+    assert_equal probes.values_at(:shared, :member_private).sort, ai_batch_ids
+    assert_not_includes ai_batch_ids, read_only
+  end
+
+  test "AI actions leave the other actions of the rule on every matched account" do
+    probes = ai_scope_probes
+    family = families(:dylan_family)
+    category = family.categories.create!(name: "AI scope category")
+    rule = ai_scope_rule
+    rule.actions.create!(action_type: "set_transaction_category", value: category.id)
+
+    Rule::Runner.new(family, rules: [ rule ], execution_type: "manual", user: users(:family_member)).run
+
+    assert_equal probes.values.sort, Transaction.where(category: category).pluck(:id).sort
+  end
+
   private
+    def run_ai_rule(action_type, user:, execution_type: "manual")
+      Rule::Runner.new(families(:dylan_family), rules: [ ai_scope_rule(action_type) ], execution_type: execution_type, user: user).run
+    end
+
     def create_ai_rule(*action_types)
       @family.rules.create!(
         name: "AI",
