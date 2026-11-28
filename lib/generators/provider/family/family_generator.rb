@@ -366,15 +366,9 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
     end
   end
 
-  # Bank sync renders a provider's connection row and drawer from FAMILY_PANELS, which
-  # the adapter's declares_connection panel: feeds (the adapter template always writes
-  # it). The same declaration moves a connected provider under Your connections, and
-  # the row's sync status and Sync button read family_panel_items.
+  # Bank sync lists a provider, with its connection row, summary and sync status, from
+  # the adapter's declares_connection panel:, which the adapter template always writes.
   def add_bank_sync_entries
-    controller_path = "app/controllers/settings/providers_controller.rb"
-    add_bank_sync_entry(controller_path, "family_panel_items", "=> @#{file_name}_items") do |content|
-      self.class.append_family_panel_item(content, key: file_name)
-    end
     warn_unless_panel_declared
   end
 
@@ -637,42 +631,14 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
     content.sub(/(enum :source, \{)([^}]*)(\})/m) { prefix + new_body + suffix }
   end
 
-  # Hands the loaded items to the row's sync status through family_panel_items.
-  def self.append_family_panel_item(content, key:)
-    append_hash_entry(content, /(def family_panel_items\n[ \t]*\{\n)(.*?)(\n[ \t]*\}\n)/m, key, "@#{key}_items")
-  end
-
-  # Appends `"key" => value` to a multi-line hash, lining its arrow up with the last entry's.
-  def self.append_hash_entry(content, pattern, key, value)
-    last = content[pattern, 2]&.rstrip&.lines&.last
-    return nil unless last&.include?("=>")
-
-    width = last.index("=>") - last[/\A[ \t]*/].length
-    append_last_entry(content, pattern, %("#{key}").ljust(width - 1) + " => #{value}")
-  end
-
-  # Appends `entry` to the multi-line literal whose (opening)(body)(closing) `pattern`
-  # captures, indented like the last entry, which has no trailing comma and gets one.
   # True when an adapter's source declares the connection with a settings panel,
   # which is what lists the provider in Bank sync.
   def self.panel_declared?(adapter_source, key:)
     adapter_source.match?(/^\s*declares_connection key: "#{Regexp.escape(key)}"[^\n]*\bpanel:/)
   end
 
-  def self.append_last_entry(content, pattern, entry)
-    match = content.match(pattern)
-    return nil unless match
-
-    body = match[2].rstrip
-    indent = body.lines.last[/\A[ \t]*/]
-    separator = body.end_with?(",") ? "" : ","
-
-    content.sub(pattern) { match[1] + "#{body}#{separator}\n#{indent}#{entry}" + match[3] }
-  end
-
   private
 
-    # Writes the block's result to `path` unless `marker` shows the entry is already there.
     # An adapter that already existed, or was skipped, never got the template's
     # declaration, so the derived Bank sync lists would leave the provider out.
     def warn_unless_panel_declared
@@ -684,21 +650,6 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
       say "Bank sync will not list #{file_name} until #{adapter_path} declares " \
           "`declares_connection key: \"#{file_name}\", name: \"#{class_name.titleize}\", panel: true, " \
           "metadata: { region: \"Global\", kinds: %w[#{kinds}], maturity: :alpha, logo_text: \"#{class_name.first(2).upcase}\" }`", :yellow
-    end
-
-    def add_bank_sync_entry(path, name, marker)
-      return unless File.exist?(path)
-
-      content = File.read(path)
-
-      if content.include?(marker)
-        say "#{name} already lists #{file_name}", :skip
-      elsif (updated = yield(content))
-        write_file(path, updated)
-        say "Added #{file_name} to #{name}", :green
-      else
-        say "Could not find #{name} in #{path}", :yellow
-      end
     end
 
     def update_source_enum(model_path)
