@@ -14,3 +14,4 @@ fr:
     over_allocation: Cela affecterait plus que le montant de la transaction
     reject:
       success: Ignorée. Cette transaction ne sera plus suggérée pour cette facture.
+    split_counterpart_allocated: Cette transaction est divisée, et la dépense d'origine ou l'une de ses parties est déjà affectée à une facture
