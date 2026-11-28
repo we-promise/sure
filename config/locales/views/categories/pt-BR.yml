@@ -3,6 +3,10 @@ pt-BR:
   categories:
     bootstrap:
       success: Categorias padrão criadas com sucesso
+    locked: As categorias estão bloqueadas. Desbloqueie-as para adicionar uma nova categoria.
+    toggle_lock:
+      locked: Categorias bloqueadas
+      unlocked: Categorias desbloqueadas
     category:
       delete: Excluir categoria
       edit: Editar categoria
@@ -14,19 +18,58 @@ pt-BR:
       edit: Editar categoria
     form:
       placeholder: Nome da categoria
+      name_label: Nome
+      unassigned: (nenhuma)
+      parent_category_label: Categoria principal (opcional)
+      trigger_label: Escolher cor e ícone
+      color: Cor
+      icon: Ícone
+      auto_adjust: ajustar automaticamente.
+      poor_contrast: Contraste insuficiente. Escolha uma cor mais escura ou
+    destroy_all:
+      success: Todas as categorias foram excluídas
     index:
       bootstrap: Usar padrões (recomendado)
       categories: Categorias
       categories_expenses: Categorias de despesas
       categories_incomes: Categorias de receitas
+      delete_all: Excluir todas
       empty: Nenhuma categoria encontrada
+      lock_categories: Bloquear a criação de categorias
+      locked_message: A criação de categorias está bloqueada. Importações e sincronizações bancárias ainda podem adicionar categorias.
+      merge: Mesclar categorias
       new: Nova categoria
+      unlock_categories: Desbloquear a criação de categorias
+    merge:
+      title: Mesclar categorias
+      description: Selecione uma categoria de destino e as categorias que serão mescladas nela. As transações e linhas de orçamento correspondentes serão movidas para a categoria de destino.
+      target_label: Mesclar em (destino)
+      select_target: Selecione a categoria de destino...
+      sources_label: Categorias a mesclar
+      sources_hint: As categorias selecionadas serão excluídas depois que suas transações e linhas de orçamento forem movidas para o destino. Não selecione a categoria de destino como origem.
+      submit: Mesclar selecionadas
     new:
       new_category: Nova categoria
+    perform_merge:
+      success:
+        one: "%{count} categoria mesclada com sucesso"
+        other: "%{count} categorias mescladas com sucesso"
+      no_categories_selected: Nenhuma categoria selecionada para mesclar
+      target_not_found: Categoria de destino não encontrada
+      invalid_categories: Categorias selecionadas inválidas
+      target_selected_as_source: Escolha categorias diferentes para o destino e as origens.
     update:
       success: Categoria atualizada com sucesso
+    virtual:
+      transfer: Transferência
+      payment: Pagamento
+      trade: Negociação
   category:
     dropdowns:
       show:
         bootstrap: Gerar categorias padrão
         empty: Nenhuma categoria encontrada
+        match_transfer: Associar transferência/pagamento
+        one_time: É uma %{type} pontual
+        income: receita
+        expense: despesa

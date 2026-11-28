@@ -5,6 +5,7 @@ zh-CN:
     missing_rate: 无可用汇率；请明确输入金额
     already_allocated: 该交易已应用于此账单
     entry_exhausted: 该交易的全部金额已应用于其他应付款项
+    split_counterpart_allocated: 该交易已拆分，且原始支出或其某个拆分项已应用于账单
     invalid: 无法记录此笔付款
     create:
       success: 付款已应用

@@ -1,0 +1,23 @@
+---
+es:
+  rule_groups:
+    new:
+      title: Nuevo grupo de reglas
+    edit:
+      title: Renombrar el grupo "%{name}"
+    form:
+      name_label: Nombre
+      name_placeholder: p. ej., Supermercado
+      hint: Los grupos solo organizan la lista de reglas. Las reglas se siguen ejecutando de arriba abajo.
+    create:
+      success: Grupo creado
+    update:
+      success: Grupo renombrado
+    destroy:
+      success: Grupo eliminado. Sus reglas se mantienen, sin grupo.
+    activation:
+      activated: Todas las reglas de "%{name}" están activadas
+      deactivated: Todas las reglas de "%{name}" están desactivadas
+      partially_switched:
+        one: No se ha podido cambiar 1 regla. Ábrela para ver por qué.
+        other: No se han podido cambiar %{count} reglas. Ábrelas para ver por qué.

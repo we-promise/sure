@@ -66,6 +66,22 @@ class Settings::ProviderPanelsTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "Enable Banking Add Connection carries the country chosen in the form" do
+    family = families(:dylan_family)
+    EnableBankingItem.create!(family: family, name: "Finland", country_code: "FI", application_id: "app",
+                              client_certificate: "cert", session_id: "fi", session_expires_at: 1.day.from_now)
+    EnableBankingItem.create!(family: family, name: "Sweden", country_code: "SE", application_id: "app",
+                              client_certificate: "cert", session_id: "se", session_expires_at: 1.day.from_now)
+
+    get connect_form_settings_providers_path(provider_key: "enable_banking")
+
+    assert_response :success
+    selected = css_select("select[data-enable-banking-country-target=select] option[selected]").first["value"]
+    assert_includes %w[FI SE], selected
+    assert_select "form[action*='new_connection'] input[name=country_code][value=#{selected}]"
+    assert_select "form[action*='new_connection'][data-action='submit->enable-banking-country#applyCountry']"
+  end
+
   private
     # DS::Alert prefixes its text with the variant for screen readers ("Error: …").
     def titled_alert(variant, title_key)
