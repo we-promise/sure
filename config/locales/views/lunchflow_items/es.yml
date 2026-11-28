@@ -1,6 +1,14 @@
 ---
 es:
   lunchflow_items:
+    syncer:
+      accounts_failed:
+        one: 'Importación de Lunchflow: no se ha podido actualizar %{count} cuenta'
+        other: 'Importación de Lunchflow: no se han podido actualizar %{count} cuentas'
+      import_failed_with_error: 'Importación de Lunchflow: %{error}'
+      transactions_failed:
+        one: 'Importación de Lunchflow: no se han podido obtener las transacciones de %{count} cuenta'
+        other: 'Importación de Lunchflow: no se han podido obtener las transacciones de %{count} cuentas'
     api_error:
       title: Error de conexión con Lunch Flow
       unable_to_connect: No se puede conectar con Lunch Flow
@@ -14,6 +22,7 @@ es:
       service_down_label: Servicio caído
       service_down_desc: La API de Lunch Flow puede no estar disponible temporalmente
       check_provider_settings: Revisar ajustes de proveedores
+      unexpected_error: Se ha producido un error inesperado. Inténtalo de nuevo más tarde.
     setup_required:
       title: Configuración de Lunch Flow necesaria
       api_key_not_configured: Clave de API no configurada
@@ -62,8 +71,20 @@ es:
       status_never: Nunca sincronizado
       status_with_summary: Sincronizado hace %{timestamp} • %{summary}
       syncing: Sincronizando...
+      sync_status:
+        no_accounts: No se han encontrado cuentas
+        synced:
+          one: "%{count} cuenta sincronizada"
+          other: "%{count} cuentas sincronizadas"
+        partial_setup:
+          one: "%{linked} sincronizadas, %{unlinked} pendiente de configurar"
+          other: "%{linked} sincronizadas, %{unlinked} pendientes de configurar"
       total: Total
       unlinked: Desvinculadas
+    subtype_select:
+      placeholder:
+        subtype: Selecciona un subtipo
+        type: Selecciona un tipo
     select_accounts:
       accounts_selected: cuentas seleccionadas
       api_error: 'Error de API: %{message}'
@@ -101,6 +122,7 @@ es:
       api_error: 'Error de API: %{message}'
       fetch_failed: Error al obtener las cuentas
       no_accounts_to_setup: No hay cuentas para configurar
+      page_title: Configurar cuentas de Lunch Flow
       no_api_token: La clave API de Lunch Flow no está configurada. Por favor, comprueba los ajustes de conexión.
       account_types:
         skip: Omitir esta cuenta
@@ -159,6 +181,7 @@ es:
       creation_failed: 'Error al crear las cuentas: %{error}'
       no_accounts: No hay cuentas para configurar.
       success: Se han creado %{count} cuenta(s) con éxito.
+      unexpected_error: Se ha producido un error inesperado
     sync:
       success: Sincronización iniciada
     update:
