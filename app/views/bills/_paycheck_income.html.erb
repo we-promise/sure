@@ -37,7 +37,7 @@
         <p class="text-xs text-secondary truncate">
           <%= frequency_label(series) %>
           <% if occurrence %>
-            &middot; <%= t("bills.paycheck.income_next_payday", date: l(occurrence.due_on, format: :short)) %>
+            &middot; <%= t("bills.paycheck.income_next_payday", date: l(occurrence.effective_due_on, format: :short)) %>
           <% end %>
           <% unless paycheck_income_plans?(series) %>
             &middot; <%= paycheck_income_excluded_reason(series) %>

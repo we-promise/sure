@@ -124,7 +124,7 @@ class RecurringOccurrence < ApplicationRecord
 
   # List views preload allocation sums in one grouped query and inject them
   # here, so row rendering issues no per-occurrence SUM.
-  attr_writer :cached_confirmed_allocated
+  attr_writer :cached_confirmed_allocated, :cached_matched_entry, :cached_received_on
 
   def self.preload_confirmed_allocated(occurrences)
     sums = RecurringAllocation.confirmed
@@ -140,6 +140,34 @@ class RecurringOccurrence < ApplicationRecord
 
   def confirmed_allocated_money
     Money.new(confirmed_allocated, currency)
+  end
+
+  # What a payday row says, read from what backs it. Status alone can't tell a
+  # payday matched to a transaction from one settled by hand with no entry, so
+  # the allocations decide between them.
+  def payday_state
+    return :skipped if skipped?
+    return :missed if missed?
+    # A partial receipt is not a settled payday, even when a deposit is matched.
+    return(effective_due_on < Date.current ? :unmatched : :expected) if partially_paid?
+    return :matched if matched_entry?
+    return :received if paid?
+
+    effective_due_on < Date.current ? :unmatched : :expected
+  end
+
+  # When the money actually arrived: the latest confirmed allocation's date,
+  # or the expected date when nothing is confirmed. Uses the list preload when present.
+  def received_on
+    latest = defined?(@cached_received_on) ? @cached_received_on : allocations.confirmed.maximum(:paid_on)
+    latest || effective_due_on
+  end
+
+  # Whether a confirmed allocation is backed by a bank transaction. Uses the list preload when present.
+  def matched_entry?
+    return @cached_matched_entry if defined?(@cached_matched_entry)
+
+    allocations.confirmed.where.not(entry_id: nil).exists?
   end
 
   def remaining_amount
