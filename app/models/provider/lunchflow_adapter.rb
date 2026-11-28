@@ -13,48 +13,43 @@ class Provider::LunchflowAdapter < Provider::Base
     %w[Depository CreditCard Loan Investment]
   end
 
-  # Returns connection configurations for this provider
+  # One entry for the family, or one per credentialed connection when there
+  # are several, so the user chooses which connection's accounts to link.
   def self.connection_configs(family:)
     return [] unless family.can_connect_lunchflow?
 
-    [ {
-      key: "lunchflow",
-      name: "Lunch Flow",
-      description: "Connect to your bank via Lunch Flow",
+    lunchflow_items = family.lunchflow_items.active.with_credentials.ordered
+    return [ connection_config_for(nil) ] unless lunchflow_items.many?
+
+    lunchflow_items.map { |lunchflow_item| connection_config_for(lunchflow_item) }
+  end
+
+  def self.connection_config_for(lunchflow_item)
+    path_params = ->(extra = {}) do
+      lunchflow_item.present? ? extra.merge(lunchflow_item_id: lunchflow_item.id) : extra
+    end
+
+    {
+      key: lunchflow_item.present? ? "lunchflow_#{lunchflow_item.id}" : "lunchflow",
+      name: lunchflow_item.present? ? I18n.t("lunchflow_items.provider_connection.name", name: lunchflow_item.name) : I18n.t("lunchflow_items.provider_connection.default_name"),
+      description: lunchflow_item.present? ? I18n.t("lunchflow_items.provider_connection.description", name: lunchflow_item.name) : I18n.t("lunchflow_items.provider_connection.default_description"),
       can_connect: true,
       new_account_path: ->(accountable_type, return_to) {
         Rails.application.routes.url_helpers.select_accounts_lunchflow_items_path(
-          accountable_type: accountable_type,
-          return_to: return_to
+          path_params.call(accountable_type: accountable_type, return_to: return_to)
         )
       },
       existing_account_path: ->(account_id) {
         Rails.application.routes.url_helpers.select_existing_account_lunchflow_items_path(
-          account_id: account_id
+          path_params.call(account_id: account_id)
         )
       }
-    } ]
+    }
   end
+  private_class_method :connection_config_for
 
   def provider_name
     "lunchflow"
-  end
-
-  # Build a Lunch Flow provider instance with family-specific credentials
-  # Lunchflow is now fully per-family - no global credentials supported
-  # @param family [Family] The family to get credentials for (required)
-  # @return [Provider::Lunchflow, nil] Returns nil if API key is not configured
-  def self.build_provider(family: nil)
-    return nil unless family.present?
-
-    # Get family-specific credentials
-    lunchflow_item = family.lunchflow_items.where.not(api_key: nil).first
-    return nil unless lunchflow_item&.credentials_configured?
-
-    Provider::Lunchflow.new(
-      lunchflow_item.api_key,
-      base_url: lunchflow_item.effective_base_url
-    )
   end
 
   def sync_path

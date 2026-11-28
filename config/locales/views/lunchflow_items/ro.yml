@@ -37,7 +37,7 @@ ro:
       description: Selectați conturile pe care doriți să le conectați la contul dumneavoastră Sure.
       link_accounts: Conectează conturile selectate
       no_accounts_found: Nu s-au găsit conturi. Vă rugăm să verificați configurația cheii API.
-      no_api_key: Cheia API Lunch Flow nu este configurată. Vă rugăm să o configurați în Setări.
+      no_api_token: Cheia API Lunch Flow nu este configurată. Vă rugăm să o configurați în Setări.
       title: Selectați conturile Lunch Flow
     select_existing_account:
       account_already_linked: Acest cont este deja conectat la un furnizor
@@ -47,15 +47,14 @@ ro:
       description: Selectați un cont Lunch Flow pentru a-l conecta cu acest cont. Tranzacțiile vor fi sincronizate și deduplicate automat.
       link_account: Conectează contul
       no_account_specified: Niciun cont specificat
-      no_accounts_found: Nu s-au găsit conturi Lunch Flow. Vă rugăm să verificați configurația cheii API.
-      no_api_key: Cheia API Lunch Flow nu este configurată. Vă rugăm să o configurați în Setări.
+      no_api_token: Cheia API Lunch Flow nu este configurată. Vă rugăm să o configurați în Setări.
       title: "Conectează %{account_name} cu Lunch Flow"
     link_existing_account:
       account_already_linked: Acest cont este deja conectat la un furnizor
       api_error: "Eroare API: %{message}"
-      lunchflow_account_already_linked: Acest cont Lunch Flow este deja conectat la un alt cont
-      lunchflow_account_not_found: Contul Lunch Flow nu a fost găsit
       missing_parameters: Parametri lipsă
+      provider_account_already_linked: Acest cont Lunch Flow este deja conectat la un alt cont
+      provider_account_not_found: Contul Lunch Flow nu a fost găsit
       success: "S-a conectat cu succes %{account_name} cu Lunch Flow"
     sync:
       success: Sincronizarea a început

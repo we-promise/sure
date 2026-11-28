@@ -10,6 +10,7 @@
 
         <form action="<%= link_existing_account_lunchflow_items_path %>" method="post" class="space-y-4" data-turbo-frame="_top">
           <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+          <%= hidden_field_tag :lunchflow_item_id, @lunchflow_item.id %>
           <%= hidden_field_tag :account_id, @account.id %>
           <%= hidden_field_tag :return_to, @return_to %>
 

@@ -71,15 +71,6 @@ class LunchflowItemsAccountCacheTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "a list fetched with no API key on record is not cached" do
-    @item.update_columns(api_key: nil)
-
-    accounts = LunchflowItemsController.new.send(:fetch_lunchflow_accounts, Provider::Lunchflow.new("unused"), @item, @key)
-
-    assert_equal [ { id: 1, name: "Everyday" } ], accounts
-    assert_nil Rails.cache.read(@key)
-  end
-
   test "renaming the connection keeps its cached accounts" do
     Rails.cache.write(@key, [ { id: 7, name: "Cached account" } ])
 

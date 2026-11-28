@@ -1,6 +1,13 @@
 ---
 en:
   lunchflow_items:
+    errors:
+      unexpected_error: An unexpected error occurred. Please try again later.
+    provider_connection:
+      default_description: Connect to your bank via Lunch Flow
+      default_name: Lunch Flow
+      description: "Connect using %{name}"
+      name: "Lunch Flow - %{name}"
     syncer:
       account_processing_failed:
         one: "%{count} Lunch Flow account failed while processing."
@@ -66,10 +73,13 @@ en:
       invalid_account_names:
         one: "Cannot link account with blank name"
         other: "Cannot link %{count} accounts with blank names"
+      invalid_account_type: Unsupported Lunch Flow account type
       link_failed: Failed to link accounts
       no_accounts_selected: Please select at least one account
+      no_api_token: Lunch Flow API key is not configured. Please configure it in Settings.
       partial_invalid: "Successfully linked %{created_count} account(s), %{already_linked_count} were already linked, %{invalid_count} account(s) had invalid names"
       partial_success: "Successfully linked %{created_count} account(s). %{already_linked_count} account(s) were already linked: %{already_linked_names}"
+      select_connection: Choose a Lunch Flow connection before linking accounts.
       success:
         one: "Successfully linked %{count} account"
         other: "Successfully linked %{count} accounts"
@@ -109,9 +119,12 @@ en:
       description: Select the accounts you want to link to your %{product_name} account.
       link_accounts: Link selected accounts
       no_accounts_found: No accounts found. Please check your API key configuration.
-      no_api_key: Lunch Flow API key is not configured. Please configure it in Settings.
+      no_api_token: Lunch Flow API key is not configured. Please configure it in Settings.
+      no_credentials_configured: Please configure your Lunch Flow API key first in Provider Settings.
       no_name_placeholder: "(No name)"
+      select_connection: Choose a Lunch Flow connection in Provider Settings.
       title: Select Lunch Flow Accounts
+      unexpected_error: An unexpected error occurred. Please try again later.
     select_existing_account:
       account_already_linked: This account is already linked to a provider
       all_accounts_already_linked: All Lunch Flow accounts are already linked
@@ -121,17 +134,22 @@ en:
       description: Select a Lunch Flow account to link with this account. Transactions will be synced and deduplicated automatically.
       link_account: Link account
       no_account_specified: No account specified
-      no_accounts_found: No Lunch Flow accounts found. Please check your API key configuration.
-      no_api_key: Lunch Flow API key is not configured. Please configure it in Settings.
+      no_api_token: Lunch Flow API key is not configured. Please configure it in Settings.
+      no_credentials_configured: Please configure your Lunch Flow API key first in Provider Settings.
       no_name_placeholder: "(No name)"
+      select_connection: Choose a Lunch Flow connection in Provider Settings.
       title: "Link %{account_name} with Lunch Flow"
+      unexpected_error: An unexpected error occurred. Please try again later.
     link_existing_account:
       account_already_linked: This account is already linked to a provider
       api_error: "API error: %{message}"
       invalid_account_name: Cannot link account with blank name
-      lunchflow_account_already_linked: This Lunch Flow account is already linked to another account
-      lunchflow_account_not_found: Lunch Flow account not found
       missing_parameters: Missing required parameters
+      no_account_specified: No account specified
+      no_api_token: Lunch Flow API key is not configured. Please configure it in Settings.
+      provider_account_already_linked: This Lunch Flow account is already linked to another account
+      provider_account_not_found: Lunch Flow account not found
+      select_connection: Choose a Lunch Flow connection before linking accounts.
       success: "Successfully linked %{account_name} with Lunch Flow"
     setup_accounts:
       account_type_label: "Account Type:"

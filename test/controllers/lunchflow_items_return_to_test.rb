@@ -5,7 +5,7 @@ class LunchflowItemsReturnToTest < ActionDispatch::IntegrationTest
     sign_in users(:family_admin)
     provider = mock("lunchflow_provider")
     provider.stubs(:get_accounts).returns(accounts: [ { id: "acc_1", name: "Checking", currency: "EUR", status: "active" } ])
-    Provider::LunchflowAdapter.stubs(:build_provider).returns(provider)
+    LunchflowItem.any_instance.stubs(:lunchflow_provider).returns(provider)
   end
 
   test "an internal return path is kept" do

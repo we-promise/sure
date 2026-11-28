@@ -72,7 +72,7 @@ it:
       description: Seleziona i conti che vuoi collegare al tuo account %{product_name}.
       link_accounts: Collega i conti selezionati
       no_accounts_found: Nessun conto trovato. Controlla la configurazione della tua chiave API.
-      no_api_key: La chiave API di Lunch Flow non è configurata. Configurala nelle Impostazioni.
+      no_api_token: La chiave API di Lunch Flow non è configurata. Configurala nelle Impostazioni.
       no_name_placeholder: "(Nessun nome)"
       title: Seleziona conti Lunch Flow
     select_existing_account:
@@ -84,17 +84,16 @@ it:
       description: Seleziona un conto Lunch Flow da collegare a questo conto. Le transazioni verranno sincronizzate e deduplicate automaticamente.
       link_account: Collega conto
       no_account_specified: Nessun conto specificato
-      no_accounts_found: Nessun conto Lunch Flow trovato. Controlla la configurazione della tua chiave API.
-      no_api_key: La chiave API di Lunch Flow non è configurata. Configurala nelle Impostazioni.
+      no_api_token: La chiave API di Lunch Flow non è configurata. Configurala nelle Impostazioni.
       no_name_placeholder: "(Nessun nome)"
       title: "Collega %{account_name} con Lunch Flow"
     link_existing_account:
       account_already_linked: Questo conto è già collegato a un provider
       api_error: "Errore API: %{message}"
       invalid_account_name: Impossibile collegare un conto senza nome
-      lunchflow_account_already_linked: Questo conto Lunch Flow è già collegato a un altro conto
-      lunchflow_account_not_found: Conto Lunch Flow non trovato
       missing_parameters: Parametri obbligatori mancanti
+      provider_account_already_linked: Questo conto Lunch Flow è già collegato a un altro conto
+      provider_account_not_found: Conto Lunch Flow non trovato
       success: "Collegato con successo %{account_name} con Lunch Flow"
     setup_accounts:
       account_type_label: "Tipo di conto:"

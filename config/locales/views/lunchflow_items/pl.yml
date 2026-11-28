@@ -72,10 +72,10 @@ pl:
       account_already_linked: To konto jest już połączone z dostawcą
       api_error: 'Błąd API: %{message}'
       invalid_account_name: Nie można połączyć konta bez nazwy
-      lunchflow_account_already_linked: To konto Lunch Flow jest już połączone z innym
-        kontem
-      lunchflow_account_not_found: Nie znaleziono konta Lunch Flow
       missing_parameters: Brak wymaganych parametrów
+      provider_account_already_linked: To konto Lunch Flow jest już połączone z innym
+        kontem
+      provider_account_not_found: Nie znaleziono konta Lunch Flow
       success: Pomyślnie połączono %{account_name} z Lunch Flow
     loading:
       loading_message: Ładowanie kont Lunch Flow...
@@ -114,9 +114,10 @@ pl:
       description: Wybierz konta, które chcesz połączyć z kontem %{product_name}.
       link_accounts: Połącz wybrane konta
       no_accounts_found: Nie znaleziono kont. Sprawdź konfigurację klucza API.
-      no_api_key: Klucz API Lunch Flow nie jest skonfigurowany. Skonfiguruj go w Ustawieniach.
+      no_api_token: Klucz API Lunch Flow nie jest skonfigurowany. Skonfiguruj go w Ustawieniach.
       no_name_placeholder: "(Brak nazwy)"
       title: Wybierz konta Lunch Flow
+      unexpected_error: Wystąpił nieoczekiwany błąd. Spróbuj ponownie później.
     select_existing_account:
       account_already_linked: To konto jest już połączone z dostawcą
       all_accounts_already_linked: Wszystkie konta Lunch Flow są już połączone
@@ -128,11 +129,10 @@ pl:
         będą synchronizowane i deduplikowane automatycznie.
       link_account: Połącz konto
       no_account_specified: Nie podano konta
-      no_accounts_found: Nie znaleziono kont Lunch Flow. Sprawdź konfigurację klucza
-        API.
-      no_api_key: Klucz API Lunch Flow nie jest skonfigurowany. Skonfiguruj go w Ustawieniach.
+      no_api_token: Klucz API Lunch Flow nie jest skonfigurowany. Skonfiguruj go w Ustawieniach.
       no_name_placeholder: "(Brak nazwy)"
       title: Połącz %{account_name} z Lunch Flow
+      unexpected_error: Wystąpił nieoczekiwany błąd. Spróbuj ponownie później.
     setup_accounts:
       account_type_label: 'Typ konta:'
       account_types:
