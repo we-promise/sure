@@ -102,6 +102,7 @@ de:
         amount: Betrag
         balance: Kontostand
         confirmed: Bestätigt
+        mark_all_read: Alle als gelesen markieren
         date: Datum
         entries: Buchungen
         entry: Buchung
@@ -158,6 +159,9 @@ de:
       logo_not_applied: "Das Konto wurde gespeichert, aber das gewählte Symbol konnte nicht heruntergeladen werden. Versuch es noch einmal oder lade ein eigenes hoch."
     sidebar:
       missing_data: Fehlende historische Daten
+      unread_count:
+        one: "%{count} ungelesene Transaktion"
+        other: "%{count} ungelesene Transaktionen"
       missing_data_description: "%{product} verwendet Drittanbieter, um historische Wechselkurse, Wertpapierpreise und weitere Daten abzurufen. Diese Daten sind erforderlich, um genaue historische Kontostände zu berechnen."
       configure_providers: Konfiguriere deine Anbieter hier
       tabs:

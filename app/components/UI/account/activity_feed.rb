@@ -1,10 +1,11 @@
 class UI::Account::ActivityFeed < ApplicationComponent
-  attr_reader :feed_data, :pagy, :q
+  attr_reader :feed_data, :pagy, :q, :has_unread
 
-  def initialize(feed_data:, pagy:, q: {})
+  def initialize(feed_data:, pagy:, q: {}, has_unread: false)
     @feed_data = feed_data
     @pagy = pagy
     @q = q || {}
+    @has_unread = has_unread
   end
 
   def id
