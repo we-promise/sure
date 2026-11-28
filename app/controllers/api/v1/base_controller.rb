@@ -31,6 +31,8 @@ class Api::V1::BaseController < ApplicationController
   before_action :check_api_key_rate_limit
   before_action :log_api_access
 
+  helper_method :api_accessible_account?, :api_accessible_account_ids
+
 
 
   # Override Doorkeeper's default behavior to return JSON instead of redirecting
@@ -178,6 +180,17 @@ class Api::V1::BaseController < ApplicationController
     # Returns the user that owns the access token or API key
     def current_resource_owner
       @current_user
+    end
+
+    # Whether the caller can open an account the response would otherwise name,
+    # such as the one on a transfer's other leg.
+    def api_accessible_account?(account)
+      api_accessible_account_ids.include?(account.id)
+    end
+
+    # The accounts the caller can open. One query per request.
+    def api_accessible_account_ids
+      @api_accessible_account_ids ||= Account.accessible_by(current_resource_owner).pluck(:id).to_set
     end
 
     # Get current scopes from either authentication method

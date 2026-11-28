@@ -70,7 +70,7 @@ class Assistant::Function::GetTransferMatchCandidates < Assistant::Function
       counterpart = counterparts[matcher.counterpart_id(row)]
       next unless counterpart && visible.include?(counterpart.entry.account_id)
 
-      serialize_transaction(counterpart).merge(
+      serialize_transaction(counterpart, visible).merge(
         days_apart: row.date_diff.to_i,
         previously_rejected: row.rejected_transfer_id.present?
       )

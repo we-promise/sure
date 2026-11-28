@@ -512,7 +512,10 @@ class Entry < ApplicationRecord
     @earliest_saved_date = nil
     account.sync_later(window_start_date: sync_start_date)
 
-    EntryScheduledSyncJob.schedule_for(self) if !destroyed? && scheduled?
+    # No scheduled? gate here: schedule_for judges "future" in the family's
+    # time zone, and the app-zone check would skip entries that are still
+    # tomorrow for the family.
+    EntryScheduledSyncJob.schedule_for(self) unless destroyed?
   end
 
   # Whether the last save changed anything a sync depends on. Call it right
@@ -522,6 +525,12 @@ class Entry < ApplicationRecord
 
     descriptive = entryable.is_a?(Transaction) ? DESCRIPTIVE_TRANSACTION_ATTRIBUTES : %w[updated_at]
     (entryable.saved_changes.keys - descriptive).any?
+  end
+
+  # The name as read by someone who can open only the accounts in
+  # +accessible_account_ids+ (see Transaction#name_for).
+  def name_for(accessible_account_ids)
+    transaction? ? entryable.name_for(accessible_account_ids) : name
   end
 
   def entryable_name_short

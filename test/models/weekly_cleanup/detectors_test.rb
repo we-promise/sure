@@ -21,6 +21,16 @@ class WeeklyCleanup::DetectorsTest < ActiveSupport::TestCase
     assert finding.samples.any? { |s| s.include?("Mystery Store") }
   end
 
+  test "samples do not name an account the admin cannot open in a transfer fee's name" do
+    fee = create_transfer_to_hidden_account(source_fee_amount: 2).fee_transactions.sole
+    fee.update!(category: nil)
+
+    finding = WeeklyCleanup::Detectors::UncategorizedTransactions.new(@family, user: users(:family_member)).generate
+
+    assert finding.samples.any? { |sample| sample.include?("Transfer fee — Transfer to another account") }
+    assert finding.samples.none? { |sample| sample.include?("Hidden Savings") }
+  end
+
   test "uncategorized detector ignores transfers and excluded entries" do
     create_transaction(account: @account, name: "Transfer Thing", date: 1.day.ago, amount: 50, kind: "funds_movement")
     excluded = create_transaction(account: @account, name: "Excluded Thing", date: 1.day.ago, amount: 50)

@@ -62,6 +62,16 @@ class WeeklyCleanup::Detector
       Finding.new(key: self.class.key, heading: heading, count: count, samples: samples.first(MAX_SAMPLES))
     end
 
+    # A sample entry as the user may read it: a transfer fee does not name an
+    # account they cannot open (Entry#name_for).
+    def sample_line(entry)
+      "#{entry.date} — #{entry.name_for(accessible_account_ids)} (#{entry.amount_money.format})"
+    end
+
+    def accessible_account_ids
+      @accessible_account_ids ||= accounts.pluck(:id).to_set
+    end
+
     # Recent standard (non-transfer, non-excluded) purchase/refund transactions
     # joined to their entries — the base relation most detectors filter further.
     def recent_standard_entries(since: window_start)

@@ -4,9 +4,7 @@
 class WeeklyCleanup::Detectors::UncategorizedTransactions < WeeklyCleanup::Detector
   def generate
     scope = recent_standard_entries.where(transactions: { category_id: nil })
-    samples = scope.includes(:entryable).order(date: :desc).limit(MAX_SAMPLES).map do |entry|
-      "#{entry.date} — #{entry.name} (#{entry.amount_money.format})"
-    end
+    samples = scope.includes(:entryable).order(date: :desc).limit(MAX_SAMPLES).map { |entry| sample_line(entry) }
 
     finding(
       heading: I18n.t("weekly_cleanup.detectors.uncategorized_transactions.heading"),

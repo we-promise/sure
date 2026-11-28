@@ -24,10 +24,7 @@
         <div class="space-y-3">
           <dl class="flex items-center gap-2 justify-between">
             <dt class="text-secondary"><%= t(".from") %></dt>
-            <dd class="flex items-center gap-2 font-medium">
-              <%= render "accounts/logo", account: @transfer.from_account, size: "sm" %>
-              <%= link_to @transfer.from_account.name, account_path(@transfer.from_account), data: { turbo_frame: "_top" } %>
-            </dd>
+            <%= render "endpoint_account", account: @transfer.from_account, readable: @readable_account_ids.include?(@transfer.from_account&.id) %>
           </dl>
           <dl class="flex items-center gap-2 justify-between">
             <dt class="text-secondary"><%= t(".date") %></dt>
@@ -39,7 +36,7 @@
               full on a phone too. %>
           <% if @readable_account_ids.include?(@transfer.from_account&.id) %>
             <dl>
-              <%= render DS::DetailRow.new(label: t(".transaction"), value: @transfer.outflow_transaction.entry.name, value_class: "font-medium") %>
+              <%= render DS::DetailRow.new(label: t(".transaction"), value: entry_display_name(@transfer.outflow_transaction.entry), value_class: "font-medium") %>
             </dl>
           <% end %>
           <dl class="flex items-center gap-2 justify-between">
@@ -63,10 +60,7 @@
         <div class="space-y-3">
           <dl class="flex items-center gap-2 justify-between">
             <dt class="text-secondary"><%= t(".to") %></dt>
-            <dd class="flex items-center gap-2 font-medium">
-              <%= render "accounts/logo", account: @transfer.to_account, size: "sm" %>
-              <%= link_to @transfer.to_account.name, account_path(@transfer.to_account), data: { turbo_frame: "_top" } %>
-            </dd>
+            <%= render "endpoint_account", account: @transfer.to_account, readable: @readable_account_ids.include?(@transfer.to_account&.id) %>
           </dl>
           <dl class="flex items-center gap-2 justify-between">
             <dt class="text-secondary"><%= t(".date") %></dt>
@@ -74,7 +68,7 @@
           </dl>
           <% if @readable_account_ids.include?(@transfer.to_account&.id) %>
             <dl>
-              <%= render DS::DetailRow.new(label: t(".transaction"), value: @transfer.inflow_transaction.entry.name, value_class: "font-medium") %>
+              <%= render DS::DetailRow.new(label: t(".transaction"), value: entry_display_name(@transfer.inflow_transaction.entry), value_class: "font-medium") %>
             </dl>
           <% end %>
           <dl class="flex items-center gap-2 justify-between">

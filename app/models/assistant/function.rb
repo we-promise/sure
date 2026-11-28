@@ -153,6 +153,12 @@ class Assistant::Function
       user.family
     end
 
+    # The entry's name as this user may read it (Entry#name_for). A tool that
+    # names many entries reads accessible_account_ids once and passes it in.
+    def entry_name(entry, accessible = accessible_account_ids)
+      entry&.name_for(accessible)
+    end
+
     def valid_uuid?(str)
       UuidFormat.valid?(str)
     end

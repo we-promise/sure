@@ -22,5 +22,7 @@ en:
           opposite_amounts: "Must have opposite amounts"
           within_days: "Must be within %{count} days"
   transfer:
+    # Stands in for an account the reader cannot open in a transfer's name.
+    hidden_account: another account
     name: Transfer to %{to_account}
     payment_name: Payment to %{to_account}

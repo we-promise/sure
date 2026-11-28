@@ -53,6 +53,19 @@ class Assistant::Function::GetBillDetailsTest < ActiveSupport::TestCase
     assert_equal "user_confirmed", payment[:source]
   end
 
+  test "a payment's transaction name does not name an account the user cannot open" do
+    series = create_series(name: "Bank fees", amount: 2)
+    fee = create_transfer_fee_to_hidden_account
+    occurrence = series.recurring_occurrences.order(:due_on).first
+    occurrence.allocations.create!(entry: fee, allocated_amount: 2, currency: "USD", source: "user_confirmed")
+    occurrence.close!("paid", source: "user")
+
+    result = Assistant::Function::GetBillDetails.new(users(:family_member)).call({ "bill_id" => series.id.to_s })
+
+    assert_equal "Transfer fee — Transfer to another account", result[:history].sole[:payments].sole[:transaction_name]
+    assert_not_includes result.to_json, "Hidden Savings"
+  end
+
   test "price changes serialize with the percent" do
     series = create_series(name: "Stream Co", amount: 12)
     series.recurring_price_changes.create!(

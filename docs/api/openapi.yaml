@@ -1718,8 +1718,12 @@ components:
         currency:
           type: string
         other_account:
-          "$ref": "#/components/schemas/Account"
-          nullable: true
+          anyOf:
+          - "$ref": "#/components/schemas/Account"
+          - type: object
+            nullable: true
+            enum:
+            -
     RecurringTransaction:
       type: object
       required:
@@ -1950,6 +1954,8 @@ components:
           type: string
         name:
           type: string
+          description: On a transfer leg or transfer fee, the other account's name
+            is replaced with "another account" when the caller cannot open that account.
         notes:
           type: string
           nullable: true

@@ -612,6 +612,103 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_match "Starbucks", response.body
   end
 
+  test "index does not name an account the viewer cannot open in a transfer's name" do
+    transfer = create_transfer_to_hidden_account
+    sign_in users(:family_member)
+
+    get transactions_url
+
+    assert_response :success
+    assert_select "##{dom_id(transfer.outflow_transaction.entry)}", text: /Transfer to another account/
+    assert_no_match "Hidden Savings", response.body
+  end
+
+  test "index does not name an account the viewer cannot open in a transfer fee's name" do
+    transfer = create_transfer_to_hidden_account(source_fee_amount: 2)
+    sign_in users(:family_member)
+
+    get transactions_url
+
+    assert_response :success
+    assert_select "##{dom_id(transfer.fee_transactions.sole.entry)}", text: /Transfer fee — Transfer to another account/
+    assert_no_match "Hidden Savings", response.body
+  end
+
+  test "index names the other account in a transfer's name for a viewer who can open it" do
+    transfer = create_transfer_to_hidden_account
+
+    get transactions_url
+
+    assert_response :success
+    assert_select "##{dom_id(transfer.outflow_transaction.entry)}", text: /Transfer to Hidden Savings/
+  end
+
+  test "the transaction drawer does not name an account the viewer cannot open in a transfer's name" do
+    transfer = create_transfer_to_hidden_account
+    sign_in users(:family_member)
+
+    get transaction_url(transfer.outflow_transaction.entry)
+
+    assert_response :success
+    assert_select "input[name='entry[name]'][value='Transfer to another account']"
+    assert_no_match "Hidden Savings", response.body
+  end
+
+  test "name suggestions leave out transfer names that name an account the viewer cannot open" do
+    create_transfer_to_hidden_account
+    sign_in users(:family_member)
+
+    get name_suggestions_transactions_url(q: "Transfer to"), as: :turbo_stream
+
+    assert_response :success
+    assert_no_match "Hidden Savings", response.body
+  end
+
+  test "recent name suggestions leave out transfer names that name an account the viewer cannot open" do
+    families(:dylan_family).update!(auto_generate_transaction_names: true)
+    create_transfer_to_hidden_account
+    sign_in users(:family_member)
+
+    get name_suggestions_transactions_url, as: :turbo_stream
+
+    assert_response :success
+    assert_no_match "Hidden Savings", response.body
+  end
+
+  test "index does not name an account the viewer cannot open in a split transfer fee's name" do
+    fee = create_transfer_fee_to_hidden_account
+    fee.split!([ { name: "Bank charge", amount: 1 }, { name: "FX charge", amount: 1 } ])
+    sign_in users(:family_member)
+
+    get transactions_url
+
+    assert_response :success
+    assert_select "a[href=?]", entry_path(fee), text: "Transfer fee — Transfer to another account"
+    assert_no_match "Hidden Savings", response.body
+  end
+
+  test "a duplicate does not copy an account the user cannot open from a transfer fee's name" do
+    fee = create_transfer_fee_to_hidden_account
+    sign_in users(:family_member)
+
+    get new_transaction_url(duplicate_entry_id: fee.id)
+
+    assert_response :success
+    assert_select "input[name='entry[name]'][value='Transfer fee — Transfer to another account']"
+    assert_no_match "Hidden Savings", response.body
+  end
+
+  test "the rule prompt after categorizing does not name an account the user cannot open" do
+    fee = create_transfer_fee_to_hidden_account
+    sign_in users(:family_member)
+
+    patch transaction_url(fee), params: {
+      entry: { entryable_type: "Transaction", entryable_attributes: { id: fee.entryable_id, category_id: categories(:food_and_drink).id } }
+    }
+
+    assert_equal "Transfer fee — Transfer to another account", flash[:cta][:merchant_name]
+  end
+
   test "updates with transaction details" do
     assert_no_difference [ "Entry.count", "Transaction.count" ] do
       patch transaction_url(@entry), params: {

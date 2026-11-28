@@ -23,14 +23,14 @@ module Assistant::Function::TransferMatchSupport
       family.accounts.visible.writable_by(user).find_by(id: id)
     end
 
-    def serialize_transaction(transaction)
+    def serialize_transaction(transaction, accessible = accessible_account_ids)
       entry = transaction.entry
 
       {
         transaction_id: transaction.id,
         account_id: entry.account_id,
         account: entry.account.name,
-        name: entry.name,
+        name: entry_name(entry, accessible),
         date: entry.date,
         amount: entry.amount.abs.to_s,
         amount_formatted: format_money(entry.amount_money.abs),
@@ -44,11 +44,12 @@ module Assistant::Function::TransferMatchSupport
     # see, e.g. a transfer into another member's private account.
     def serialize_transfer(transfer, from:)
       other = transfer.inflow_transaction_id == from.id ? transfer.outflow_transaction : transfer.inflow_transaction
+      accessible = accessible_account_ids
 
       {
         transfer_id: transfer.id,
         status: transfer.status,
-        counterpart: (serialize_transaction(other) if other && accessible_account_ids.include?(other.entry.account_id))
+        counterpart: (serialize_transaction(other, accessible) if other && accessible.include?(other.entry.account_id))
       }.compact
     end
 

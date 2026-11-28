@@ -20,7 +20,7 @@ class TransactionCategoriesController < ApplicationController
         type: "category_rule",
         category_id: transaction.category_id,
         category_name: transaction.category.name,
-        merchant_name: @entry.name
+        merchant_name: @entry.name_for(Current.accessible_account_ids)
       }
     end
 

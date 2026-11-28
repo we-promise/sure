@@ -21,5 +21,6 @@ tr:
           same_family: Aynı aileden olmalıdır
           within_days: "%{count} gün içinde olmalıdır"
   transfer:
+    hidden_account: başka bir
     name: "%{to_account} hesabına transfer"
     payment_name: "%{to_account} hesabına ödeme"

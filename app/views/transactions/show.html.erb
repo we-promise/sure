@@ -66,6 +66,7 @@
           <%# "change", not "blur": leaving the field untouched must not send its stale value. %>
           <%= f.text_field :name,
                 label: t(".name_label"),
+                value: entry_display_name(@entry),
                 disabled: @entry.split_child? || edit_locked,
                 "data-auto-submit-form-target": "auto",
                 "data-autosubmit-trigger-event": "change" %>

@@ -221,6 +221,30 @@ class Assistant::Function::GetTransactionsTest < ActiveSupport::TestCase
     assert_not row.key?(:transfer_account), "an inaccessible counterparty must not be named"
   end
 
+  test "does not name an inaccessible account in a transfer's name" do
+    transfer = create_transfer_to_hidden_account
+
+    result = Assistant::Function::GetTransactions.new(users(:family_member)).call("search" => "Transfer to")
+    row = result[:transactions].find { |item| item[:id] == transfer.outflow_transaction_id }
+
+    assert_equal "Transfer to another account", row[:name]
+    assert_not_includes result.to_json, "Hidden Savings"
+  end
+
+  test "rereads account access on each call of the same instance" do
+    member = users(:family_member)
+    transfer = create_transfer_to_hidden_account(name: "Joint Savings")
+    share = AccountShare.create!(account: transfer.inflow_transaction.entry.account, user: member, permission: "read_only")
+    function = Assistant::Function::GetTransactions.new(member)
+    name_of_outflow = -> { function.call("search" => "Transfer to")[:transactions].find { |row| row[:id] == transfer.outflow_transaction_id }[:name] }
+
+    assert_equal "Transfer to Joint Savings", name_of_outflow.call
+
+    share.destroy!
+
+    assert_equal "Transfer to another account", name_of_outflow.call
+  end
+
   test "omits transfer_account on a plain transaction" do
     result = @function.call("search" => @transaction.entry.name)
     row = result[:transactions].find { |item| item[:id] == @transaction.id }

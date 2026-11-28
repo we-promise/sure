@@ -2,7 +2,7 @@
   <% dialog.with_header do %>
     <div class="flex items-start justify-between gap-4">
       <div>
-        <h2 class="text-lg font-semibold text-primary"><%= @entry.name %></h2>
+        <h2 class="text-lg font-semibold text-primary"><%= entry_display_name(@entry) %></h2>
         <p class="text-sm text-secondary flex items-center gap-1.5">
           <span><%= @entry.date.strftime("%b %d, %Y") %></span>
           <% if (category = @entry.entryable.try(:category)) %>

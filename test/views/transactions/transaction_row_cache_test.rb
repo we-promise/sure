@@ -1,7 +1,7 @@
 require "test_helper"
 
 class Transactions::TransactionRowCacheTest < ActionView::TestCase
-  include TransactionsHelper
+  include TransactionsHelper, EntriesHelper
 
   setup do
     Current.session = Session.create!(user: users(:family_admin))
@@ -150,12 +150,41 @@ class Transactions::TransactionRowCacheTest < ActionView::TestCase
     end
   end
 
+  test "a cached transfer leg or fee stops naming the other account once the viewer loses access to it" do
+    hidden = @entry.account.family.accounts.create!(name: "Hidden Savings", owner: users(:family_admin), balance: 0,
+                                                    currency: "USD", accountable: Depository.new)
+    share = hidden.account_shares.create!(user: users(:family_member), permission: "read_only")
+    transfer = Transfer::Creator.new(
+      family: @entry.account.family, source_account_id: accounts(:depository).id, destination_account_id: hidden.id,
+      date: Date.current, amount: 100, source_fee_amount: 2
+    ).create
+    rows = [ transfer.outflow_transaction.entry, transfer.fee_transactions.sole.entry ]
+
+    view_as users(:family_member)
+    rows.each { |entry| assert_includes render_row(entry: entry), "Hidden Savings" }
+
+    share.destroy!
+    view_as users(:family_member)
+    rows.each do |entry|
+      html = render_row(entry: entry)
+      assert_includes html, "another account"
+      assert_not_includes html, "Hidden Savings"
+    end
+  end
+
   private
     def row_key(entry: @entry, view_ctx: "global", in_split_group: false)
       transaction_row_cache_key(entry.reload, view_ctx: view_ctx, in_split_group: in_split_group)
     end
 
-    def render_row
-      render(partial: "transactions/transaction", locals: { entry: @entry.reload, balance_trend: nil, view_ctx: "global" })
+    def render_row(entry: @entry)
+      render(partial: "transactions/transaction", locals: { entry: entry.reload, balance_trend: nil, view_ctx: "global" })
+    end
+
+    # A fresh request's view for +user+.
+    def view_as(user)
+      Current.reset
+      Current.session = Session.create!(user: user)
+      @accessible_account_ids = user.accessible_accounts.pluck(:id).to_set
     end
 end
