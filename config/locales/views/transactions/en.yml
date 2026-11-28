@@ -6,6 +6,9 @@ en:
         part_transferred:
           one: "1 split transaction was not deleted: a part of it is linked as a transfer. Remove that transfer first."
           other: "%{count} split transactions were not deleted: a part of each is linked as a transfer. Remove those transfers first."
+        vest_part:
+          one: "1 transaction was not deleted: it is part of a vest. Delete the vest, or change it on the vest's screen."
+          other: "%{count} transactions were not deleted: each is part of a vest. Delete the vest, or change it on the vest's screen."
     bulk_updates:
       new:
         cancel: Cancel
@@ -169,6 +172,7 @@ en:
       contribution: Contribution
       withdrawal: Withdrawal
       exchange: Exchange
+      vest: Vest
       other: Other
     mark_recurring: Mark as Recurring
     mark_recurring_subtitle: Track this as a recurring transaction. Amount variance is automatically calculated from past 6 months of similar transactions.
@@ -365,6 +369,7 @@ en:
       errors:
         not_investment_account: Only transactions in investment accounts can be converted to trades
         already_converted: This transaction has already been converted or excluded
+        vest_part: A vest's income or tax can't be converted to a trade. Change it on the vest's screen.
         enter_ticker: Please enter a ticker symbol
         security_not_found: Selected security no longer exists. Please select another.
         select_security: Please select or enter a security

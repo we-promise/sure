@@ -17,6 +17,7 @@ de:
           opposite_amounts: muss entgegengesetzte Beträge haben
           same_family: muss aus derselben Familie stammen
           within_days: muss innerhalb von %{count} Tagen liegen
+          vest_part: Einkommen oder Steuern eines Vestings können nicht Teil einer Überweisung sein
   transfer:
     name: Überweisung an %{to_account}
     payment_name: Zahlung an %{to_account}

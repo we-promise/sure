@@ -9,6 +9,10 @@ json.notes trade.entry.notes
 json.qty trade.qty
 json.price trade.price_money.format
 json.investment_activity_label trade.investment_activity_label
+# A vest's shares the stock plan kept back for its taxes, as a decimal
+# string; they never reached the account, so they are not in qty. Null on
+# every other trade.
+json.units_withheld trade.units_withheld&.to_s("F")
 # The fee charged on the trade, formatted like price, and as an unrounded,
 # locale-independent decimal string (the stored value).
 json.fee trade.fee_money.format

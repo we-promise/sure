@@ -20,6 +20,11 @@ class Entry < ApplicationRecord
   # to be unlinked first.
   class SplitPartTransferredError < StandardError; end
 
+  # Raised when a vest's income, tax, or sale for taxes would be deleted on its
+  # own, which would leave the vest's totals counting it. The vest is deleted,
+  # or the line cleared, on the vest's own screen.
+  class VestPartDeletionError < StandardError; end
+
   attr_accessor :unsplitting
 
   monetize :amount
@@ -38,6 +43,18 @@ class Entry < ApplicationRecord
   validates :reconciled_at, presence: true, if: -> { reconciled_by_statement_id.present? }
 
   has_many :child_entries, class_name: "Entry", foreign_key: :parent_entry_id, dependent: :destroy
+  # A vest's income and tax entries point at the vest's own entry (see
+  # Trade::VestForm), so the three are edited and deleted together.
+  belongs_to :vest_entry, class_name: "Entry", optional: true
+  has_many :vest_parts, class_name: "Entry", foreign_key: :vest_entry_id, dependent: :destroy, inverse_of: :vest_entry
+  # Set by Trade::VestForm and the data import, which write a vest and its
+  # parts together. Any other change to their amounts, dates, exclusion, or
+  # labels would leave the parts out of step with the vest, so it is refused
+  # (vest_written_together here, Entryable for the trade's and transactions'
+  # columns). It lasts one save, so the same record edited later is checked
+  # again.
+  attr_accessor :vest_write
+  after_save { self.vest_write = nil }
   # Read side only, so a transaction can say which bills it paid. The foreign key
   # already nullifies on delete, so this adds no lifecycle behaviour.
   has_many :recurring_allocations, dependent: nil, inverse_of: :entry
@@ -78,6 +95,7 @@ class Entry < ApplicationRecord
 
   validate :cannot_unexclude_split_parent
   validate :split_child_date_matches_parent
+  validate :vest_written_together, on: :update
 
   # new_record? && import_id.blank? keeps this to genuinely new manual
   # entries -- excludes CSV imports (which have their own, separately
@@ -708,7 +726,7 @@ class Entry < ApplicationRecord
   # when it split.
   def split_once!(splits, lock_attributes: false)
     with_split_lock do |txn|
-      next false if split_parent? || excluded? || txn&.transfer? || txn&.pending?
+      next false if split_parent? || excluded? || vest_entry_id? || txn&.transfer? || txn&.pending?
 
       split!(splits, lock_attributes: lock_attributes)
       true
@@ -742,15 +760,26 @@ class Entry < ApplicationRecord
 
   # Deletes this entry for a user. A split is refused like unsplit! while a part
   # is a leg of a confirmed transfer: deleting the parent takes the part and its
-  # transfer with it and leaves the other leg behind as a standalone entry.
+  # transfer with it and leaves the other leg behind as a standalone entry. A
+  # vest is refused the same way while one of its parts is a transfer leg, and
+  # a part on its own only through Trade::VestForm (vest_write).
   # Syncs and imports that remove entries call destroy! directly.
   def destroy_unless_split_part_transferred!
+    raise VestPartDeletionError, "This is part of a vest. Delete the vest, or change it on the vest's screen." if vest_entry_id? && !vest_write
+    refuse_while_vest_part_transferred! if vest_entry_id? || (trade? && entryable.vest?)
     return destroy! unless split_parent?
 
     with_split_lock do
       refuse_while_split_part_transferred! if split_parent?
       destroy!
     end
+  end
+
+  # The vest this entry records, or is the income or a tax of: what opens when
+  # any of them is opened. nil for an entry that is no part of a vest.
+  def vest
+    return vest_entry if vest_entry_id
+    self if trade? && entryable.vest?
   end
 
   def split_child?
@@ -994,7 +1023,8 @@ class Entry < ApplicationRecord
           # Update standard attributes
           if bulk_attributes.present?
             attrs = bulk_attributes.dup
-            attrs.delete(:date) if entry.split_child?
+            attrs.delete(:date) if entry.split_child? || entry.vest_entry_id?
+            attrs.delete(:excluded) if entry.vest_entry_id?
             attrs.delete(:entryable_attributes) unless entry.transaction?
             # reconciled_status is a manual-accounts-only concept — synced accounts
             # already have duplicate-matching + statement-level reconciliation.
@@ -1108,6 +1138,18 @@ class Entry < ApplicationRecord
       raise SplitPartTransferredError, "Remove the transfer on a split part before changing the split" if split_part_transferred?
     end
 
+    # Deleting a vest deletes its income and taxes, and deleting a part deletes
+    # that part, with any transfer they are legs of. Transfers aren't matched
+    # to vest parts, but one recorded before that rule, or by a path that skips
+    # it, still counts.
+    def refuse_while_vest_part_transferred!
+      parts = vest_entry_id? ? self.class.where(id: id) : vest_parts
+      part_ids = parts.where(entryable_type: "Transaction").select(:entryable_id)
+      transferred = Transfer.confirmed.where(outflow_transaction_id: part_ids)
+        .or(Transfer.confirmed.where(inflow_transaction_id: part_ids)).exists?
+      raise SplitPartTransferredError, "Remove the transfer on a vest's income or tax before deleting it" if transferred
+    end
+
     def split_part_transaction_ids
       child_entries.where(entryable_type: "Transaction").select(:entryable_id)
     end
@@ -1124,6 +1166,19 @@ class Entry < ApplicationRecord
       return unless excluded_changed?(from: true, to: false) && split_parent?
 
       errors.add(:excluded, "cannot be toggled off for a split transaction")
+    end
+
+    VEST_ENTRY_ATTRIBUTES = %w[account_id amount currency date excluded].freeze
+
+    # A vest's shares, income, and taxes change only together, through
+    # Trade::VestForm. Entryable checks the trade's and transactions' own
+    # columns, which can be saved without the entry.
+    def vest_written_together
+      return if vest_write
+      return unless vest_entry_id_was.present? || (trade? && entryable.vest?)
+      return if (changed & VEST_ENTRY_ATTRIBUTES).none?
+
+      errors.add(:base, "This entry is part of a vest. Edit it from the vest instead.")
     end
 
     def split_child_date_matches_parent

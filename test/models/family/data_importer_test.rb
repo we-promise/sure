@@ -1767,6 +1767,96 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal 600, HoldingLot.find_by!(source_entry: trades.fetch(60)).manual_total_cost
   end
 
+  test "a vest round trip keeps its income and taxes linked, its withheld shares, and every label" do
+    ndjson = vest_export(sold_qty: 10)
+
+    [ ndjson, ndjson.split("\n") ].each do |file|
+      family = Family.create!(name: "Vest Target", currency: "USD", locale: "en", date_format: "%Y-%m-%d")
+      if file.is_a?(Array)
+        session = family.import_sessions.create!(expected_chunks: file.size)
+        file.each { |line| Family::DataImporter.new(family, line, import_session: session).import! }
+      else
+        Family::DataImporter.new(family, file).import!
+      end
+
+      vest = family.entries.where(entryable_type: "Trade").find { |entry| entry.trade.vest? }
+      assert vest, "the vest keeps its label"
+      assert_equal 30, vest.trade.units_withheld
+      income, taxes, sale = Trade::VestForm.parts_of(vest)
+      assert_equal(-1000, income.amount)
+      assert_equal [ 400 ], taxes.map(&:amount)
+      assert_equal(-10, sale.trade.qty)
+    end
+  end
+
+  test "a replayed vest that lists fewer parts unlinks the rest, leaving them as transactions" do
+    export = vest_export
+    session = @family.import_sessions.create!(expected_chunks: 2)
+    Family::DataImporter.new(@family, export, import_session: session).import!
+    income_id = export.split("
+").map { |line| JSON.parse(line) }
+      .find { |record| record["type"] == "Transaction" && record["data"]["investment_activity_label"] == Trade::VestForm::INCOME_LABEL }["data"]["id"]
+
+    Family::DataImporter.new(@family, edit_trades(export) { |data| data["vest_part_transaction_ids"] = [ income_id ] }, import_session: session).import!
+
+    vest = @family.entries.find_by!(entryable_type: "Trade")
+    income, taxes = Trade::VestForm.parts_of(vest)
+    assert_equal(-1000, income.amount)
+    assert_empty taxes
+    assert @family.entries.where(entryable_type: "Transaction", amount: 300).exists?, "the tax is unlinked, not deleted"
+  end
+
+  test "a replayed vest keeps its sale for taxes, which the vest's own list doesn't name" do
+    export = vest_export(sold_qty: 10)
+    session = @family.import_sessions.create!(expected_chunks: 2)
+    Family::DataImporter.new(@family, export, import_session: session).import!
+    without_sale = export.split("
+").reject { |line| JSON.parse(line).dig("data", "vest_trade_id") }.join("
+")
+
+    Family::DataImporter.new(@family, without_sale, import_session: session).import!
+
+    vest = @family.entries.where(entryable_type: "Trade").find { |entry| entry.trade.vest? }
+    assert_equal(-10, Trade::VestForm.parts_of(vest).third&.trade&.qty)
+  end
+
+  test "a replayed vest doesn't link a transaction that has become a transfer leg" do
+    export = vest_export
+    session = @family.import_sessions.create!(expected_chunks: 2)
+    Family::DataImporter.new(@family, export, import_session: session).import!
+    vest = @family.entries.find_by!(entryable_type: "Trade")
+    tax = Trade::VestForm.parts_of(vest).second.first
+    tax.update_columns(vest_entry_id: nil)
+    checking = @family.accounts.create!(name: "Checking", balance: 0, currency: "USD", accountable: Depository.new)
+    inflow = checking.entries.create!(name: "Refund", date: tax.date, amount: -tax.amount, currency: "USD", entryable: Transaction.new)
+    Transfer.create!(inflow_transaction: inflow.transaction, outflow_transaction: tax.transaction)
+
+    # A session refuses a bad reference, as it does any other invalid part.
+    assert_raises(Family::DataImporter::InvalidRecordError) do
+      Family::DataImporter.new(@family, export, import_session: session).import!
+    end
+
+    assert_nil tax.reload.vest_entry_id
+    assert tax.transaction.transfer.present?
+  end
+
+  test "a split line's activity label is restored" do
+    ndjson = build_ndjson([
+      { type: "Account", data: { id: "brokerage", name: "Brokerage", balance: "0", currency: "USD", accountable_type: "Investment", accountable: {} } },
+      { type: "Transaction", data: {
+          id: "split-parent", account_id: "brokerage", date: "2024-01-15", amount: "-100.00", name: "Deposit", currency: "USD",
+          split_lines: [
+            { id: "split-contribution", amount: "-60.00", name: "Contribution", investment_activity_label: "Contribution" },
+            { id: "split-interest", amount: "-40.00", name: "Interest", investment_activity_label: "Interest" }
+          ] } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    parent = @family.entries.find_by!(name: "Deposit")
+    assert_equal %w[Contribution Interest], parent.child_entries.order(:amount).map { |child| child.transaction.investment_activity_label }
+  end
+
   # An import stamps entries in file order, so the file's order of a day's
   # trades becomes the order they replay in.
   test "a fifo round trip replays a day's trades in the order they were entered" do
@@ -4025,6 +4115,18 @@ class Family::DataImporterTest < ActiveSupport::TestCase
       Holding::Materializer.new(account.reload, strategy: :forward).materialize_holdings
       HoldingLot.find_by!(source_entry: first_buy).set_manual_total_cost!(600)
       account.update!(cost_basis_method: switch_to) if switch_to
+
+      ndjson = nil
+      Zip::File.open_buffer(Family::DataExporter.new(source).generate_export) { |zip| ndjson = zip.read("all.ndjson") }
+      ndjson
+    end
+
+    def vest_export(**attrs)
+      source = Family.create!(name: "Vest Source", currency: "USD", locale: "en", date_format: "%Y-%m-%d")
+      account = source.accounts.create!(name: "Vest Round Trip", accountable: Investment.new, balance: 0, cash_balance: 0, currency: "USD")
+      form = Trade::VestForm.new(account: account, date: 2.days.ago.to_date, manual_ticker: "VRT#{SecureRandom.hex(3).upcase}",
+                                 vested_qty: 100, units_withheld: 30, price: 10, **attrs)
+      assert form.save, form.errors.full_messages.to_sentence
 
       ndjson = nil
       Zip::File.open_buffer(Family::DataExporter.new(source).generate_export) { |zip| ndjson = zip.read("all.ndjson") }

@@ -10,8 +10,13 @@ class Trade < ApplicationRecord
   # provider, so it stays editable on a linked sale.
   belongs_to :lot_source_entry, class_name: "Entry", optional: true
 
-  # Use the same activity labels as Transaction
-  ACTIVITY_LABELS = Transaction::ACTIVITY_LABELS.dup.freeze
+  # Shares an employer paid as compensation (an RSU vest), at the price they
+  # vested at. Trade::VestForm records the pay itself as income beside it, and
+  # is the only way to set it, so it is in no label menu.
+  VEST_LABEL = "Vest".freeze
+
+  # The labels a transaction can have, and Vest.
+  ACTIVITY_LABELS = (Transaction::ACTIVITY_LABELS + [ VEST_LABEL ]).freeze
 
   # The labels that mean the asset went somewhere else you own rather than
   # being bought or sold.
@@ -37,6 +42,10 @@ class Trade < ApplicationRecord
   TRANSFER_LABEL = "Transfer".freeze
 
   validates :qty, presence: true
+  # Shares a stock plan kept back at a vest for its taxes. They never reach
+  # the account, so they are not in qty; only a vest has them.
+  validates :units_withheld, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+  validates :units_withheld, absence: true, unless: :vest?
   validates :price, :currency, presence: true
   validates :investment_activity_label, inclusion: { in: ACTIVITY_LABELS }, allow_nil: true
 
@@ -105,6 +114,10 @@ class Trade < ApplicationRecord
     sell? && !internal_movement?
   end
 
+  def vest?
+    investment_activity_label == VEST_LABEL
+  end
+
   # A negative quantity that left for another account you own. It looks exactly
   # like a sale — same sign, same shape — and only the label tells them apart.
   def internal_movement?
@@ -134,7 +147,7 @@ class Trade < ApplicationRecord
 
   class << self
     def build_name(type, qty, ticker)
-      prefix = type == "buy" ? "Buy" : "Sell"
+      prefix = { "buy" => "Buy", "vest" => VEST_LABEL }.fetch(type, "Sell")
       "#{prefix} #{qty.to_d.abs} shares of #{ticker}"
     end
   end

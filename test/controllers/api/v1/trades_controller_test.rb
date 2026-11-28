@@ -263,6 +263,60 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "a vest's shares and price change only on its vest screen, with its income and taxes" do
+    vest = create_api_vest
+
+    patch "/api/v1/trades/#{vest.trade.id}", params: { trade: { qty: 80 } }, headers: api_headers(read_write_api_key)
+
+    assert_response :unprocessable_entity
+    assert_equal 70, vest.trade.reload.qty
+    assert_equal [ -1000, 300 ], vest.vest_parts.map(&:amount).sort
+
+    patch "/api/v1/trades/#{vest.trade.id}", params: { trade: { notes: "RSU grant 1234" } }, headers: api_headers(read_write_api_key)
+    assert_response :ok
+  end
+
+  test "a vest's withheld shares are in the trade, and null on any other" do
+    vest = create_api_vest
+
+    get "/api/v1/trades/#{vest.trade.id}", headers: api_headers(read_write_api_key)
+    assert_response :ok
+    body = JSON.parse(response.body)
+    assert_equal "70.0", body["qty"].to_s
+    assert_equal "30.0", body["units_withheld"]
+
+    get "/api/v1/trades/#{Trade.find(create_buy_trade("NOVEST")).id}", headers: api_headers(read_write_api_key)
+    assert_nil JSON.parse(response.body)["units_withheld"]
+  end
+
+  test "deleting a vest is refused while its income or a tax is a transfer leg" do
+    vest = create_api_vest
+    income = Trade::VestForm.parts_of(vest).first
+    outflow = accounts(:depository).entries.create!(name: "Pay", date: Date.current, amount: 1000, currency: "USD", entryable: Transaction.new)
+    Transfer.new(inflow_transaction: income.transaction, outflow_transaction: outflow.transaction, status: "confirmed").save!(validate: false)
+
+    assert_no_difference -> { Entry.count } do
+      delete "/api/v1/trades/#{vest.trade.id}", headers: api_headers(read_write_api_key)
+    end
+    assert_response :unprocessable_entity
+
+    Transfer.where(inflow_transaction_id: income.entryable_id).destroy_all
+    assert_difference -> { Entry.count }, -3 do
+      delete "/api/v1/trades/#{vest.trade.id}", headers: api_headers(read_write_api_key)
+    end
+    assert_response :ok
+  end
+
+  test "a vest's sale for taxes can't be deleted on its own" do
+    vest = create_api_vest(sold_qty: 10)
+    sale = Trade::VestForm.parts_of(vest).third
+
+    assert_no_difference -> { Entry.count } do
+      delete "/api/v1/trades/#{sale.trade.id}", headers: api_headers(read_write_api_key)
+    end
+    assert_response :unprocessable_entity
+  end
+
   test "an update carrying only a category_id changes nothing" do
     trade = Trade.find(create_buy_trade("CATNOOP"))
     reset_update_side_effects(trade)
@@ -1624,6 +1678,14 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
       ).tap do |key|
         Redis.new.del("api_rate_limit:#{key.id}")
       end
+    end
+
+    # 100 vested at 10 with 30 withheld: 70 shares, 1,000 income, 300 tax.
+    def create_api_vest(**attrs)
+      form = Trade::VestForm.new(account: @investment_account, date: Date.current, manual_ticker: "AAPL",
+                                 vested_qty: 100, units_withheld: 30, price: 10, **attrs)
+      assert form.save, form.errors.full_messages.to_sentence
+      form.entry
     end
 
     def api_headers(api_key)

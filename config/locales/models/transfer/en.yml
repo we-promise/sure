@@ -21,6 +21,7 @@ en:
           same_family: "Must be from same family"
           opposite_amounts: "Must have opposite amounts"
           within_days: "Must be within %{count} days"
+          vest_part: "A vest's income or tax can't be part of a transfer"
   transfer:
     name: Transfer to %{to_account}
     payment_name: Payment to %{to_account}

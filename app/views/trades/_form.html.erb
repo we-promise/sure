@@ -15,7 +15,8 @@
           [t(".type_deposit"), "deposit"],
           [t(".type_withdrawal"), "withdrawal"],
           [t(".type_dividend"), "dividend"],
-          [t(".type_interest"), "interest"]
+          [t(".type_interest"), "interest"],
+          *([[t(".type_vest"), "vest"]] if account&.investment?)
       ],
       { label: t(".type"), selected: type },
       { data: {

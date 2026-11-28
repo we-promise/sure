@@ -227,6 +227,8 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
   rescue Entry::SplitPartTransferredError
     render json: { error: "validation_failed", message: "A part of this split is linked as a transfer. Remove that transfer before you delete the transaction." }, status: :unprocessable_entity
+  rescue Entry::VestPartDeletionError
+    render json: { error: "validation_failed", message: "This transaction is a vest's income or tax. Delete the vest, or remove the tax line on the vest's screen." }, status: :unprocessable_entity
   rescue => e
     Rails.logger.error "TransactionsController#destroy error: #{e.message}"
     Rails.logger.error e.backtrace.join("\n")

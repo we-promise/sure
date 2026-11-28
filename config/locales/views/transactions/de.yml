@@ -130,6 +130,7 @@ de:
       contribution: Einlage
       withdrawal: Entnahme
       exchange: Umtausch
+      vest: Vesting
       other: Sonstige
     mark_recurring: Als wiederkehrend markieren
     mark_recurring_subtitle: Als wiederkehrende Transaktion verfolgen. Die Betragsabweichung wird automatisch aus den letzten 6 Monaten ähnlicher Transaktionen berechnet.

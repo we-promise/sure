@@ -6,6 +6,8 @@ class TradesController < ApplicationController
   # Defaults to a buy trade
   def new
     @account = accessible_accounts.find_by(id: params[:account_id])
+    return redirect_to new_vest_path(account_id: @account.id) if params[:type] == "vest" && @account&.investment?
+
     @model = Current.family.entries.new(
       account: @account,
       currency: @account ? @account.currency : Current.family.currency,

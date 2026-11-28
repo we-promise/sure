@@ -398,6 +398,7 @@ module Family::AutoTransferMatchable
           JOIN entries outflow_candidates ON (
             outflow_candidates.entryable_type = 'Transaction' AND
             outflow_candidates.excluded = FALSE AND
+            outflow_candidates.vest_entry_id IS NULL AND
             outflow_candidates.amount > 0 AND
             outflow_candidates.account_id <> inflow_candidates.account_id AND
             outflow_candidates.date BETWEEN inflow_candidates.date - :date_window AND inflow_candidates.date + :date_window AND
@@ -416,6 +417,7 @@ module Family::AutoTransferMatchable
           WHERE
             inflow_candidates.entryable_type = 'Transaction' AND
             inflow_candidates.excluded = FALSE AND
+            inflow_candidates.vest_entry_id IS NULL AND
             inflow_candidates.amount < 0 AND
             inflow_accounts.family_id = :family_id AND
             outflow_accounts.family_id = :family_id AND
@@ -445,6 +447,7 @@ module Family::AutoTransferMatchable
           JOIN entries outflow_candidates ON (
             outflow_candidates.entryable_type = 'Transaction' AND
             outflow_candidates.excluded = FALSE AND
+            outflow_candidates.vest_entry_id IS NULL AND
             outflow_candidates.amount > 0 AND
             outflow_candidates.account_id <> inflow_candidates.account_id AND
             outflow_candidates.date BETWEEN inflow_candidates.date - :date_window AND inflow_candidates.date + :date_window AND
@@ -501,6 +504,7 @@ module Family::AutoTransferMatchable
           WHERE
             inflow_candidates.entryable_type = 'Transaction' AND
             inflow_candidates.excluded = FALSE AND
+            inflow_candidates.vest_entry_id IS NULL AND
             inflow_candidates.amount < 0 AND
             inflow_accounts.family_id = :family_id AND
             outflow_accounts.family_id = :family_id AND

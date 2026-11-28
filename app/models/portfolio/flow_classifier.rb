@@ -61,6 +61,9 @@ class Portfolio::FlowClassifier
   # "Reinvestment" is internal: the cash that bought the shares was a
   # dividend, but income is only counted when a separate Dividend entry
   # records it, as InvestmentStatement::Totals already assumes.
+  #
+  # "Vest" is internal for the same reason: the pay that bought the shares is
+  # its own Contribution entry (Trade::VestForm).
   LABEL_RULES = {
     "Dividend" => :income,
     "Interest" => :income,
@@ -71,13 +74,14 @@ class Portfolio::FlowClassifier
     "Sweep In" => :internal,
     "Sweep Out" => :internal,
     "Exchange" => :internal,
+    "Vest" => :internal,
     "Contribution" => :external,
     "Withdrawal" => :external,
     "Transfer" => :transfer,
     "Other" => nil
   }.freeze
 
-  # Every label the table knows, so a new Transaction::ACTIVITY_LABELS entry
+  # Every label the table knows, so a new Trade::ACTIVITY_LABELS entry
   # without a rule fails the test that compares the two.
   def self.labels_for(klass)
     LABEL_RULES.select { |_, rule| rule == klass }.keys.freeze

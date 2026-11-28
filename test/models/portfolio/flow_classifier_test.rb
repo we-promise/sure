@@ -396,7 +396,7 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
   end
 
   test "every activity label has a rule" do
-    assert_equal Transaction::ACTIVITY_LABELS.sort, Portfolio::FlowClassifier::LABEL_RULES.keys.sort
+    assert_empty Transaction::ACTIVITY_LABELS - Portfolio::FlowClassifier::LABEL_RULES.keys
     assert_equal Trade::ACTIVITY_LABELS.sort, Portfolio::FlowClassifier::LABEL_RULES.keys.sort
     assert_includes Portfolio::FlowClassifier.labels_for(:income), "Dividend"
     assert_equal %w[Fee], Portfolio::FlowClassifier.labels_for(:fee)

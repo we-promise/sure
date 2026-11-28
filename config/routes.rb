@@ -601,6 +601,7 @@ Rails.application.routes.draw do
       post :unlock, on: :member
     end
   end
+  resources :vests, only: %i[show new create update destroy]
   resources :trades, only: %i[show new create update destroy] do
     member do
       post :unlock

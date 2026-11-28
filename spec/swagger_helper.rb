@@ -1771,6 +1771,7 @@ RSpec.configure do |config|
               qty: { type: :string },
               price: { type: :string },
               investment_activity_label: { type: :string, nullable: true },
+              units_withheld: { type: :string, nullable: true, description: "For a vest (investment_activity_label Vest), the shares the stock plan kept back for its taxes, as a decimal string. They never reached the account, so qty is the shares vested less these. Null on every other trade." },
               fee: { type: :string, description: 'Fee charged on the trade, formatted like price' },
               fee_decimal: { type: :string, description: 'Fee as the exact stored, unrounded, locale-independent decimal string. A purchase fee adds to the cost and a sale fee comes off the proceeds' },
               exchange_rate: {

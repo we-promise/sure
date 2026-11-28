@@ -91,6 +91,8 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
       entry.destroy_unless_split_part_transferred!
     rescue Entry::SplitPartTransferredError
       return error("split_part_transferred", "A part of this split is linked as a transfer. Remove that transfer before you delete the transaction.")
+    rescue Entry::VestPartDeletionError
+      return error("vest_part", "This transaction is a vest's income or tax. Delete the vest, or remove the tax line on the vest's screen.")
     rescue ActiveRecord::RecordNotDestroyed
       # A before_destroy guard aborted the destroy (e.g. a split child that
       # slipped past the pre-check, or another constraint). `throw :abort` in
