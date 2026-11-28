@@ -198,6 +198,15 @@ class EnableBankingItem::Importer
     linked_accounts_query = enable_banking_item.enable_banking_accounts.joins(:account_provider).joins(:account).merge(Account.visible)
 
     linked_accounts_query.each do |enable_banking_account|
+      # GET /sessions usually lists accounts as bare UIDs, so import_account
+      # above never runs for them; this fills the IBAN of accounts linked
+      # before they had one. Best-effort, like the balance refresh.
+      begin
+        enable_banking_account.propagate_iban_to_account!
+      rescue => e
+        Rails.logger.error "EnableBankingItem::Importer - Failed to propagate IBAN for account #{enable_banking_account.uid}: #{e.class}"
+      end
+
       begin
         result = fetch_and_store_transactions(enable_banking_account)
         if result[:success]

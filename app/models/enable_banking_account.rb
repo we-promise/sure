@@ -166,6 +166,8 @@ class EnableBankingAccount < ApplicationRecord
 
     target = current_account
     return if target.nil? || !target.supports_iban?
+    # Runs on every sync, so skip the row lock when there is nothing to fill.
+    return if target.iban.present? || target.locked?(:iban)
 
     # #with_lock reloads target under SELECT FOR UPDATE before the block
     # runs, so a concurrent manual edit that lands between our earlier
