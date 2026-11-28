@@ -41,16 +41,38 @@ fr:
     tabs:
       overview:
         above_minimum: Ce relevé s'élevait à %{balance}, au-dessus du minimum de %{minimum}. Ne payer que le minimum laisse le solde sur la carte à ce TAEG.
+        annual_percentage_rate: Taux annuel effectif global
         apr: TAEG
+        balance_carried_label: Solde reporté
+        balance_updates: Mises à jour du solde
+        charges: Dépenses
         closes_on: Prochain relevé arrêté le %{date}
+        closes_on_days:
+          zero: Relevé arrêté le %{date} (aujourd'hui)
+          one: Relevé arrêté le %{date} (dans %{count} jour)
+          other: Relevé arrêté le %{date} (dans %{count} jours)
         credit_toward_next: Crédit pour le prochain relevé
         due_on: À payer le %{date}
+        due_on_days:
+          zero: Échéance le %{date} (aujourd'hui)
+          one: Échéance le %{date} (dans %{count} jour)
+          other: Échéance le %{date} (dans %{count} jours)
+        due_overdue_days:
+          one: Échéance le %{date} (%{count} jour de retard)
+          other: Échéance le %{date} (%{count} jours de retard)
         edit_card_details: Modifier les détails de la carte
+        estimated_interest_label: Intérêts estimés
+        monthly_rate_label: Taux mensuel
         multi_currency_unavailable: Ce relevé additionne des opérations enregistrées dans plusieurs devises, qui ne peuvent pas être totalisées ici sans un taux pour chacune d'elles. Les soldes sont laissés vides plutôt qu'estimés.
         no_cycle_description: 'Indiquez le jour où votre relevé est arrêté et le jour où le paiement est dû : cet onglet affichera alors le montant de votre dernier relevé et ce qui s''accumule pour le prochain. Une carte liée les renseigne généralement pour vous.'
         no_cycle_title: Aucun cycle de relevé défini
+        payments_applied: Paiements imputés
+        per_month: "%{amount}/mois"
+        scheduled_payment: Paiement prévu de %{amount} le %{date}
         since_last_statement: Depuis le dernier relevé
         statement_balance: Solde du relevé
+        status_paid: Payée
+        status_partial: Partiellement payée
         unknown: Inconnu
     update:
       sophtron_balance_sign_error: Impossible d'appliquer la signification du solde Sophtron. Votre réglage précédent a été conservé. Veuillez réessayer.

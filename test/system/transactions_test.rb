@@ -199,6 +199,50 @@ class TransactionsTest < ApplicationSystemTestCase
     end
   end
 
+  test "the Match? pill opens the suggested transfer with both transactions' names and amounts" do
+    @user.update!(show_ai_sidebar: false)
+    page.current_window.resize_to(1440, 900)
+    outflow = create_transaction("Card bill sent from checking", Date.current, 100)
+    inflow = create_transaction("Payment received, thank you", Date.current, -100, account: accounts(:credit_card))
+    Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable)
+    visit transactions_url(per_page: @page_size)
+
+    find("##{dom_id(outflow.entryable, :transfer_match)} [data-testid='transfer-match-pill']", visible: true).click
+
+    within "dialog[open]" do
+      [ outflow, inflow ].each do |entry|
+        row = find("dd", exact_text: entry.name).find(:xpath, "ancestor::div[contains(@class, 'space-y-3')][1]")
+        assert row.has_selector?("dd", exact_text: entry.name)
+        assert row.has_selector?("dd.privacy-sensitive", text: entry.amount_money.abs.format), "#{entry.name}'s amount is not beside it"
+      end
+    end
+  end
+
+  test "a long transaction name wraps inside the transfer drawer instead of being cut off" do
+    @user.update!(show_ai_sidebar: false)
+    page.current_window.resize_to(390, 900)
+    long_reference = "SUNDAY*QUALITYWINESLONDONGBR-REF-0001234567890ABCDEF0123456789GHIJKLMNOPQRSTUVWXYZ-TXN-9876543210"
+    outflow = create_transaction(long_reference, Date.current, 100)
+    inflow = create_transaction("Payment received", Date.current, -100, account: accounts(:credit_card))
+    Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable)
+    visit transactions_url(per_page: @page_size)
+
+    find("##{dom_id(outflow.entryable, :transfer_match)} [data-testid='transfer-match-pill']", visible: true).click
+
+    name = find("dialog[open] dd", exact_text: long_reference)
+    fit = name.evaluate_script(<<~JS)
+      (() => {
+        const drawer = this.closest("dialog").getBoundingClientRect();
+        const box = this.getBoundingClientRect();
+        return { cut: this.scrollWidth > this.clientWidth + 1, inside: box.left >= drawer.left && box.right <= drawer.right + 0.5,
+                 pageScrolls: document.documentElement.scrollWidth > document.documentElement.clientWidth };
+      })()
+    JS
+    assert_not fit["cut"], "the name is cut off; on a phone there is no way to read the rest"
+    assert fit["inside"], "the name runs out of the drawer"
+    assert_not fit["pageScrolls"], "the long name makes the page scroll sideways"
+  end
+
   test "confirms an auto-matched transfer from beside the amount" do
     @user.update!(show_ai_sidebar: false)
     page.current_window.resize_to(1440, 900)

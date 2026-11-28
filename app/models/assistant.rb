@@ -35,14 +35,20 @@ module Assistant
     Function::RecordBillPayment
   ].freeze
 
-  # Guests may view family configuration but not change it, so these tools are
-  # left out of a guest's registry (chat and MCP alike).
+  # Guests may view family configuration (tags, categories, rules) but not
+  # change it, so these tools are left out of a guest's registry (chat and MCP
+  # alike). PreviewRule writes nothing, but it issues the token ApplyRule needs,
+  # and the web blocks guests from a rule's confirmation page too.
   FAMILY_CONFIG_FUNCTION_CLASSES = [
     Function::CreateTag,
     Function::UpdateTag,
     Function::CreateCategory,
     Function::UpdateCategory,
-    Function::DeleteCategory
+    Function::DeleteCategory,
+    Function::CreateRule,
+    Function::UpdateRule,
+    Function::ApplyRule,
+    Function::PreviewRule
   ].freeze
 
   class << self

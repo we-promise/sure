@@ -1,5 +1,5 @@
 <turbo-frame id="modal">
-<dialog class="w-full h-full bg-transparent text-primary backdrop:bg-overlay pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] lg:p-1" role="dialog" aria-modal="true" aria-labelledby="dialog-title-ID" data-controller="DS--dialog hotkey" data-DS--dialog-auto-open-value="true" data-DS--dialog-reload-on-close-value="false" data-DS--dialog-disable-click-outside-value="false" data-action="click-&gt;DS--dialog#clickOutside" data-hotkey="esc:DS--dialog#close">
+<dialog class="w-full h-full bg-transparent text-primary backdrop:bg-overlay pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] lg:p-1" role="dialog" aria-modal="true" aria-labelledby="dialog-title-ID" data-controller="DS--dialog hotkey" data-DS--dialog-auto-open-value="true" data-DS--dialog-reload-on-close-value="false" data-DS--dialog-disable-click-outside-value="false" data-action="pointerdown-&gt;DS--dialog#trackPress pointercancel-&gt;DS--dialog#clearPress click-&gt;DS--dialog#clickOutside" data-hotkey="esc:DS--dialog#close">
 <div class="flex h-full w-full items-center justify-center">
 <div class="flex flex-col bg-container rounded-xl shadow-border-xs mx-3 lg:mx-0 w-full max-h-full lg:max-w-[550px]" data-DS--dialog-target="content">
 <div class="grow py-4 space-y-4 flex flex-col overflow-auto">

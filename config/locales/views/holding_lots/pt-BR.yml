@@ -1,0 +1,9 @@
+---
+pt-BR:
+  holding_lots:
+    provider_cost: Seu provedor informa o custo desta posição, então os custos dos lotes dela não podem ser definidos.
+    update:
+      success: Custo do lote atualizado.
+      error: Informe o custo total do lote, zero ou mais.
+    unlock:
+      success: Custo manual removido.

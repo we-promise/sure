@@ -10,6 +10,7 @@ fr:
         goals: Objectifs
         home: Accueil
         plan: Plan
+        portfolio: Portefeuille
         reports: Rapports
         transactions: Transactions
       privacy_mode: Activer/désactiver le mode confidentialité
@@ -36,6 +37,7 @@ fr:
         download_complete: Téléchargement terminé
         download_failed: Le téléchargement a échoué. Veuillez réessayer.
         download_location: Le fichier se trouve dans votre dossier Téléchargements.
+        order_save_failed: Impossible de confirmer que le nouvel ordre a été enregistré. Vérifiez votre connexion et rechargez la page pour voir l'ordre enregistré.
     trial:
       contribute: Contribuer
       data_deleted_in_days: Les données seront supprimées dans %{days} jours
