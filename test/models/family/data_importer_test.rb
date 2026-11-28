@@ -1768,7 +1768,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
   end
 
   test "a vest round trip keeps its income and taxes linked, its withheld shares, and every label" do
-    ndjson = vest_export
+    ndjson = vest_export(sold_qty: 10)
 
     [ ndjson, ndjson.split("\n") ].each do |file|
       family = Family.create!(name: "Vest Target", currency: "USD", locale: "en", date_format: "%Y-%m-%d")
@@ -1779,12 +1779,13 @@ class Family::DataImporterTest < ActiveSupport::TestCase
         Family::DataImporter.new(family, file).import!
       end
 
-      vest = family.entries.find_by!(entryable_type: "Trade")
-      assert_equal Trade::VEST_LABEL, vest.trade.investment_activity_label
+      vest = family.entries.where(entryable_type: "Trade").find { |entry| entry.trade.vest? }
+      assert vest, "the vest keeps its label"
       assert_equal 30, vest.trade.units_withheld
-      income, taxes = Trade::VestForm.parts_of(vest)
+      income, taxes, sale = Trade::VestForm.parts_of(vest)
       assert_equal(-1000, income.amount)
-      assert_equal [ 300 ], taxes.map(&:amount)
+      assert_equal [ 400 ], taxes.map(&:amount)
+      assert_equal(-10, sale.trade.qty)
     end
   end
 
@@ -1805,12 +1806,26 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert @family.entries.where(entryable_type: "Transaction", amount: 300).exists?, "the tax is unlinked, not deleted"
   end
 
+  test "a replayed vest keeps its sale for taxes, which the vest's own list doesn't name" do
+    export = vest_export(sold_qty: 10)
+    session = @family.import_sessions.create!(expected_chunks: 2)
+    Family::DataImporter.new(@family, export, import_session: session).import!
+    without_sale = export.split("
+").reject { |line| JSON.parse(line).dig("data", "vest_trade_id") }.join("
+")
+
+    Family::DataImporter.new(@family, without_sale, import_session: session).import!
+
+    vest = @family.entries.where(entryable_type: "Trade").find { |entry| entry.trade.vest? }
+    assert_equal(-10, Trade::VestForm.parts_of(vest).third&.trade&.qty)
+  end
+
   test "a replayed vest doesn't link a transaction that has become a transfer leg" do
     export = vest_export
     session = @family.import_sessions.create!(expected_chunks: 2)
     Family::DataImporter.new(@family, export, import_session: session).import!
     vest = @family.entries.find_by!(entryable_type: "Trade")
-    tax = Trade::VestForm.parts_of(vest).last.first
+    tax = Trade::VestForm.parts_of(vest).second.first
     tax.update_columns(vest_entry_id: nil)
     checking = @family.accounts.create!(name: "Checking", balance: 0, currency: "USD", accountable: Depository.new)
     inflow = checking.entries.create!(name: "Refund", date: tax.date, amount: -tax.amount, currency: "USD", entryable: Transaction.new)
@@ -4106,11 +4121,11 @@ class Family::DataImporterTest < ActiveSupport::TestCase
       ndjson
     end
 
-    def vest_export
+    def vest_export(**attrs)
       source = Family.create!(name: "Vest Source", currency: "USD", locale: "en", date_format: "%Y-%m-%d")
       account = source.accounts.create!(name: "Vest Round Trip", accountable: Investment.new, balance: 0, cash_balance: 0, currency: "USD")
       form = Trade::VestForm.new(account: account, date: 2.days.ago.to_date, manual_ticker: "VRT#{SecureRandom.hex(3).upcase}",
-                                 vested_qty: 100, units_withheld: 30, price: 10)
+                                 vested_qty: 100, units_withheld: 30, price: 10, **attrs)
       assert form.save, form.errors.full_messages.to_sentence
 
       ndjson = nil

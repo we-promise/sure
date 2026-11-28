@@ -68,6 +68,7 @@ class VestsController < ApplicationController
     def vest_params
       params.require(:vest).permit(
         :date, :ticker, :manual_ticker, :vested_qty, :units_withheld, :price, :income_category_id,
+        :sold_qty, :sold_price, :sold_fee,
         tax_lines: [ :id, :name, :category_id, :amount ]
       )
     end

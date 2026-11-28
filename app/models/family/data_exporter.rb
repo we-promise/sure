@@ -506,7 +506,7 @@ class Family::DataExporter
       vest_parts = Entry.joins(:account).where(accounts: { family_id: @family.id }, entryable_type: "Transaction")
         .where.not(vest_entry_id: nil).pluck(:vest_entry_id, :entryable_id)
         .group_by(&:first).transform_values { |pairs| pairs.map(&:last) }
-      @family.trades.includes(:security, :lot_source_entry, entry: :account)
+      @family.trades.includes(:security, :lot_source_entry, entry: [ :account, :vest_entry ])
         .order(Arel.sql("entries.date ASC, entries.created_at ASC, CASE WHEN trades.qty < 0 THEN 1 ELSE 0 END ASC, entries.id ASC")).each do |trade|
         lines << {
           type: "Trade",
@@ -535,6 +535,8 @@ class Family::DataExporter
             units_withheld: trade.units_withheld,
             # A vest's income and taxes, exported ahead of it as Transactions.
             vest_part_transaction_ids: vest_parts[trade.entry.id],
+            # A sale of shares for a vest's taxes names the vest it belongs to.
+            vest_trade_id: trade.entry.vest_entry&.entryable_id,
             created_at: trade.created_at,
             updated_at: trade.updated_at
           }

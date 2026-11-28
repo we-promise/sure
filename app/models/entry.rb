@@ -20,9 +20,9 @@ class Entry < ApplicationRecord
   # to be unlinked first.
   class SplitPartTransferredError < StandardError; end
 
-  # Raised when a vest's income or tax entry would be deleted on its own,
-  # which would leave the vest's totals counting it. The vest is deleted, or
-  # the tax line removed, on the vest's own screen.
+  # Raised when a vest's income, tax, or sale for taxes would be deleted on its
+  # own, which would leave the vest's totals counting it. The vest is deleted,
+  # or the line cleared, on the vest's own screen.
   class VestPartDeletionError < StandardError; end
 
   attr_accessor :unsplitting
@@ -765,7 +765,7 @@ class Entry < ApplicationRecord
   # a part on its own only through Trade::VestForm (vest_write).
   # Syncs and imports that remove entries call destroy! directly.
   def destroy_unless_split_part_transferred!
-    raise VestPartDeletionError, "Delete the vest, or remove the tax line on the vest's screen" if vest_entry_id? && !vest_write
+    raise VestPartDeletionError, "This is part of a vest. Delete the vest, or change it on the vest's screen." if vest_entry_id? && !vest_write
     refuse_while_vest_part_transferred! if vest_entry_id? || (trade? && entryable.vest?)
     return destroy! unless split_parent?
 

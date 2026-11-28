@@ -27,7 +27,7 @@ en:
       income_category: Income category
       no_category: No category
       taxes: Taxes withheld
-      taxes_hint: One line per tax on your paystub. Left empty, the withheld shares' value is recorded as one line.
+      taxes_hint: One line per tax on your paystub. Left empty, the withheld shares and the sale's proceeds are recorded as one line.
       tax_name: Tax
       tax_name_placeholder: Federal income tax
       tax_category: Category
@@ -44,6 +44,12 @@ en:
       tax_line_repeated: Each tax line can be saved only once
       tax_transferred: A tax line you removed is linked as a transfer. Remove that transfer before you remove the line.
       withheld_exceeds_vested: Shares withheld must be fewer than the shares vested
+      sold_exceeds_received: Shares sold for taxes cannot be more than the shares received
+      sold: Shares sold for taxes
+      sold_qty: Shares sold
+      sold_price: Sale price per share
+      sold_price_placeholder: Same as the vest price
+      sold_fee: Sale fee
     entries:
       income: "%{ticker} vest income"
       taxes_withheld: Taxes withheld

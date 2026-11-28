@@ -133,7 +133,7 @@ class Api::V1::TradesController < Api::V1::BaseController
     @entry.sync_account_later
 
     render json: { message: "Trade deleted successfully" }, status: :ok
-  rescue Entry::SplitPartTransferredError => e
+  rescue Entry::SplitPartTransferredError, Entry::VestPartDeletionError => e
     render_validation_error("Trade could not be deleted", [ e.message ])
   rescue => e
     log_and_render_error("destroy", e)

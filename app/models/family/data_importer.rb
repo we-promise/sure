@@ -1283,6 +1283,7 @@ class Family::DataImporter
         imported[old_id] = entry
         import_lot_total_cost(entry, data["lot_total_cost"])
         import_vest_parts(entry, data["vest_part_transaction_ids"]) if data.key?("vest_part_transaction_ids")
+        import_vest_sale(entry, data["vest_trade_id"], imported)
         @created_entry_ids << entry.id if created
         increment_summary("Trade", created ? :created : :updated)
       end
@@ -1292,8 +1293,9 @@ class Family::DataImporter
 
     # A vest's income and taxes are Transactions the export writes ahead of
     # it, in this file or an earlier chunk of the same session. Each must be
-    # in the vest's account. The list is the vest's whole set of parts, so a
-    # replay that lists fewer unlinks the rest, leaving them as transactions.
+    # in the vest's account. The list is the vest's whole set of income and
+    # taxes, so a replay that lists fewer unlinks the rest, leaving them as
+    # transactions. Its sale for taxes is linked from the sale's own record.
     def import_vest_parts(vest, transaction_ids)
       unless vest.trade.vest?
         return if transaction_ids.blank?
@@ -1308,8 +1310,19 @@ class Family::DataImporter
         part || invalid_record!("Trade", "vest_part_transaction_ids", old_id)
       end
 
-      vest.vest_parts.where.not(id: parts.map(&:id)).update_all(vest_entry_id: nil)
+      vest.vest_parts.where(entryable_type: "Transaction").where.not(id: parts.map(&:id)).update_all(vest_entry_id: nil)
       parts.each { |part| part.update!(vest_entry: vest) }
+    end
+
+    # A sale of shares for a vest's taxes is exported after the vest, which is
+    # an acquisition on the same day, in this file or an earlier chunk.
+    def import_vest_sale(sale, vest_trade_id, imported)
+      return if vest_trade_id.blank?
+
+      vest = imported[vest_trade_id] || session_imported_entry(sale.account, "Trade", vest_trade_id)
+      return invalid_record!("Trade", "vest_trade_id", vest_trade_id) unless vest&.trade&.vest? && vest.account_id == sale.account_id
+
+      sale.update!(vest_entry: vest)
     end
 
     # The lot is rebuilt from its trade on the next sync, which keeps a cost

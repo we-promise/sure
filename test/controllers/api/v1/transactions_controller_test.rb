@@ -1493,7 +1493,7 @@ end
   test "should reject destroying a vest's tax on its own" do
     form = Trade::VestForm.new(account: accounts(:investment), date: Date.current, manual_ticker: "AAPL", vested_qty: 100, units_withheld: 30, price: 10)
     assert form.save, form.errors.full_messages.to_sentence
-    tax = Trade::VestForm.parts_of(form.entry).last.first
+    tax = Trade::VestForm.parts_of(form.entry).second.first
 
     assert_no_difference "Entry.count" do
       delete api_v1_transaction_url(tax.transaction), headers: api_headers(@api_key)

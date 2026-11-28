@@ -307,6 +307,16 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
   end
 
+  test "a vest's sale for taxes can't be deleted on its own" do
+    vest = create_api_vest(sold_qty: 10)
+    sale = Trade::VestForm.parts_of(vest).third
+
+    assert_no_difference -> { Entry.count } do
+      delete "/api/v1/trades/#{sale.trade.id}", headers: api_headers(read_write_api_key)
+    end
+    assert_response :unprocessable_entity
+  end
+
   test "an update carrying only a category_id changes nothing" do
     trade = Trade.find(create_buy_trade("CATNOOP"))
     reset_update_side_effects(trade)
@@ -1671,9 +1681,9 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     end
 
     # 100 vested at 10 with 30 withheld: 70 shares, 1,000 income, 300 tax.
-    def create_api_vest
+    def create_api_vest(**attrs)
       form = Trade::VestForm.new(account: @investment_account, date: Date.current, manual_ticker: "AAPL",
-                                 vested_qty: 100, units_withheld: 30, price: 10)
+                                 vested_qty: 100, units_withheld: 30, price: 10, **attrs)
       assert form.save, form.errors.full_messages.to_sentence
       form.entry
     end

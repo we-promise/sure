@@ -5,7 +5,7 @@ en:
       destroy:
         success: "Entry deleted successfully."
         part_transferred: "A part of this split is linked as a transfer. Remove that transfer before you delete the transaction."
-        vest_part: "This is a vest's income or tax. Delete the vest, or remove the tax line on the vest's screen."
+        vest_part: "This is part of a vest. Delete the vest, or change it on the vest's screen."
   accounts:
     reconciliation_indicator:
       matched: All transactions reconciled

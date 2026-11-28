@@ -59,10 +59,19 @@ class VestsControllerTest < ActionDispatch::IntegrationTest
     assert_select "[name='vest[vested_qty]'][value='100.0']"
   end
 
+  test "opening a vest's sale for taxes opens the vest screen" do
+    form = Trade::VestForm.new(account: @account, manual_ticker: "AAPL", date: Date.current, vested_qty: 100, price: 10, sold_qty: 30)
+    assert form.save, form.errors.full_messages.to_sentence
+    sale = Trade::VestForm.parts_of(form.entry).last
+
+    get trade_url(sale)
+    assert_redirected_to vest_url(form.entry)
+  end
+
   test "saving the vest screen updates the shares, the income, and the taxes together" do
     vest = create_vest
     part_ids = vest.vest_parts.pluck(:id).sort
-    tax_id = Trade::VestForm.parts_of(vest).last.first.id
+    tax_id = Trade::VestForm.parts_of(vest).second.first.id
 
     patch vest_url(vest), params: { vest: vest_params(units_withheld: 40, tax_amount: 400, tax_id: tax_id) }
 

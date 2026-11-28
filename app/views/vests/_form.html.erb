@@ -33,6 +33,15 @@
     </div>
 
     <div class="space-y-2">
+      <h4 class="text-sm font-medium text-primary"><%= t("vests.form.sold") %></h4>
+      <div class="grid grid-cols-3 gap-2">
+        <%= form.number_field :sold_qty, label: t("vests.form.sold_qty"), placeholder: "0", min: 0, step: "any" %>
+        <%= form.money_field :sold_price, label: t("vests.form.sold_price"), placeholder: t("vests.form.sold_price_placeholder"), step: "any", precision: 10, disable_currency: true %>
+        <%= form.money_field :sold_fee, label: t("vests.form.sold_fee"), step: "any", min: 0, disable_currency: true %>
+      </div>
+    </div>
+
+    <div class="space-y-2">
       <h4 class="text-sm font-medium text-primary"><%= t("vests.form.taxes") %></h4>
       <p class="text-xs text-secondary"><%= t("vests.form.taxes_hint") %></p>
       <% form_model.tax_lines_for_form.each_with_index do |line, index| %>

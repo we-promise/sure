@@ -111,20 +111,20 @@ class Trade::VestFormTest < ActiveSupport::TestCase
     federal.reload
     assert_equal "paystub 2026-11-15", federal.notes
     assert_equal 230, federal.amount
-    assert_equal [ federal.id ], Trade::VestForm.parts_of(form.entry.reload).last.map(&:id), "the State line is gone"
+    assert_equal [ federal.id ], Trade::VestForm.parts_of(form.entry.reload).second.map(&:id), "the State line is gone"
   end
 
   test "clearing one tax line keeps the entry of each line left, whatever its position" do
     form = vest_form(vested_qty: 100, units_withheld: 30, price: 10, tax_lines: [ { name: "Federal", amount: 200 }, { name: "State", amount: 100 } ])
     form.save
-    federal, state = Trade::VestForm.parts_of(form.entry).last
+    federal, state = Trade::VestForm.parts_of(form.entry).second
     state.update!(notes: "state paystub line")
 
     reopened = Trade::VestForm.for(form.entry.reload)
     reopened.assign_attributes(tax_lines: [ { id: federal.id, name: "", amount: "" }, { id: state.id, name: "State", amount: 100 } ])
     assert reopened.save, reopened.errors.full_messages.to_sentence
 
-    assert_equal [ state.id ], Trade::VestForm.parts_of(form.entry.reload).last.map(&:id)
+    assert_equal [ state.id ], Trade::VestForm.parts_of(form.entry.reload).second.map(&:id)
     assert_equal "state paystub line", state.reload.notes
     assert_not Entry.exists?(federal.id)
   end
@@ -132,14 +132,75 @@ class Trade::VestFormTest < ActiveSupport::TestCase
   test "a tax line's id from another vest is a new line, not that vest's entry" do
     other = vest_form(vested_qty: 10, units_withheld: 3, price: 10)
     other.save
-    others_tax = Trade::VestForm.parts_of(other.entry).last.first
+    others_tax = Trade::VestForm.parts_of(other.entry).second.first
 
     form = vest_form(vested_qty: 100, units_withheld: 30, price: 10, tax_lines: [ { id: others_tax.id, name: "Federal", amount: 300 } ])
     assert form.save
 
     assert_equal 30, others_tax.reload.amount
-    assert_not_includes Trade::VestForm.parts_of(form.entry).last.map(&:id), others_tax.id
+    assert_not_includes Trade::VestForm.parts_of(form.entry).second.map(&:id), others_tax.id
   end
+
+  # 100 vested at 10; 30 sold for taxes at the vest price with a 5 fee.
+  test "shares sold for taxes are a sale from the vest's lot, and their proceeds the default tax" do
+    @account.update!(cost_basis_method: "fifo")
+    form = vest_form(vested_qty: 100, price: 10, sold_qty: 30, sold_fee: 5)
+
+    assert_difference -> { @account.entries.count }, 4 do
+      assert form.save, form.errors.full_messages.to_sentence
+    end
+
+    income, taxes, sale = Trade::VestForm.parts_of(form.entry)
+    assert_equal(-1000, income.amount)
+    assert_equal(-30, sale.trade.qty)
+    assert_equal 10, sale.trade.price
+    assert_equal 5, sale.trade.fee
+    assert_equal(-295, sale.amount)
+    assert_equal form.entry.id, sale.trade.lot_source_entry_id
+    assert_equal [ 295 ], taxes.map(&:amount)
+    assert_equal 0, form.cash_left
+  end
+
+  test "a sale for taxes in an average-cost account names no lot, and keeps its own price" do
+    form = vest_form(vested_qty: 100, price: 10, sold_qty: 30, sold_price: 10.5)
+    form.save
+
+    sale = Trade::VestForm.parts_of(form.entry).last
+    assert_equal BigDecimal("10.5"), sale.trade.price
+    assert_nil sale.trade.lot_source_entry_id
+  end
+
+  test "reopening a vest fills in its sale, and clearing the shares sold removes it" do
+    form = vest_form(vested_qty: 100, price: 10, sold_qty: 30, sold_fee: 5)
+    form.save
+
+    reopened = Trade::VestForm.for(form.entry.reload)
+    assert_equal [ 30, 10, 5 ], [ reopened.sold_qty, reopened.sold_price, reopened.sold_fee ]
+
+    reopened.assign_attributes(sold_qty: "", tax_lines: [])
+    assert_difference -> { @account.entries.count }, -2, "the sale and its default tax line" do
+      assert reopened.save, reopened.errors.full_messages.to_sentence
+    end
+  end
+
+  test "a vest's sale for taxes changes and is deleted only with the vest" do
+    form = vest_form(vested_qty: 100, price: 10, sold_qty: 30)
+    form.save
+    sale = Trade::VestForm.parts_of(form.entry).third
+
+    assert_not sale.update(amount: 1)
+    assert_not sale.trade.update(qty: -1)
+    assert_raises(Entry::VestPartDeletionError) { sale.reload.destroy_unless_split_part_transferred! }
+    assert Entry.exists?(sale.id)
+  end
+
+  test "a vest cannot sell more shares for taxes than it received" do
+    form = vest_form(vested_qty: 100, units_withheld: 30, price: 10, sold_qty: 71)
+
+    assert_not form.save
+    assert_includes form.errors[:base], I18n.t("vests.form.sold_exceeds_received")
+  end
+
   test "some vested shares must reach the account" do
     form = vest_form(vested_qty: 30, units_withheld: 30, price: 10)
 
@@ -205,7 +266,7 @@ class Trade::VestFormTest < ActiveSupport::TestCase
   test "the transfer rule still sets up the other transactions it matches" do
     form = vest_form(vested_qty: 100, units_withheld: 30, price: 10)
     form.save
-    tax = Trade::VestForm.parts_of(form.entry).last.first
+    tax = Trade::VestForm.parts_of(form.entry).second.first
     other = @account.entries.create!(name: "Withdrawal", date: Date.current, amount: 50, currency: "USD", entryable: Transaction.new)
 
     Rule::Action.new(rule: rules(:one), action_type: "set_as_transfer_or_payment", value: accounts(:depository).id)
@@ -217,7 +278,7 @@ class Trade::VestFormTest < ActiveSupport::TestCase
   test "two tax lines can't name the same entry" do
     form = vest_form(vested_qty: 100, units_withheld: 30, price: 10, tax_lines: [ { name: "Federal", amount: 300 } ])
     form.save
-    federal = Trade::VestForm.parts_of(form.entry).last.first
+    federal = Trade::VestForm.parts_of(form.entry).second.first
 
     reopened = Trade::VestForm.for(form.entry.reload)
     reopened.assign_attributes(tax_lines: [ { id: federal.id, name: "Federal", amount: 200 }, { id: federal.id, name: "State", amount: 100 } ])
@@ -263,7 +324,7 @@ class Trade::VestFormTest < ActiveSupport::TestCase
   test "removing a tax line on the vest's form is refused while it is a transfer leg" do
     form = vest_form(vested_qty: 100, units_withheld: 30, price: 10, tax_lines: [ { name: "Federal", amount: 200 }, { name: "State", amount: 100 } ])
     form.save
-    federal, state = Trade::VestForm.parts_of(form.entry).last
+    federal, state = Trade::VestForm.parts_of(form.entry).second
     inflow = accounts(:depository).entries.create!(name: "Refund", date: Date.current, amount: -100, currency: "USD", entryable: Transaction.new)
     # Recorded past the transfer rules, as an older or raw-SQL path could.
     Transfer.new(inflow_transaction: inflow.transaction, outflow_transaction: state.transaction, status: "confirmed").save!(validate: false)

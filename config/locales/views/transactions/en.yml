@@ -7,8 +7,8 @@ en:
           one: "1 split transaction was not deleted: a part of it is linked as a transfer. Remove that transfer first."
           other: "%{count} split transactions were not deleted: a part of each is linked as a transfer. Remove those transfers first."
         vest_part:
-          one: "1 transaction was not deleted: it is a vest's income or tax. Delete the vest, or remove the tax line on the vest's screen."
-          other: "%{count} transactions were not deleted: each is a vest's income or tax. Delete the vest, or remove the tax line on the vest's screen."
+          one: "1 transaction was not deleted: it is part of a vest. Delete the vest, or change it on the vest's screen."
+          other: "%{count} transactions were not deleted: each is part of a vest. Delete the vest, or change it on the vest's screen."
     bulk_updates:
       new:
         cancel: Cancel
