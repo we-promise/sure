@@ -1,0 +1,6 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".heading")) %>
+  <% dialog.with_body do %>
+    <%= render "form", retirement_plan: @retirement_plan %>
+  <% end %>
+<% end %>
