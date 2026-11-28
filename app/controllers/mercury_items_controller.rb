@@ -124,171 +124,34 @@ class MercuryItemsController < ApplicationController
     end
   end
 
-  # Show unlinked Mercury accounts for setup
   def setup_accounts
-    # First, ensure we have the latest accounts from the API
-    @api_error = fetch_mercury_accounts_from_api
-
-    # Get Mercury accounts that are not linked (no AccountProvider)
-    @mercury_accounts = @mercury_item.mercury_accounts
-      .left_joins(:account_provider)
-      .where(account_providers: { id: nil })
-
-    # Get supported account types from the adapter
-    supported_types = Provider::MercuryAdapter.supported_account_types
-
-    # Map of account type keys to their internal values
-    account_type_keys = {
-      "depository" => "Depository",
-      "credit_card" => "CreditCard",
-      "investment" => "Investment",
-      "loan" => "Loan",
-      "other_asset" => "OtherAsset"
-    }
-
-    # Build account type options using i18n, filtering to supported types
-    all_account_type_options = account_type_keys.filter_map do |key, type|
-      next unless supported_types.include?(type)
-      [ t(".account_types.#{key}"), type ]
-    end
-
-    # Add "Skip" option at the beginning
-    @account_type_options = [ [ t(".account_types.skip"), "skip" ] ] + all_account_type_options
-
-    # Helper to translate subtype options
-    translate_subtypes = ->(type_key, subtypes_hash) {
-      subtypes_hash.map { |k, v| [ t(".subtypes.#{type_key}.#{k}", default: v[:long] || k.humanize), k ] }
-    }
-
-    # Subtype options for each account type (only include supported types)
-    all_subtype_options = {
-      "Depository" => {
-        label: t(".subtype_labels.depository"),
-        options: translate_subtypes.call("depository", Depository::SUBTYPES)
-      },
-      "CreditCard" => {
-        label: t(".subtype_labels.credit_card"),
-        options: [],
-        message: t(".subtype_messages.credit_card")
-      },
-      "Investment" => {
-        label: t(".subtype_labels.investment"),
-        options: translate_subtypes.call("investment", Investment::SUBTYPES)
-      },
-      "Loan" => {
-        label: t(".subtype_labels.loan"),
-        options: translate_subtypes.call("loan", Loan::SUBTYPES)
-      },
-      "OtherAsset" => {
-        label: t(".subtype_labels.other_asset").presence,
-        options: [],
-        message: t(".subtype_messages.other_asset")
-      }
-    }
-
-    @subtype_options = all_subtype_options.slice(*supported_types)
+    @api_error = account_flow.import_accounts_with_user_facing_error
+    @mercury_accounts = account_flow.unlinked_provider_accounts
+    @account_type_options = account_flow.account_type_options
+    @subtype_options = account_flow.subtype_options
   end
 
   def complete_account_setup
-    account_types = params[:account_types] || {}
-    account_subtypes = params[:account_subtypes] || {}
+    result = account_flow.complete_setup_result(
+      account_types: sanitized_account_types,
+      account_subtypes: sanitized_account_subtypes
+    )
 
-    # Valid account types for this provider
-    valid_types = Provider::MercuryAdapter.supported_account_types
+    return redirect_to accounts_path, alert: result.message, status: :see_other unless result.success?
 
-    created_accounts = []
-    skipped_count = 0
-
-    begin
-      ActiveRecord::Base.transaction do
-        account_types.each do |mercury_account_id, selected_type|
-          # Skip accounts marked as "skip"
-          if selected_type == "skip" || selected_type.blank?
-            skipped_count += 1
-            next
-          end
-
-          # Validate account type is supported
-          unless valid_types.include?(selected_type)
-            Rails.logger.warn("Invalid account type '#{selected_type}' submitted for Mercury account #{mercury_account_id}")
-            next
-          end
-
-          # Find account - scoped to this item to prevent cross-item manipulation
-          mercury_account = @mercury_item.mercury_accounts.find_by(id: mercury_account_id)
-          unless mercury_account
-            Rails.logger.warn("Mercury account #{mercury_account_id} not found for item #{@mercury_item.id}")
-            next
-          end
-
-          # Skip if already linked (race condition protection)
-          if mercury_account.account_provider.present?
-            Rails.logger.info("Mercury account #{mercury_account_id} already linked, skipping")
-            next
-          end
-
-          selected_subtype = account_subtypes[mercury_account_id]
-
-          # Default subtype for CreditCard since it only has one option
-          selected_subtype = "credit_card" if selected_type == "CreditCard" && selected_subtype.blank?
-
-          # Create account with user-selected type and subtype (raises on failure)
-          # Skip initial sync - provider sync will handle balance creation with correct currency
-          account = Account.create_and_sync(
-            {
-              family: Current.family,
-              name: mercury_account.name,
-              balance: mercury_account.current_balance || 0,
-              currency: "USD", # Mercury is US-only
-              accountable_type: selected_type,
-              accountable_attributes: selected_subtype.present? ? { subtype: selected_subtype } : {}
-            },
-            skip_initial_sync: true
-          )
-
-          # Link account to mercury_account via account_providers join table (raises on failure)
-          AccountProvider.create!(
-            account: account,
-            provider: mercury_account
-          )
-
-          created_accounts << account
-        end
-      end
-    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
-      Rails.logger.error("Mercury account setup failed: #{e.class} - #{e.message}")
-      Rails.logger.error(e.backtrace.first(10).join("\n"))
-      flash[:alert] = t(".creation_failed", error: e.message)
-      redirect_to accounts_path, status: :see_other
-      return
-    rescue StandardError => e
-      Rails.logger.error("Mercury account setup failed unexpectedly: #{e.class} - #{e.message}")
-      Rails.logger.error(e.backtrace.first(10).join("\n"))
-      flash[:alert] = t(".creation_failed", error: "An unexpected error occurred")
-      redirect_to accounts_path, status: :see_other
-      return
-    end
-
-    # Trigger a sync to process transactions
-    @mercury_item.sync_later if created_accounts.any?
-
-    # Set appropriate flash message
-    if created_accounts.any?
-      flash[:notice] = t(".success", count: created_accounts.count)
-    elsif skipped_count > 0
-      flash[:notice] = t(".all_skipped")
-    else
-      flash[:notice] = t(".no_accounts")
-    end
+    flash[:notice] = result.message
 
     if turbo_frame_request?
-      # Recompute data needed by Accounts#index partials
-      @manual_accounts = Account.uncached {
-        Current.family.accounts
-          .visible_manual_for(Current.user)
-          .order(:name)
-          .to_a
-      }
+      render_accounts_update_after_setup
+    else
+      redirect_to accounts_path, status: :see_other
+    end
+  end
+
+  private
+
+    def render_accounts_update_after_setup
+      @manual_accounts = Account.uncached { Current.family.accounts.visible_manual_for(Current.user).order(:name).to_a }
       @mercury_items = Current.family.mercury_items.ordered
 
       manual_accounts_stream = if @manual_accounts.any?
@@ -310,58 +173,47 @@ class MercuryItemsController < ApplicationController
           locals: { mercury_item: @mercury_item, visible_accounts: @mercury_item.accounts }
         )
       ] + Array(flash_notification_stream_items)
-    else
-      redirect_to accounts_path, status: :see_other
     end
-  end
 
-  private
+    def sanitized_account_types
+      supported_types = MercuryItem::AccountFlow.adapter_class.supported_account_types
 
-    # Fetch Mercury accounts from the API and store them locally
-    # Returns nil on success, or an error message string on failure
-    def fetch_mercury_accounts_from_api
-      # Skip if we already have accounts cached
-      return nil unless @mercury_item.mercury_accounts.empty?
+      setup_param_hash(:account_types, allowed_account_ids).each_with_object({}) do |(account_id, selected_type), sanitized|
+        next unless allowed_account_ids.include?(account_id.to_s)
 
-      # Validate API token is configured
-      unless @mercury_item.credentials_configured?
-        return t("mercury_items.setup_accounts.no_api_token")
+        normalized_type = selected_type.to_s
+        sanitized[account_id.to_s] = supported_types.include?(normalized_type) ? normalized_type : "skip"
       end
+    end
 
-      # Use the specific mercury_item's provider (scoped to this family's item)
-      mercury_provider = @mercury_item.mercury_provider
-      unless mercury_provider.present?
-        return t("mercury_items.setup_accounts.no_api_token")
+    # Subtypes of the account types the provider supports.
+    def sanitized_account_subtypes
+      allowed_subtypes = MercuryItem::AccountFlow.adapter_class.supported_account_types.flat_map { |type| type.constantize::SUBTYPES.keys }.map(&:to_s)
+
+      setup_param_hash(:account_subtypes, allowed_account_ids).each_with_object({}) do |(account_id, selected_subtype), sanitized|
+        next unless allowed_account_ids.include?(account_id.to_s)
+        next if selected_subtype.blank?
+        next unless allowed_subtypes.include?(selected_subtype.to_s)
+
+        sanitized[account_id.to_s] = selected_subtype.to_s
       end
+    end
 
-      begin
-        accounts_data = mercury_provider.get_accounts
-        available_accounts = accounts_data[:accounts] || []
+    def setup_param_hash(key, allowed_keys)
+      raw_params = params.fetch(key, {})
+      return {} if raw_params.blank?
 
-        if available_accounts.empty?
-          Rails.logger.info("Mercury API returned no accounts for item #{@mercury_item.id}")
-          return nil
-        end
-
-        available_accounts.each do |account_data|
-          account_name = account_data[:nickname].presence || account_data[:name].presence || account_data[:legalBusinessName].presence
-          next if account_name.blank?
-
-          mercury_account = @mercury_item.mercury_accounts.find_or_initialize_by(
-            account_id: account_data[:id].to_s
-          )
-          mercury_account.upsert_mercury_snapshot!(account_data)
-          mercury_account.save!
-        end
-
-        nil # Success
-      rescue Provider::Mercury::MercuryError => e
-        Rails.logger.error("Mercury API error: #{e.message}")
-        t("mercury_items.setup_accounts.api_error", message: e.message)
-      rescue StandardError => e
-        Rails.logger.error("Unexpected error fetching Mercury accounts: #{e.class}: #{e.message}")
-        t("mercury_items.setup_accounts.api_error", message: e.message)
+      if raw_params.is_a?(ActionController::Parameters)
+        raw_params.permit(*allowed_keys).to_h
+      elsif raw_params.is_a?(Hash)
+        raw_params.slice(*allowed_keys)
+      else
+        {}
       end
+    end
+
+    def allowed_account_ids
+      @allowed_account_ids ||= @mercury_item.mercury_accounts.pluck(:id).map(&:to_s)
     end
 
     def account_flow
