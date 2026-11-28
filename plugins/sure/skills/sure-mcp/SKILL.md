@@ -48,8 +48,9 @@ Treat `tools/list` as the source of truth. Main groups:
 2. Use `dry_run: true` where supported (`set_opening_balance`,
    transfer tools) and show the user the result.
 3. Rules: `preview_rule` on a saved rule (or `create_rule` /
-   `update_rule`) returns a `preview_token`; an unsaved definition must
-   be saved first. No token when matches exist but none are shown
+   `update_rule`) returns a `preview_token`. Previewing an unsaved
+   definition works but returns no token, so save the rule first to get
+   one. No token when matches exist but none are shown
    (`sample_size` 0, or all matches in accounts you cannot see).
    `apply_rule` needs the token within 30 minutes and refuses if the
    rule definition or match count differs from the preview. New rules
