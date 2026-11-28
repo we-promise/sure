@@ -33,6 +33,26 @@ module ProviderItemLifecycleTests
       assert_equal expected_total, sync.sync_stats["unlinked_accounts"]
     end
 
+    test "lifecycle: a failed import reports the provider's own error when it gives one" do
+      key = provider_item.provider_key
+      import = :"import_latest_#{key}_data"
+
+      provider_item.class.any_instance.stubs(import).returns(success: false, error: "Rate limited by the provider")
+      with_error = Sync.create!(syncable: provider_item).tap(&:perform).reload.sync_stats["errors"]
+
+      provider_item.class.any_instance.stubs(import).returns(success: false)
+      without_error = Sync.create!(syncable: provider_item).tap(&:perform).reload.sync_stats["errors"]
+
+      provider_item.class.any_instance.stubs(import).returns(success: false, error: "")
+      blank_error = Sync.create!(syncable: provider_item).tap(&:perform).reload.sync_stats["errors"]
+
+      assert_equal [ [ I18n.t("#{key}_items.syncer.import_failed_with_error", error: "Rate limited by the provider"), "import_error" ] ],
+                   with_error.map { |error| error.values_at("message", "category") }
+      assert_equal [ [ I18n.t("#{key}_items.syncer.import_failed"), "import_error" ] ],
+                   without_error.map { |error| error.values_at("message", "category") }
+      assert_equal without_error, blank_error
+    end
+
     test "lifecycle: unlinking removes the connection's links and detaches their holdings" do
       account, link = link_provider_account(provider_account)
       holding = create_holding(account, link)
