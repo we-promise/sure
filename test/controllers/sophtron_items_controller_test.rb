@@ -407,6 +407,46 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     assert_not_equal "requires_update", @item.reload.status
   end
 
+  test "connection_status keeps polling past the previous initial limit while the job is still running" do
+    @item.update!(user_institution_id: "ui-1", current_job_id: "job-1")
+    provider = mock
+    provider.stubs(:get_job_information).with("job-1").returns({
+      AccountID: "00000000-0000-0000-0000-000000000000",
+      JobType: "AddAccounts",
+      JobID: "job-1"
+    })
+
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
+
+    get connection_status_sophtron_item_url(@item, poll_attempt: 7)
+
+    assert_response :success
+    assert_includes response.body, "Attempt 7 of #{SophtronItemsController::CONNECTION_STATUS_MAX_POLLS}"
+    assert_includes response.body, "poll_attempt=8"
+    assert_not_includes response.body, "Sophtron did not finish connecting"
+    assert_not_equal "requires_update", @item.reload.status
+  end
+
+  test "connection_status keeps polling past the previous post mfa limit while the job is still running" do
+    @item.update!(user_institution_id: "ui-1", current_job_id: "job-1")
+    provider = mock
+    provider.stubs(:get_job_information).with("job-1").returns({
+      AccountID: "00000000-0000-0000-0000-000000000000",
+      JobType: "AddAccounts",
+      JobID: "job-1"
+    })
+
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
+
+    get connection_status_sophtron_item_url(@item, poll_attempt: 16, post_mfa: true)
+
+    assert_response :success
+    assert_includes response.body, "Attempt 16 of #{SophtronItemsController::CONNECTION_STATUS_MAX_POLLS}"
+    assert_includes response.body, "poll_attempt=17"
+    assert_not_includes response.body, "Sophtron did not finish connecting"
+    assert_not_equal "requires_update", @item.reload.status
+  end
+
   test "connection_status extends polling when Sophtron starts institution login before otp" do
     @item.update!(user_institution_id: "ui-1", current_job_id: "job-1")
     provider = mock
@@ -420,11 +460,11 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
 
     SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
 
-    get connection_status_sophtron_item_url(@item, poll_attempt: SophtronItemsController::CONNECTION_STATUS_MAX_POLLS)
+    get connection_status_sophtron_item_url(@item, poll_attempt: 7)
 
     assert_response :success
-    assert_includes response.body, "Attempt #{SophtronItemsController::CONNECTION_STATUS_MAX_POLLS} of #{SophtronItemsController::LOGIN_PROGRESS_CONNECTION_STATUS_MAX_POLLS}"
-    assert_includes response.body, "poll_attempt=#{SophtronItemsController::CONNECTION_STATUS_MAX_POLLS + 1}"
+    assert_includes response.body, "Attempt 7 of #{SophtronItemsController::CONNECTION_STATUS_MAX_POLLS}"
+    assert_includes response.body, "poll_attempt=8"
     assert_not_includes response.body, "Sophtron did not finish connecting"
     assert_not_equal "requires_update", @item.reload.status
   end
@@ -452,16 +492,16 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
 
     SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
 
-    get connection_status_sophtron_item_url(@item, poll_attempt: SophtronItemsController::CONNECTION_STATUS_MAX_POLLS + 1)
+    get connection_status_sophtron_item_url(@item, poll_attempt: 7)
 
     assert_response :success
-    assert_includes response.body, "Attempt #{SophtronItemsController::CONNECTION_STATUS_MAX_POLLS + 1} of #{SophtronItemsController::LOGIN_PROGRESS_CONNECTION_STATUS_MAX_POLLS}"
-    assert_includes response.body, "poll_attempt=#{SophtronItemsController::CONNECTION_STATUS_MAX_POLLS + 2}"
+    assert_includes response.body, "Attempt 7 of #{SophtronItemsController::CONNECTION_STATUS_MAX_POLLS}"
+    assert_includes response.body, "poll_attempt=8"
     assert_not_includes response.body, "Sophtron did not finish connecting"
     assert_not_equal "requires_update", @item.reload.status
   end
 
-  test "connection_status uses longer polling after mfa is submitted" do
+  test "connection_status keeps polling after mfa is submitted" do
     @item.update!(user_institution_id: "ui-1", current_job_id: "job-1")
     provider = mock
     provider.expects(:get_job_information).with("job-1").returns({
@@ -475,11 +515,11 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
 
     SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
 
-    get connection_status_sophtron_item_url(@item, poll_attempt: SophtronItemsController::CONNECTION_STATUS_MAX_POLLS, post_mfa: true)
+    get connection_status_sophtron_item_url(@item, poll_attempt: 7, post_mfa: true)
 
     assert_response :success
-    assert_includes response.body, "Attempt #{SophtronItemsController::CONNECTION_STATUS_MAX_POLLS} of 15"
-    assert_includes response.body, "poll_attempt=#{SophtronItemsController::CONNECTION_STATUS_MAX_POLLS + 1}"
+    assert_includes response.body, "Attempt 7 of #{SophtronItemsController::CONNECTION_STATUS_MAX_POLLS}"
+    assert_includes response.body, "poll_attempt=8"
     assert_not_includes response.body, "Sophtron did not finish connecting"
   end
 
@@ -542,7 +582,7 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     get connection_status_sophtron_item_url(@item, poll_attempt: 6, post_mfa: true)
 
     assert_response :success
-    assert_includes response.body, "Attempt 6 of #{SophtronItemsController::POST_MFA_CONNECTION_STATUS_MAX_POLLS}"
+    assert_includes response.body, "Attempt 6 of #{SophtronItemsController::CONNECTION_STATUS_MAX_POLLS}"
     assert_includes response.body, "poll_attempt=7"
     assert_not_includes response.body, "Sophtron did not finish connecting"
     assert_equal "job-1", @item.reload.current_job_id
