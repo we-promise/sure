@@ -22,7 +22,7 @@ es:
           one: 1 transacción
           other: '%{count} transacciones'
         split_warning_title: Transacciones divididas detectadas
-        split_warning_description: Este archivo QIF contiene transacciones divididas. Las divisiones aún no son compatibles, por lo que cada transacción dividida se importará como una única transacción con su importe total y sin categoría. Los desgloses individuales de las divisiones no se conservarán.
+        split_warning_description: Este archivo QIF contiene transacciones divididas. Revisa abajo las categorías y etiquetas de las divisiones detectadas antes de importar.
         split_badge: dividida
         empty_state_primary: No se encontraron categorías ni etiquetas en este archivo QIF.
         empty_state_secondary: Todas las transacciones se importarán sin categorías ni etiquetas.
@@ -41,6 +41,40 @@ es:
     configurations:
       update:
         success: Importación configurada correctamente.
+        monarch_success: Opciones de cuenta guardadas.
+      monarch:
+        title: Revisa cada cuenta de Monarch
+        description: Elige a dónde va cada cuenta, de qué tipo es y qué traer.
+        help_title: Cómo funciona cada opción
+        help_account: Importa en una cuenta nueva, con el nombre que quieras, o en una de tus cuentas manuales. Una cuenta existente conserva su nombre, su tipo y sus propios movimientos, y su saldo inicial se mueve al inicio del historial de Monarch si cae dentro de él. Su estado sigue el Estado que elijas. No se puede importar en cuentas con posiciones u operaciones.
+        help_closed: Cambia el Estado a Cerrada en las cuentas que hayas cerrado. Bajan a cero el día siguiente a su último saldo de Monarch y se ocultan de los saldos actuales, pero siguen en tu historial de patrimonio neto. Las cuentas marcadas como inactivas no han tenido actividad en los últimos %{days} días, lo que no siempre significa que estén cerradas.
+        help_transactions: Desactiva las transacciones para importar solo el historial de saldos de una cuenta.
+        help_balance: El saldo de hoy parte del último saldo de Monarch. Cámbialo si está desactualizado y se registrará como el saldo de hoy. Introduce lo que debes en tarjetas y préstamos como números positivos.
+        table_label: Cuentas de Monarch
+        import_column: Importar
+        account_column: Nombre de la cuenta
+        destination_column: Importar en
+        type_column: Tipo
+        status_column: Estado
+        status_open: Abierta
+        status_closed: Cerrada
+        toggle_all_label: "%{column} para todas las cuentas"
+        transactions_column: Transacciones
+        balance_column: Saldo hoy
+        import_label: Importar %{name}
+        destination_label: Dónde importar %{name}
+        name_label: Nombre en Sure de %{name}
+        monarch_name: 'En Monarch: %{name}'
+        type_label: Tipo de %{name}
+        status_label: "%{name} está abierta"
+        transactions_label: Importar las transacciones de %{name}
+        balance_label: Saldo de hoy de %{name}
+        new_account: Cuenta nueva
+        inactive: Inactiva
+        last_activity: 'Última actividad: %{date}'
+        no_activity: Sin actividad
+        no_transactions: Ninguna
+        submit: Revisar importación
       account_import:
         leave_empty: Dejar vacío
         default: Predeterminado
@@ -113,6 +147,20 @@ es:
         instructions: Selecciona continuar para procesar tu CSV y pasar al paso de limpieza.
       mint_import:
         date_format_label: Formato de fecha
+        account_optional: Cuenta (opcional)
+        amount: Importe
+        apply_configuration: Aplicar configuración
+        category_optional: Categoría (opcional)
+        currency: Divisa
+        date: Fecha
+        format: Formato
+        incomes_negative: Los ingresos son negativos
+        incomes_positive: Los ingresos son positivos
+        intro: Hemos preconfigurado tu importación de Mint. Continúa con el siguiente paso.
+        leave_empty: Dejar vacío
+        name_optional: Nombre (opcional)
+        select_format: Seleccionar formato
+        tags_optional: Etiquetas (opcional)
       actual_import:
         preconfigured_notice: Hemos preconfigurado tu importación de Actual Budget. Continúa con el siguiente paso.
         leave_empty: Dejar vacío
@@ -145,6 +193,11 @@ es:
       show:
         description: Selecciona las columnas que corresponden a cada campo en tu CSV.
         title: Configura tu importación
+        template_found: Se ha encontrado una configuración de plantilla
+        template_description: Hemos encontrado una configuración de una importación anterior para esta cuenta. ¿Quieres aplicarla a esta importación?
+        manually_configure: Configurar manualmente
+        apply_template: Aplicar plantilla
+        sample_caption: Datos de ejemplo del CSV que has subido
     confirms:
       sure_import:
         title: Confirma tu importación
@@ -172,11 +225,30 @@ es:
         tag_mapping_description: Asigna todas las etiquetas de tu archivo importado a las etiquetas existentes de %{product_name}. También puedes añadir nuevas etiquetas o dejarlas sin categorizar.
         tag_mapping_title: Asigna tus etiquetas
     uploads:
+      sample_csv:
+        unavailable: No hay un CSV de ejemplo para este tipo de importación.
       handle_qif_upload:
         qif_uploaded: Archivo QIF subido correctamente.
+        qif_account_required: Selecciona una cuenta para la importación QIF
       update:
         qif_uploaded: Archivo QIF subido correctamente.
+        qif_account_required: Selecciona una cuenta para la importación QIF
+        monarch_uploaded: Exportaciones de Monarch subidas.
+        monarch_balances_required: Elige la exportación de saldos de Monarch.
       show:
+        monarch_title: Sube tus exportaciones de Monarch
+        monarch_description: Trae tus cuentas, transacciones e historial de saldos desde Monarch.
+        monarch_export_title: Descarga tus datos de Monarch
+        monarch_export_step_settings_html: Inicia sesión en Monarch en la web y abre %{link}.
+        monarch_export_settings_link: Settings → Data
+        monarch_export_step_download: Descarga tus transacciones y el historial de saldos de tus cuentas, cada uno como archivo CSV.
+        monarch_export_step_upload: Elige los archivos abajo.
+        monarch_export_help_html: Monarch explica cada descarga en %{link}.
+        monarch_export_help_link: su artículo de ayuda
+        monarch_balances_label: Exportación de saldos
+        monarch_transactions_label: Exportación de transacciones
+        monarch_transactions_hint: Deja fuera la exportación de transacciones para importar solo el historial de saldos.
+        monarch_upload_button: Subir exportaciones
         csv_invalid: Debe ser un CSV válido con cabeceras y al menos una fila de datos
         drop_csv_title: Suelta el CSV para subirlo
         drop_csv_subtitle: Tu archivo se subirá automáticamente
@@ -215,6 +287,7 @@ es:
         hint_html: Sube el archivo <strong>all.ndjson</strong> del ZIP de tu exportación de datos
         ndjson_invalid: Debe ser un NDJSON válido con al menos un registro
   imports:
+    configuration_locked: Los datos de esta importación ya están en Sure, así que sus archivos y opciones no se pueden cambiar. Vuelve a intentarlo para terminarla o elimínala para empezar de nuevo.
     mapping_labels:
       account_type: Tipo de cuenta
       account: Cuenta
@@ -255,14 +328,33 @@ es:
       category_icon: Icono de Lucide
       merchant_color: Color
       merchant_website: URL del sitio web
+    summary:
+      title: Resumen de la importación
+      subtitle: Qué ha pasado con cada transacción de este extracto en %{account}.
+      subtitle_no_account: Qué ha pasado con cada transacción de este extracto.
+      extracted: Encontradas en el extracto
+      already_recorded: Ya registradas
+      already_recorded_hint: Emparejadas con una transacción que esta cuenta ya tenía y marcadas como conciliadas.
+      imported: Importadas como nuevas
+      awaiting_review: Pendientes de importar
+      fully_reconciled:
+        one: 'No había nada que importar: la única transacción del extracto ya estaba registrada.'
+        other: 'No había nada que importar: las %{count} transacciones ya estaban registradas.'
+      statement_evidence_html: Conciliado con %{statement}.
+      close: Cerrar
     update:
       account_saved: Cuenta guardada.
+      account_locked: Esta importación ya se ha publicado, así que no se puede cambiar su cuenta. Reviértela primero si necesitas importarla en otro sitio.
       invalid_account: Cuenta no encontrada.
     publish:
       started: Tu importación ha comenzado en segundo plano.
       max_rows_exceeded: Tu importación supera el número máximo de filas de %{max}.
+      guest_new_categories_or_tags: Los invitados no pueden crear categorías ni etiquetas. Asígnalas a otras existentes o déjalas vacías.
     revert:
       started: La importación se está revirtiendo en segundo plano.
+    cancel:
+      cancelled: Importación marcada como fallida. Puedes volver a intentarlo desde la página de la importación.
+      not_cancellable: 'Ahora mismo no se puede marcar esta importación como fallida: puede que su tarea siga en marcha. Vuelve a intentarlo cuando lleve una hora inactiva.'
     apply_template:
       template_applied: Plantilla aplicada.
       no_template_found: No se ha encontrado ninguna plantilla; configura tu importación manualmente.
@@ -308,6 +400,7 @@ es:
       mint_import: Importación de Mint
       actual_import: Importación de Actual
       ynab_import: Importación de YNAB
+      monarch_import: Importación de Monarch
       qif_import: Importación QIF
       category_import: Importación de categorías
       rule_import: Importación de reglas
@@ -317,11 +410,13 @@ es:
       sure_import: Importación de Sure
     steps:
       upload: Subir
+      accounts: Cuentas
       configure: Configurar
       clean: Limpiar
       map: Mapear
       confirm: Confirmar
       select: Seleccionar
+      label: Paso %{step}
       progress: Paso %{step} de %{total}
     empty:
       message: No se han encontrado importaciones.
@@ -362,12 +457,15 @@ es:
           confirm_revert: Esto eliminará las transacciones que se importaron, pero aún podrás revisar y volver a importar tus datos en cualquier momento.
           delete: Eliminar
           view: Ver
+          mark_failed: Marcar como fallida
+          confirm_mark_failed: Esta importación lleva un tiempo inactiva y probablemente su tarea en segundo plano se interrumpió. ¿La marcas como fallida para poder volver a intentarlo? No se conserva ningún dato importado.
       empty: Aún no hay importaciones.
     new:
-      description: Puedes importar manualmente varios tipos de datos mediante CSV o usar una de nuestras plantillas de importación como Mint.
+      description: Importa desde una herramienta financiera o sube archivos de datos.
       tab_financial_tools: Herramientas y archivos financieros
       tab_raw_data: Datos en bruto
       import_ynab: Importar desde YNAB
+      import_monarch: Importar desde Monarch
       import_accounts: Importar cuentas
       import_categories: Importar categorías
       import_merchants: Importar comercios
@@ -393,6 +491,7 @@ es:
       pdf_too_large: El archivo PDF es demasiado grande. El tamaño máximo es %{max_size}MB.
       pdf_processing: Tu PDF se está procesando. Recibirás un correo electrónico cuando el análisis haya finalizado.
       invalid_pdf: El archivo subido no es un PDF válido.
+      missing_upload: No hemos recibido tu archivo. Vuelve a subirlo.
       duplicate_pdf_unavailable: Este PDF ya está almacenado como un extracto al que no tienes acceso.
       document_too_large: El documento es demasiado grande. El tamaño máximo es %{max_size}MB.
       invalid_document_file_type: Tipo de archivo de documento no válido para el almacén de vectores activo.
@@ -405,14 +504,58 @@ es:
       finalize_mappings: Por favor, finaliza tus mapeos antes de continuar.
     ready:
       description: Aquí tienes un resumen de los nuevos elementos que se añadirán a tu cuenta una vez publiques esta importación.
+      monarch_existing_names_title: Ya existen cuentas con estos nombres
+      monarch_existing_names_description: Ya tienes cuentas llamadas %{names}. Al publicar se crean cuentas nuevas junto a ellas. Si prefieres importar en una de ellas, elígela en el paso Cuentas.
+      monarch_conflicts_title: Algunos saldos existentes no coinciden con Monarch
+      monarch_conflicts_description:
+        one: Un día, una cuenta en la que importas ya tiene una actualización de saldo distinta de la de Monarch. Se conserva tu valor actual.
+        other: En %{count} días, las cuentas en las que importas ya tienen actualizaciones de saldo distintas de las de Monarch. Se conservan tus valores actuales.
+      monarch_overlap_title: Transacciones existentes en el mismo periodo
+      monarch_overlap_description:
+        one: 1 transacción existente cae dentro del historial de Monarch de una cuenta en la que importas y no coincide con ninguna transacción de Monarch. Se conserva y cuenta para el saldo.
+        other: "%{count} transacciones existentes caen dentro del historial de Monarch de cuentas en las que importas y no coinciden con ninguna transacción de Monarch. Se conservan y cuentan para el saldo."
+      monarch_duplicates_title: Se omiten las transacciones que ya están en Sure
+      monarch_duplicates_description:
+        one: 1 transacción de Monarch ya está en su cuenta de destino, de una importación anterior o con la misma fecha e importe, así que se omite.
+        other: "%{count} transacciones de Monarch ya están en sus cuentas de destino, de una importación anterior o con la misma fecha e importe, así que se omiten."
+      monarch_kept_title: Algunos saldos iniciales se han dejado como los editaste
+      monarch_kept_description: Al deshacer la importación no se restauró el saldo inicial de %{names}, porque se cambió después de importar. Revísalo antes de volver a importar.
+      monarch_opening_title: Los saldos iniciales se moverán
+      monarch_opening_description:
+        one: El saldo inicial de 1 cuenta existente se mueve al inicio de su historial de Monarch. Si deshaces la importación, vuelve a su sitio.
+        other: Los saldos iniciales de %{count} cuentas existentes se mueven al inicio de su historial de Monarch. Si deshaces la importación, vuelven a su sitio.
       title: Confirma tus datos de importación
       summary_item_label: Elemento
       summary_count_label: Cantidad
       empty_summary: No se han encontrado registros importables en este archivo. Puede estar vacío, o las líneas no coinciden con el formato de exportación esperado (cada línea debe ser un objeto JSON con las claves «type» y «data», usando tipos que admite esta importación).
       publish_import: Publicar importación
       back_to_imports: Volver a importaciones
+      missing_merchant_warning_title: Faltan algunos comercios en esta exportación
+      missing_merchant_warning_description:
+        one: 1 referencia de este archivo apunta a un comercio que no está incluido. Puede pasar con exportaciones hechas antes de que las exportaciones de Sure incluyeran los comercios asignados por proveedores. Puedes publicar igualmente esta importación -- el registro afectado se importará sin comercio y podrás etiquetarlo después.
+        other: "%{count} referencias de este archivo apuntan a comercios que no están incluidos. Puede pasar con exportaciones hechas antes de que las exportaciones de Sure incluyeran los comercios asignados por proveedores. Puedes publicar igualmente esta importación -- los registros afectados se importarán sin comercio y podrás etiquetarlos después."
+      skipped_recurring_description:
+        one: 1 transacción recurrente no tiene nombre y le falta el comercio, así que se omitirá. Las transacciones recurrentes detectadas automáticamente se regeneran tras la importación.
+        other: "%{count} transacciones recurrentes no tienen nombre y les falta el comercio, así que se omitirán. Las transacciones recurrentes detectadas automáticamente se regeneran tras la importación."
+      reused_taxonomy_notice_title: Algunas categorías, etiquetas o comercios ya existen
+      reused_taxonomy_notice_description:
+        one: 1 categoría, etiqueta o comercio de este archivo ya existe en tu cuenta (por ejemplo, de las categorías predeterminadas del registro inicial). Se reutilizará y actualizará con los datos de este archivo en lugar de crear un duplicado.
+        other: "%{count} categorías, etiquetas o comercios de este archivo ya existen en tu cuenta (por ejemplo, de las categorías predeterminadas del registro inicial). Se reutilizarán y actualizarán con los datos de este archivo en lugar de crear duplicados."
+      provider_merchant_diff_title: Algunos comercios ya existen con otros datos
+      provider_merchant_diff_description:
+        one: 1 comercio de este archivo ya existe con otros datos. Se conservará el comercio existente y no se aplicarán los valores de este archivo.
+        other: "%{count} comercios de este archivo ya existen con otros datos. Se conservarán los comercios existentes y no se aplicarán los valores de este archivo."
+      provider_merchant_diff_summary: Ver diferencias
+      provider_merchant_diff_none: ninguno
+      provider_merchant_diff_fields:
+        website_url: Sitio web
+        name: Nombre
+        provider_merchant_id: ID del proveedor
+      provider_merchant_diff_row: "%{field}: se conserva %{kept}, el archivo tiene %{imported}"
     errors:
       custom_column_requires_inflow: Las importaciones de columnas personalizadas requieren que se seleccione una columna de entrada de fondos (inflow)
+      interrupted: El proceso en segundo plano se interrumpió antes de terminar. Los datos importados se han revertido; puedes volver a intentarlo sin riesgo.
+      presumed_lost: Marcada como fallida al darse por perdida la tarea en segundo plano. Los datos importados se han revertido; puedes volver a intentarlo sin riesgo.
     document_types:
       bank_statement: Extracto bancario
       credit_card_statement: Extracto de tarjeta de crédito
@@ -441,6 +584,8 @@ es:
       unknown_state_description: Esta importación se encuentra en un estado inesperado. Por favor, vuelve a importaciones.
       processing_failed_with_message: '%{message}'
       processing_failed_generic: 'Error en el procesamiento: %{error}'
+      errors:
+        provider_no_pdf_support: El proveedor de IA no admite el procesamiento de PDF
       ready_for_review_title: Listo para revisar
       ready_for_review_description: Hemos extraído %{count} transacciones de tu extracto. Revísalas y publícalas para añadirlas a tu cuenta.
       transactions_extracted: Transacciones extraídas
@@ -457,5 +602,12 @@ es:
         one: Publicar %{count} transacción
         other: Publicar %{count} transacciones
       review_transactions: Revisar transacciones
+      view_summary: Ver resumen de la importación
+      already_recorded_note:
+        one: "%{count} ya estaba en esta cuenta y se ha emparejado con el extracto."
+        other: "%{count} ya estaban en esta cuenta y se han emparejado con el extracto."
+      complete_fully_reconciled:
+        one: Todas las transacciones de este extracto ya estaban en tu cuenta. %{count} se ha emparejado y marcado como conciliada; no había nada que importar.
+        other: Todas las transacciones de este extracto ya estaban en tu cuenta. Las %{count} se han emparejado y marcado como conciliadas; no había nada que importar.
       select_account_to_continue: Selecciona una cuenta arriba para continuar.
       unknown_document_type: Desconocido

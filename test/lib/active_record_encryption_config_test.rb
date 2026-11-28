@@ -125,6 +125,18 @@ class ActiveRecordEncryptionConfigTest < ActiveSupport::TestCase
     refute ActiveRecordEncryptionConfig.using_known_compromised_secret_key_base?("a-real-generated-secret")
   end
 
+  test "detects the placeholders and the old .env.example value as publicly known" do
+    [
+      "secret-value",
+      "$(openssl rand -hex 64)",
+      "replacemewiththegeneratedstringfromthepriorstep",
+      "replacemewiththegeneratedstring",
+      "__SET_SECRET__"
+    ].each do |public_value|
+      assert ActiveRecordEncryptionConfig.using_known_compromised_secret_key_base?(public_value), public_value
+    end
+  end
+
   test "using_known_compromised_secret_key_base? defaults to the app's own secret_key_base" do
     Rails.application.stubs(:secret_key_base).returns(ActiveRecordEncryptionConfig::KNOWN_COMPROMISED_SECRET_KEY_BASES.first)
     assert ActiveRecordEncryptionConfig.using_known_compromised_secret_key_base?

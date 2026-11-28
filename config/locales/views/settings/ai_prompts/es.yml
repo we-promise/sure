@@ -2,14 +2,33 @@
 es:
   settings:
     ai_prompts:
+      prompt_field:
+        provider_label: Proveedor
+        prompt_label: Instrucciones
+        provider_openai: OpenAI
+        provider_anthropic: Anthropic
+        reset: Restablecer por defecto
+        reset_confirm_title: "¿Restablecer las instrucciones por defecto?"
+        reset_confirm_body: Se descartarán tus instrucciones personalizadas y se restaurarán las instrucciones integradas por defecto.
+        status_custom: Usando tus instrucciones personalizadas
+        status_default: Usando las instrucciones integradas
+        format_risk: 'Tus instrucciones de %{provider} han quitado el ejemplo {"%{key}": ...}. Cada petición sigue pidiendo ese formato, así que normalmente se sigue interpretando bien, pero unas instrucciones que pidan otro formato de salida lo romperán.'
       show:
         page_title: Indicaciones de IA
         openai_label: OpenAI
         disable_ai: Desactivar Asistente de IA
+        save: Guardar instrucciones
+        save_confirm:
+          title: "¿Guardar instrucciones de IA personalizadas?"
+          body: Las instrucciones personalizadas sustituyen a las instrucciones de sistema integradas y a las salvaguardas de seguridad (como las restricciones sobre asesoramiento financiero) para tu familia.
+          dont_show_again: No volver a mostrar este aviso
+          cancel: Cancelar
+          confirm: Confirmar
         prompt_instructions: Instrucciones de Indicaciones
         main_system_prompt:
           title: Indicaciones del Sistema Principal
           subtitle: Instrucciones principales que definen cómo se comporta el asistente de IA en todas las conversaciones de chat
+          label: Instrucciones de sistema del chat
         transaction_categorizer:
           title: Categorizador de Transacciones
           subtitle: La IA categoriza automáticamente tus transacciones según tus categorías definidas
@@ -20,3 +39,6 @@ es:
           title: Profundizar en un insight
           subtitle: Primer mensaje del chat cuando profundizas en un insight con IA
           label: Mensaje para profundizar
+      update:
+        success: Instrucciones de IA actualizadas
+        multiple_errors: Varias instrucciones son demasiado largas (el máximo es %{count} caracteres)
