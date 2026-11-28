@@ -75,6 +75,13 @@ class EnableBankingEntry::Processor
     content = [ date, amount, currency, direction, creditor, debtor, remittance_key ].map(&:to_s).join("\x1F")
     return nil if content.gsub("\x1F", "").blank?
 
+    # The importer counts identifierless rows with identical content within one
+    # response and tags each with its occurrence index. Distinct real movements
+    # then get distinct ids; the first stays unchanged for rows imported before
+    # this index existed.
+    occurrence = data[:_content_occurrence].to_i
+    content = "#{content}\x1F#{occurrence}" if occurrence.positive?
+
     "#{CONTENT_ID_PREFIX}#{Digest::MD5.hexdigest(content)}"
   end
 
@@ -151,7 +158,9 @@ class EnableBankingEntry::Processor
   #
   # @return [String, nil]
   def self.content_external_id(raw_transaction_data)
-    compute_external_id(raw_transaction_data.with_indifferent_access.except(:transaction_id, :entry_reference))
+    # The occurrence index only separates rows inside one response; a later
+    # identified row still claims the base content id of its predecessor.
+    compute_external_id(raw_transaction_data.with_indifferent_access.except(:transaction_id, :entry_reference, :_content_occurrence))
   end
 
   def self.party_name(data, key)

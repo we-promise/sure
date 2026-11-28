@@ -118,6 +118,21 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
                  EnableBankingEntry::Processor.compute_external_id(tx)
   end
 
+  test "compute_external_id separates identifierless occurrences but keeps the first id" do
+    tx = {
+      booking_date: "2026-03-15",
+      transaction_amount: { amount: "200.00", currency: "EUR" },
+      credit_debit_indicator: "CRDT",
+      debtor: { name: "Own account" }
+    }
+    base_id = EnableBankingEntry::Processor.compute_external_id(tx)
+
+    assert_equal base_id, EnableBankingEntry::Processor.compute_external_id(tx.merge(_content_occurrence: 0))
+    assert_not_equal base_id, EnableBankingEntry::Processor.compute_external_id(tx.merge(_content_occurrence: 1))
+    # A later identified row still claims the un-suffixed content id.
+    assert_equal base_id, EnableBankingEntry::Processor.content_external_id(tx.merge(_content_occurrence: 1))
+  end
+
   test "compute_external_id returns nil for transaction with no identifiable content" do
     assert_nil EnableBankingEntry::Processor.compute_external_id({})
     assert_nil EnableBankingEntry::Processor.compute_external_id(transaction_id: nil, entry_reference: nil)

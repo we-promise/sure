@@ -255,14 +255,17 @@ class EnableBankingItem::ImporterBookedReferencesTest < ActiveSupport::TestCase
     assert imported_entries.find_by!(external_id: "enable_banking_reference-d").transaction.pending?
   end
 
-  test "retains fallback matching when the bank supplies no references" do
+  test "retains fallback matching and counts identical identifierless operations in one response" do
     row = booked(nil).merge(creditor: { name: "Synthetic merchant" })
     provide_booked_rows([ row, row.deep_dup ])
 
     import_and_process
 
-    assert_equal 1, imported_entries.count
-    assert_match(/\Aenable_banking_content_/, imported_entries.sole.external_id)
+    # With no bank identifier the rows can only be told apart by their position in
+    # the response. Both are real operations, so both get a content-based id.
+    assert_equal 2, imported_entries.count
+    assert_equal 2, imported_entries.pluck(:external_id).uniq.count
+    assert imported_entries.all? { |entry| entry.external_id.start_with?("enable_banking_content_") }
   end
 
   test "claims an identifierless predecessor once when two booked references arrive" do
