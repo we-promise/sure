@@ -1,17 +1,17 @@
 <%# locals: (investment_flows:) %>
-<div class="space-y-4">
+<div class="@container space-y-4">
   <p class="text-sm text-secondary">
     <%= t(".description") %>
   </p>
 
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+  <div class="grid grid-cols-1 @4xl:grid-cols-3 gap-4">
     <!-- Contributions -->
     <div class="bg-container border border-primary rounded-lg p-4">
       <div class="flex items-center gap-2 mb-2">
         <%= icon("trending-up", size: "sm", class: "text-green-600") %>
         <h3 class="text-sm font-medium text-secondary"><%= t(".contributions") %></h3>
       </div>
-      <div class="text-2xl font-semibold privacy-sensitive" style="color: rgb(34 197 94);">
+      <div class="text-2xl font-semibold whitespace-nowrap privacy-sensitive" style="color: rgb(34 197 94);">
         <%= format_money(investment_flows.contributions) %>
       </div>
       <p class="text-xs text-secondary mt-1"><%= t(".contributions_description") %></p>
@@ -23,7 +23,7 @@
         <%= icon("trending-down", size: "sm", class: "text-orange-600") %>
         <h3 class="text-sm font-medium text-secondary"><%= t(".withdrawals") %></h3>
       </div>
-      <div class="text-2xl font-semibold privacy-sensitive" style="color: rgb(249 115 22);">
+      <div class="text-2xl font-semibold whitespace-nowrap privacy-sensitive" style="color: rgb(249 115 22);">
         <%= format_money(investment_flows.withdrawals) %>
       </div>
       <p class="text-xs text-secondary mt-1"><%= t(".withdrawals_description") %></p>
@@ -35,7 +35,7 @@
         <%= icon("arrow-right-left", size: "sm", class: "text-primary") %>
         <h3 class="text-sm font-medium text-secondary"><%= t(".net_flow") %></h3>
       </div>
-      <div class="text-2xl font-semibold text-primary privacy-sensitive">
+      <div class="text-2xl font-semibold text-primary whitespace-nowrap privacy-sensitive">
         <%= format_money(investment_flows.net_flow) %>
       </div>
       <p class="text-xs text-secondary mt-1"><%= t(".net_flow_description") %></p>

@@ -7,6 +7,19 @@ class TransactionCategoriesControllerTest < ActionDispatch::IntegrationTest
     @transaction = transactions(:one)
   end
 
+  test "changing the category runs rules set to apply immediately" do
+    @entry.account.family.rules.create!(
+      name: "Immediate", resource_type: "transaction", active: true, apply_immediately: true,
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ]
+    )
+
+    patch transaction_category_url(@entry),
+      params: { entry: { entryable_type: "Transaction", entryable_attributes: { id: @transaction.id, category_id: categories(:income).id } } },
+      as: :turbo_stream
+
+    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @entry.account.family, { transaction_ids: [ @transaction.id ] } ])
+  end
+
   test "assigning a category touches its last_used_at" do
     category = categories(:income)
     assert_nil category.last_used_at
@@ -46,6 +59,7 @@ class TransactionCategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     # The prompt is rendered into the turbo-stream response (flash is cleared once rendered).
     assert_match %r{/rules/new\?[^"]*action_value=#{category.id}}, response.body
+    assert_match %r{/rules/new\?[^"]*name=AMZN\+Mktp\+UK}, response.body
   end
 
   test "does not offer a rule prompt when an existing rule already covers this transaction" do

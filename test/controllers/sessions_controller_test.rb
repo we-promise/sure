@@ -42,7 +42,22 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  def setup_omniauth_mock(provider:, uid:, email:, name:, first_name: nil, last_name: nil)
+  def stub_provider(name)
+    ProviderLoader.stubs(:load_providers).returns([
+      { name: name, strategy: "openid_connect", issuer: "https://idp.example", label: "IdP" }
+    ])
+  end
+
+  def stub_discovery(end_session_endpoint)
+    body = { "end_session_endpoint" => end_session_endpoint }.to_json
+    response = OpenStruct.new(success?: true, body: body)
+    connection = mock
+    connection.stubs(:get).returns(response)
+    Faraday.stubs(:new).returns(connection)
+  end
+
+  # Build authenticated claims that exercise provider and issuer checks in callbacks.
+  def setup_omniauth_mock(provider:, uid:, email:, name:, first_name: nil, last_name: nil, issuer: "https://test.example.com", id_token: nil)
     OmniAuth.config.mock_auth[:openid_connect] = OmniAuth::AuthHash.new({
       provider: provider,
       uid: uid,
@@ -51,7 +66,9 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
         name: name,
         first_name: first_name,
         last_name: last_name
-      }.compact
+      }.compact,
+      extra: { raw_info: { iss: issuer } },
+      credentials: id_token ? { id_token: id_token } : {}
     })
   end
 
@@ -319,7 +336,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     AuthConfig.stubs(:local_login_form_visible?).returns(true)
     AuthConfig.stubs(:password_features_enabled?).returns(true)
     AuthConfig.stubs(:sso_providers).returns([
-      { id: "oidc", strategy: "openid_connect", name: "openid_connect", label: "Sign in with Keycloak", icon: "key" },
+      { id: "oidc", strategy: "openid_connect", name: "openid_connect", label: "Sign in with Keycloak", icon: "key", issuer: "https://test.example.com" },
       { id: "google", strategy: "google_oauth2", name: "google_oauth2", label: "Sign in with Google", icon: "google" }
     ])
 
@@ -393,6 +410,160 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to root_path
     assert Session.exists?(user_id: @user.id)
+  end
+
+  test "rejects existing OIDC identity when provider issuer has changed" do
+    oidc_identity = oidc_identities(:bob_google)
+    oidc_identity.update!(issuer: "https://old-idp.example")
+    AuthConfig.stubs(:sso_providers).returns([
+      { name: oidc_identity.provider, issuer: "https://new-idp.example" }
+    ])
+    @user.sessions.destroy_all
+
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Changed by the new issuer",
+      issuer: "https://new-idp.example"
+    )
+    last_authenticated_at = oidc_identity.last_authenticated_at
+    identity_info = oidc_identity.info
+
+    assert_difference -> { SsoAuditLog.by_event("login_failed").count }, 1 do
+      assert_no_difference -> { SsoAuditLog.by_event("login").count } do
+        get "/auth/openid_connect/callback"
+      end
+    end
+
+    assert_redirected_to new_session_path
+    assert_not Session.exists?(user_id: @user.id)
+    assert_equal last_authenticated_at, oidc_identity.reload.last_authenticated_at
+    assert_equal identity_info, oidc_identity.info
+    assert_equal "issuer_mismatch", SsoAuditLog.by_event("login_failed").order(:created_at).last.metadata.fetch("reason")
+  end
+
+  test "rejects existing OIDC identity when provider is no longer configured" do
+    oidc_identity = oidc_identities(:bob_google)
+    oidc_identity.update!(issuer: nil)
+    # The callback strategy was registered at boot, but the live provider list
+    # no longer includes it after an administrator disables the DB provider.
+    AuthConfig.stubs(:sso_providers).returns([])
+    @user.sessions.destroy_all
+
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Disabled provider login"
+    )
+
+    assert_difference -> { SsoAuditLog.by_event("login_failed").count }, 1 do
+      assert_no_difference -> { SsoAuditLog.by_event("login").count } do
+        get "/auth/openid_connect/callback"
+      end
+    end
+
+    assert_redirected_to new_session_path
+    assert_not Session.exists?(user_id: @user.id)
+    assert_equal "provider_not_configured", SsoAuditLog.by_event("login_failed").order(:created_at).last.metadata.fetch("reason")
+  end
+
+  test "rejects new OIDC authentication when provider is no longer configured" do
+    AuthConfig.stubs(:sso_providers).returns([])
+    @user.sessions.destroy_all
+
+    setup_omniauth_mock(
+      provider: "openid_connect",
+      uid: "unconfigured-uid",
+      email: @user.email,
+      name: "Unconfigured provider"
+    )
+
+    assert_difference -> { SsoAuditLog.by_event("login_failed").count }, 1 do
+      assert_no_difference [ "OidcIdentity.count", "Session.count" ] do
+        get "/auth/openid_connect/callback"
+      end
+    end
+
+    assert_redirected_to new_session_path
+    assert_nil session[:pending_oidc_auth]
+    assert_equal "provider_not_configured", SsoAuditLog.by_event("login_failed").order(:created_at).last.metadata.fetch("reason")
+  end
+
+  test "routes a legacy OIDC identity without issuer through password verification" do
+    oidc_identity = oidc_identities(:bob_google)
+    oidc_identity.update!(issuer: nil)
+    AuthConfig.stubs(:sso_providers).returns([
+      { name: oidc_identity.provider, strategy: "openid_connect", issuer: "https://test.example.com" }
+    ])
+    @user.sessions.destroy_all
+
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Bob Dylan"
+    )
+
+    assert_no_difference "Session.count" do
+      assert_no_difference -> { SsoAuditLog.by_event("login").count } do
+        get "/auth/openid_connect/callback"
+      end
+    end
+
+    assert_redirected_to link_oidc_account_path
+    assert session[:pending_oidc_legacy_relink]
+    assert_equal "https://test.example.com", session[:pending_oidc_auth].fetch("issuer")
+  end
+
+  test "an issuerless SSO-only identity requires administrator recovery" do
+    identity = oidc_identities(:sso_only_identity)
+    identity.update!(issuer: nil)
+    identity.user.sessions.destroy_all
+    setup_omniauth_mock(
+      provider: identity.provider, uid: identity.uid,
+      email: identity.user.email, name: identity.user.display_name
+    )
+
+    assert_no_difference [ "Session.count", -> { SsoAuditLog.by_event("login").count } ] do
+      get "/auth/openid_connect/callback"
+    end
+
+    assert_redirected_to link_oidc_account_path
+    assert session[:pending_oidc_legacy_relink]
+    assert_equal I18n.t("sessions.openid_connect.legacy_issuer_relink_required"), flash[:alert]
+    assert_nil identity.reload.issuer
+    assert_not identity.user.has_local_password?
+  end
+
+  test "a fresh OIDC sign-in clears an abandoned legacy relink" do
+    legacy_identity = oidc_identities(:bob_google)
+    legacy_identity.update!(issuer: nil)
+    @user.sessions.destroy_all
+    setup_omniauth_mock(
+      provider: legacy_identity.provider, uid: legacy_identity.uid,
+      email: @user.email, name: "Bob Dylan"
+    )
+    get "/auth/openid_connect/callback"
+    assert session[:pending_oidc_legacy_relink]
+
+    user = users(:new_email)
+    setup_omniauth_mock(
+      provider: legacy_identity.provider, uid: "fresh-identity-after-legacy",
+      email: user.email, name: "New User"
+    )
+    get "/auth/openid_connect/callback"
+
+    assert_redirected_to link_oidc_account_path
+    assert_nil session[:pending_oidc_legacy_relink]
+    assert_equal "fresh-identity-after-legacy", session[:pending_oidc_auth].fetch("uid")
+
+    post create_link_oidc_account_path, params: { email: user.email, password: user_password_test }
+
+    assert_redirected_to root_path
+    assert_equal user.id, OidcIdentity.find_by!(uid: "fresh-identity-after-legacy").user_id
+    assert_nil legacy_identity.reload.issuer
   end
 
   test "rejects an SSO identity that an administrator permanently removed" do
@@ -470,6 +641,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     get "/auth/openid_connect/callback"
 
     assert_redirected_to link_oidc_account_path
+    assert_equal "https://test.example.com", session[:pending_oidc_auth].fetch("issuer")
 
     # Follow redirect to verify session data is accessible
     follow_redirect!
@@ -952,6 +1124,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
       assert_equal "unlinked-uid-99999", cached[:uid]
       assert_equal user_without_oidc.email, cached[:email]
       assert_equal "New User", cached[:name]
+      assert_equal "https://test.example.com", cached[:issuer]
       assert cached.key?(:device_info), "Expected device_info in cached payload"
       assert cached.key?(:allow_account_creation), "Expected allow_account_creation in cached payload"
     ensure
@@ -1193,6 +1366,29 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to new_session_path
   end
 
+  test "desktop_sso_start accepts a database provider added after boot" do
+    original_sso_providers = Rails.configuration.x.auth.sso_providers
+    Rails.configuration.x.auth.sso_providers = [
+      { name: "boot_provider", strategy: "openid_connect", label: "Boot provider" }
+    ]
+    FeatureFlags.stubs(:db_sso_providers?).returns(true)
+    ProviderLoader.stubs(:load_providers).returns([
+      {
+        "name" => "authentik",
+        "strategy" => "openid_connect",
+        "label" => "Sign in with Authentik",
+        "settings" => { "default_role" => "super_admin" }
+      }
+    ])
+
+    get "/auth/desktop/authentik", params: { code_challenge: "a" * 43 }
+
+    assert_response :success
+    assert_match %r{action="/auth/authentik"}, @response.body
+  ensure
+    Rails.configuration.x.auth.sso_providers = original_sso_providers
+  end
+
   test "a session inactive past the timeout is rejected and destroyed" do
     sign_in @user
     session_record = Session.order(created_at: :desc).first
@@ -1233,5 +1429,169 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to new_session_path
     assert_not Session.exists?(user_id: @user.id)
+  end
+
+  # `?return_to=` is written into the session by StoreLocation on any request,
+  # including unauthenticated ones, so it is a pre-auth value a real browser
+  # can actually carry into the sign-in POST. Writing to `session` directly
+  # from an integration test does NOT reach the next request, so a sentinel
+  # seeded that way would make these assertions vacuous.
+  test "signing in discards pre-auth session state so a fixated session cannot survive" do
+    get new_session_url(return_to: "/transactions")
+    assert_equal "/transactions", session[:return_to], "the sentinel must really be in the pre-auth session"
+
+    sign_in @user
+
+    assert_nil session[:return_to], "pre-auth session state must not survive sign-in"
+  end
+
+  # Both flags come from the framework: httponly is set where the cookie is
+  # written, and samesite from action_dispatch.cookies_same_site_protection,
+  # which also gets a `; secure` from ActionDispatch::SSL wherever force_ssl
+  # is on. Nothing in this app sets them per-cookie, so this guards against a
+  # config change quietly dropping them rather than against a regression here.
+  test "the session cookie is HttpOnly and SameSite=Lax" do
+    sign_in @user
+
+    # Set-Cookie is an array and Rails' own _sure_session cookie carries the
+    # same flags, so a regex over the joined header matches across cookie
+    # boundaries and passes even when session_token has neither. Isolate the
+    # one cookie under test.
+    session_cookie = Array(response.headers["Set-Cookie"])
+      .flat_map { |header| header.to_s.split("\n") }
+      .find { |cookie| cookie.start_with?("session_token=") }
+
+    assert session_cookie, "the sign-in response must set a session_token cookie"
+    assert_match(/;\s*httponly/i, session_cookie)
+    assert_match(/;\s*samesite=lax/i, session_cookie)
+  end
+
+  test "OIDC logout hints survive the session rotation, also after MFA" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+    @user.sessions.destroy_all
+    oidc_identity = oidc_identities(:bob_google)
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Bob Dylan",
+      id_token: "id-token-for-rp-logout"
+    )
+
+    get "/auth/openid_connect/callback"
+    assert_redirected_to verify_mfa_path
+
+    totp = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances")
+    post verify_mfa_path, params: { code: totp.now }
+    assert_redirected_to root_path
+
+    assert_equal "id-token-for-rp-logout", session[:id_token_hint]
+    assert_equal oidc_identity.provider, session[:sso_login_provider]
+    assert_nil session[:mfa_user_id]
+  end
+
+  test "signing in with a second provider does not keep the first provider's logout token" do
+    @user.sessions.destroy_all
+    first = oidc_identities(:bob_google)
+    second = @user.oidc_identities.create!(provider: "other_idp", uid: "other-idp-uid-1", issuer: "https://test.example.com")
+    AuthConfig.stubs(:sso_providers).returns(
+      [ first.provider, second.provider ].map do |name|
+        { name: name, strategy: "openid_connect", issuer: "https://test.example.com", label: name }
+      end
+    )
+
+    setup_omniauth_mock(
+      provider: first.provider,
+      uid: first.uid,
+      email: @user.email,
+      name: "Bob Dylan",
+      id_token: "id-token-minted-by-the-first-provider"
+    )
+    get "/auth/openid_connect/callback"
+    assert_equal "id-token-minted-by-the-first-provider", session[:id_token_hint]
+
+    # The second provider issues no id_token. Carrying the first one over would
+    # hand its token to the second provider's end-session endpoint at logout.
+    setup_omniauth_mock(
+      provider: second.provider,
+      uid: second.uid,
+      email: @user.email,
+      name: "Bob Dylan"
+    )
+    get "/auth/openid_connect/callback"
+
+    assert_equal second.provider, session[:sso_login_provider]
+    assert_nil session[:id_token_hint], "a stale hint must not be paired with a new provider"
+  end
+
+  # Seeding id_token_hint by assigning to `session` from the test would never
+  # reach the app. The OIDC callback is the only thing that really sets it, so
+  # this drives the real abandoned-OIDC flow: the user starts an SSO sign-in,
+  # is parked at the MFA prompt, gives up and signs in with their password.
+  test "a local sign-in does not inherit OIDC logout hints left by an abandoned SSO attempt" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+    @user.sessions.destroy_all
+    oidc_identity = oidc_identities(:bob_google)
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Bob Dylan",
+      id_token: "id-token-from-the-abandoned-attempt"
+    )
+
+    get "/auth/openid_connect/callback"
+    assert_redirected_to verify_mfa_path
+    assert_equal "id-token-from-the-abandoned-attempt", session[:id_token_hint],
+      "the OIDC attempt must really leave its hints behind for this to test anything"
+
+    post sessions_path, params: { email: @user.email, password: user_password_test }
+    assert_redirected_to verify_mfa_path
+
+    totp = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances")
+    post verify_mfa_path, params: { code: totp.now }
+    assert_redirected_to root_path
+
+    assert_nil session[:id_token_hint], "a local sign-in must not inherit SSO logout hints"
+    assert_nil session[:sso_login_provider]
+  end
+
+  # The end_session_endpoint comes out of the provider's discovery document, so
+  # the app does not choose it. Forwarding the ID token to an http:// endpoint
+  # would put the user's claims in a cleartext URL.
+  test "federated logout is skipped when the provider advertises a cleartext endpoint" do
+    oidc_identity = oidc_identities(:bob_google)
+    stub_provider(oidc_identity.provider)
+    stub_discovery("http://idp.example/logout")
+
+    setup_omniauth_mock(
+      provider: oidc_identity.provider, uid: oidc_identity.uid,
+      email: @user.email, name: "Bob Dylan", id_token: "an-id-token"
+    )
+    get "/auth/openid_connect/callback"
+
+    delete session_path(Session.order(:created_at).last)
+
+    assert_no_match(/an-id-token/, response.location.to_s, "the token must not travel over http")
+    assert_no_match(%r{^http://idp\.example}, response.location.to_s)
+  end
+
+  test "federated logout still runs for an https endpoint" do
+    oidc_identity = oidc_identities(:bob_google)
+    stub_provider(oidc_identity.provider)
+    stub_discovery("https://idp.example/logout")
+
+    setup_omniauth_mock(
+      provider: oidc_identity.provider, uid: oidc_identity.uid,
+      email: @user.email, name: "Bob Dylan", id_token: "an-id-token"
+    )
+    get "/auth/openid_connect/callback"
+
+    delete session_path(Session.order(:created_at).last)
+
+    assert_match(%r{^https://idp\.example/logout}, response.location.to_s)
+    assert_match(/an-id-token/, response.location.to_s)
   end
 end

@@ -95,6 +95,10 @@ class PushNotificationTest
         )
       end
     end
+    if result == :gone
+      subscription.invalidate_if_unchanged!
+      result = :unregistered
+    end
     record(request_id, push_subscription_id, result)
   rescue Apns::Client::TransientError
     record(request_id, push_subscription_id, :retrying)
