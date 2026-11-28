@@ -1,0 +1,96 @@
+<div id="<%= panel_dom_id %>" class="space-y-4">
+  <%= setup_steps %>
+
+  <% if error_message.present? %>
+    <%= render DS::Alert.new(message: error_message, variant: :error) %>
+  <% end %>
+
+  <% if items.any? %>
+    <div class="space-y-3">
+      <% items.each do |item| %>
+        <%= render DS::Disclosure.new(variant: :card) do |disclosure| %>
+          <% disclosure.with_summary_content do %>
+            <div class="flex items-center justify-between gap-2 w-full">
+              <div class="flex items-center gap-3">
+                <%= render ProviderLogo.new(provider_key: provider_key.to_sym) %>
+                <div>
+                  <p class="font-medium text-primary"><%= item.name %></p>
+                  <p class="text-xs text-secondary"><%= item.sync_status_summary %></p>
+                </div>
+              </div>
+            </div>
+          <% end %>
+
+          <div class="mt-4 space-y-4">
+            <div class="flex items-center gap-2">
+              <%= render DS::Button.new(
+                text: panel_t("sync"),
+                icon: "refresh-cw",
+                variant: :outline,
+                size: :sm,
+                href: sync_path(item),
+                method: :post,
+                disabled: item.syncing?
+              ) %>
+              <%= render DS::Button.new(
+                text: panel_t("disconnect"),
+                icon: "trash-2",
+                variant: :outline_destructive,
+                size: :sm,
+                href: item_path(item),
+                method: :delete,
+                aria: { label: panel_t("disconnect_label", name: item.name) },
+                data: { turbo_confirm: panel_t("disconnect_confirm", name: item.name) }
+              ) %>
+            </div>
+
+            <%= helpers.styled_form_with model: item,
+                                         url: item_path(item),
+                                         scope: form_scope,
+                                         method: :patch,
+                                         data: { turbo: true },
+                                         class: "space-y-3" do |form| %>
+              <%= form.text_field :name,
+                                  label: panel_t("connection_name_label"),
+                                  placeholder: panel_t("connection_name_placeholder") %>
+
+              <%= credential_fields(form, item, editing: true) %>
+
+              <div class="flex flex-wrap justify-end gap-2">
+                <%= render DS::Link.new(
+                  text: panel_t("setup_accounts"),
+                  icon: "settings",
+                  variant: "secondary",
+                  href: setup_accounts_path(item),
+                  frame: :modal
+                ) %>
+                <%= form.submit panel_t("update_connection") %>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <% if items.any? %>
+    <%= helpers.render "settings/providers/add_connection_heading", label: panel_t("add_connection") %>
+  <% end %>
+
+  <%= helpers.styled_form_with model: new_item,
+                               url: items_path,
+                               scope: form_scope,
+                               method: :post,
+                               data: { turbo: true },
+                               class: "space-y-3" do |form| %>
+    <%= form.text_field :name,
+                        label: panel_t("connection_name_label"),
+                        placeholder: panel_t("connection_name_placeholder") %>
+
+    <%= credential_fields(form, new_item, editing: false) %>
+
+    <div class="flex justify-end">
+      <%= form.submit panel_t("add_connection") %>
+    </div>
+  <% end %>
+</div>
