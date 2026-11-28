@@ -11,24 +11,12 @@ class ProviderItemsController < ApplicationController
 
   # Admin check first, so a non-admin gets the same redirect whether or not the
   # connection id exists.
-  before_action :require_admin!, only: %i[new create edit update destroy sync] + ACCOUNT_FLOW_ACTIONS + SETUP_ACTIONS
-  before_action :set_item, only: %i[show edit update destroy sync] + SETUP_ACTIONS
+  before_action :require_admin!, only: %i[create update destroy sync] + ACCOUNT_FLOW_ACTIONS + SETUP_ACTIONS
+  before_action :set_item, only: %i[update destroy sync] + SETUP_ACTIONS
 
   def self.connection_declaration
     Provider::Factory.connection_declarations.find { |declaration| declaration[:association].to_s == controller_name } ||
       raise(NotImplementedError, "#{name} serves no declared connection")
-  end
-
-  def index
-    self.items = family_items.active.ordered
-    render layout: "settings"
-  end
-
-  def show
-  end
-
-  def new
-    self.item = family_items.build
   end
 
   def create
@@ -41,9 +29,6 @@ class ProviderItemsController < ApplicationController
     else
       render_provider_panel(provider_key, alert: @item.errors.full_messages.join(", "))
     end
-  end
-
-  def edit
   end
 
   def update

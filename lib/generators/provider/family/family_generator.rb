@@ -316,11 +316,11 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
     concern = content.match(/^  concern :provider_items do\n.*?^  end\n/m)
     unless concern
       say "Could not find the provider_items route concern in #{routes_file}; add: " \
-          "resources :#{file_name}_items, only: %i[index new create show edit update destroy], concerns: :provider_items", :yellow
+          "resources :#{file_name}_items, only: %i[create update destroy], concerns: :provider_items", :yellow
       return
     end
 
-    line = "  resources :#{file_name}_items, only: %i[index new create show edit update destroy], concerns: :provider_items\n"
+    line = "  resources :#{file_name}_items, only: %i[create update destroy], concerns: :provider_items\n"
     write_file(routes_file, content.dup.insert(concern.end(0), "\n#{line}"))
     say "Added routes for :#{file_name}_items", :green
   end
