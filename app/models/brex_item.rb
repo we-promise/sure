@@ -1,5 +1,5 @@
-class BrexItem < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable, DestroyableLater
+class BrexItem < ProviderItem
+  include Provided, Encryptable, DestroyableLater
 
   BLANK_TOKEN_SENTINELS = [ "", " ", "  ", "   ", "\t", "\n", "\r" ].freeze
 
