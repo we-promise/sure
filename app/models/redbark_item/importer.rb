@@ -25,8 +25,8 @@ class RedbarkItem::Importer
 
     # Step 2: For linked accounts only, fetch transactions and balances.
     # Unlinked accounts just need basic info (name, institution) for the setup modal.
-    # `account_provider: :account` is preloaded because the loan filter in
-    # import_loan_account_details reads `current_account` for every linked
+    # `account_provider: :account` is preloaded because the account-type filter
+    # in import_account_details reads `current_account` for every linked
     # account, which is a query each without it.
     linked_accounts = redbark_item.linked_redbark_accounts.includes(account_provider: :account).to_a
 
@@ -37,7 +37,7 @@ class RedbarkItem::Importer
     end
 
     import_balances(linked_accounts)
-    import_loan_account_details(linked_accounts)
+    import_account_details(linked_accounts)
 
     # Store import stats on the item as the raw snapshot
     redbark_item.upsert_redbark_snapshot!(stats)
@@ -208,18 +208,25 @@ class RedbarkItem::Importer
       end
     end
 
-    # Loans only, and only when there are any: `account-details` is the one
-    # endpoint that reports a rate (we-promise/sure#3891), and for every other account type it
-    # would be a request per sync for something nothing reads.
+    # Loans, and credit cards that still need an APR, and only when there are
+    # any: `account-details` is the one endpoint that reports a rate, and for
+    # every other account it would be a request per sync for something nothing
+    # reads. Cards are a batch of their own (store_card_account_details).
     #
     # A failure here leaves the payload untouched and the sync green, exactly as
     # a failed balances fetch does. The processor treats "never fetched" and
     # "fetch failed" alike, because for a rate they mean the same thing:
     # nothing was reported.
-    def import_loan_account_details(linked_accounts)
-      eligible_accounts = balance_eligible_accounts(linked_accounts).select do |redbark_account|
-        redbark_account.current_account&.accountable_type == "Loan"
-      end
+    def import_account_details(linked_accounts)
+      eligible_accounts = balance_eligible_accounts(linked_accounts)
+      loans = eligible_accounts.select { |redbark_account| redbark_account.current_account&.accountable_type == "Loan" }
+      cards = eligible_accounts.select { |redbark_account| card_details_due?(redbark_account) }
+
+      store_loan_account_details(loans)
+      store_card_account_details(cards)
+    end
+
+    def store_loan_account_details(eligible_accounts)
       account_ids = eligible_accounts.map(&:redbark_account_id).compact
       return if account_ids.empty?
 
@@ -249,10 +256,54 @@ class RedbarkItem::Importer
       end
     end
 
+    def card_details_due?(redbark_account)
+      account = redbark_account.current_account
+      return false unless account&.accountable_type == "CreditCard"
+      return false unless RedbarkAccount::CreditCardDetailsProcessor.needs_apr?(account.accountable)
+
+      last_attempt_at = redbark_account.account_details_fetched_at
+      last_attempt_at.blank? || last_attempt_at <= fetched_at - RedbarkAccount::CreditCardDetailsProcessor::REFRESH_WINDOW
+    end
+
+    # A card's product details rarely change, so each card is tried at most
+    # once per window: its stamp records every attempt -- stored, left out by
+    # the provider, or failed -- not only a stored payload. The payload is
+    # replaced on every attempt, cleared when there is none, so a stamp never
+    # vouches for details from an earlier attempt. A batch of its own,
+    # so a card id the endpoint rejects cannot push the loans into per-account
+    # retries; a failure is logged once per window, never a sync error.
+    def store_card_account_details(cards)
+      return if cards.empty?
+
+      begin
+        details_by_id = fetch_account_details_with_fallback(cards.map(&:redbark_account_id), log: method(:warn_card_failure))
+                          .index_by { |detail| detail[:accountId].to_s }
+
+        cards.each do |redbark_account|
+          detail = details_by_id[redbark_account.redbark_account_id]
+          redbark_account.update!(raw_account_details_payload: detail.presence, account_details_fetched_at: fetched_at)
+          stats["account_details_updated"] = stats.fetch("account_details_updated", 0) + 1 if detail.present?
+        end
+      rescue Provider::Redbark::AuthenticationError
+        raise
+      rescue => e
+        warn_card_failure("Card account details fetch failed; clearing previous details", e)
+        RedbarkAccount.where(id: cards.map(&:id)).update_all(raw_account_details_payload: nil, account_details_fetched_at: fetched_at)
+      end
+    end
+
+    def warn_card_failure(message, error, account_id: nil)
+      RedbarkAccount::CreditCardDetailsProcessor.warn_once(
+        message, source: self.class.name, family: redbark_item.family,
+        key: account_id ? { account_id: account_id } : { redbark_item_id: redbark_item.id },
+        error_class: error.class.name, error: error.message
+      )
+    end
+
     # The batch is rejected whole when one id is stale or of the wrong
     # category, exactly as the balances batch is, so one bad account must not
     # cost every other loan its rate. Mirrors fetch_balances_with_fallback.
-    def fetch_account_details_with_fallback(account_ids)
+    def fetch_account_details_with_fallback(account_ids, log: method(:capture_failure))
       stats["api_requests"] = stats.fetch("api_requests", 0) + 1
       redbark_provider.get_account_details(account_ids: account_ids)
     rescue Provider::Redbark::AuthenticationError
@@ -261,7 +312,7 @@ class RedbarkItem::Importer
       raise unless %i[not_found bad_request].include?(e.error_type)
       raise if account_ids.size <= 1
 
-      capture_failure("Batched account details call rejected; retrying per account", e)
+      log.call("Batched account details call rejected; retrying per account", e)
 
       account_ids.flat_map do |account_id|
         begin
@@ -270,7 +321,7 @@ class RedbarkItem::Importer
         rescue Provider::Redbark::AuthenticationError
           raise
         rescue Provider::Redbark::Error => account_error
-          capture_failure("Account details fetch failed for account; keeping previous details", account_error, account_id: account_id)
+          log.call("Account details fetch failed for account", account_error, account_id: account_id)
           []
         end
       end

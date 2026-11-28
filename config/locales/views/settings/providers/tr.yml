@@ -69,8 +69,8 @@ tr:
         application_id_placeholder_new: Uygulama ID girin
         application_id_placeholder_update: Güncellemek için yeni ID girin
         callback_url_instruction: Geri çağırma URL'si için %{callback_url} kullanın.
-        client_certificate_label: İstemci Sertifikası (Özel Anahtar ile)
-        keep_client_certificate_hint: "Mevcut sertifikayı korumak için boş bırakın"
+        client_certificate_label: Özel Anahtar (.pem)
+        keep_client_certificate_hint: "Mevcut özel anahtarı korumak için boş bırakın"
         config_locked_message: Bu kimlik bilgilerini değiştirmeden önce bağlı tüm
           bankaların bağlantısını kesin.
         config_locked_title: Yapılandırma kilitli
@@ -89,7 +89,7 @@ tr:
         session_expired_reconnect: Oturum süresi doldu - yeniden bağlan
         session_expires: 'Oturum sona eriyor: %{date}'
         step_1_html: "%{link} adresine gidin ve geliştirici kimlik bilgilerinizi alın."
-        step_2: Ülkenizi seçin ve Uygulama ID + İstemci Sertifikasını aşağıya yapıştırın.
+        step_2: Ülkenizi seçin ve Uygulama ID + Özel Anahtarı aşağıya yapıştırın.
         step_3: Kaydedin, ardından bankanızı bağlamak için Bağlantı Ekle'yi kullanın.
         sync: Senkronize et
         syncing: Senkronize ediliyor

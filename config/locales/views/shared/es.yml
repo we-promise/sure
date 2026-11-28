@@ -5,6 +5,14 @@ es:
       redis_configured: ¡Redis ya está configurado correctamente! Ahora puedes configurar tu aplicación Sure.
   shared:
     preview: Vista previa
+    exchange_rate_notes:
+      missing:
+        one: Aún no hay ningún tipo de cambio guardado de %{currencies} a %{currency}, así que algunos totales pueden dejar fuera importes en %{currencies}.
+        other: Aún no hay tipos de cambio guardados de %{currencies} a %{currency}, así que algunos totales pueden dejar fuera importes en esas divisas.
+      stale:
+        one: 'El último tipo de cambio a %{currency} está desactualizado: %{rates}. Los totales de hoy lo usan.'
+        other: 'Los últimos tipos de cambio a %{currency} están desactualizados: %{rates}. Los totales de hoy los usan.'
+      stale_rate: "%{from} del %{date}"
     dot_separator: "·"
     sync_toast:
       message: Nuevos datos disponibles
@@ -15,7 +23,14 @@ es:
       cancel: Cancelar
       title: ¿Estás seguro?
     money_field:
+      above_max: Introduce un importe de como máximo %{max}.
+      below_min: Introduce un importe de al menos %{min}.
+      invalid_amount: Introduce un importe o una expresión válidos.
       label: Importe
+      operator_add: Sumar
+      operator_subtract: Restar
+      operator_multiply: Multiplicar
+      operator_divide: Dividir
     exchange_rate_tabs:
       calculate_rate_tab: Calcular tasa
       convert_tab: Convertir con tasa
@@ -25,6 +40,8 @@ es:
     syncing_notice:
       syncing: Sincronizando datos de cuentas...
     require_admin: Solo los administradores pueden realizar esta acción
+    require_non_guest: Los invitados no pueden realizar esta acción
+    require_connector_owner: Solo puedes gestionar las conexiones que has añadido tú
     custom_confirm:
       default_title: ¿Estás seguro?
       default_body: Esto no es reversible.
@@ -44,3 +61,13 @@ es:
       expense: Gasto
       income: Ingreso
       transfer: Transferencia
+    sidekiq_health_banner:
+      title: Algunos datos pueden estar desactualizados
+      body: No se están procesando las tareas en segundo plano, así que los saldos, el patrimonio neto y las sincronizaciones de cuentas pueden estar desactualizados o faltar.
+      cta: Ver estado del sistema
+      reasons:
+        redis_unreachable: La app no puede conectar con Redis. Comprueba tu REDIS_URL y que Redis esté en marcha.
+        no_worker_processes: No hay ningún proceso worker de Sidekiq conectado. Arranca el contenedor del worker o la unidad de systemd.
+        stale_heartbeat: El worker de Sidekiq no ha enviado señal de vida recientemente. Puede estar bloqueado o haberse caído.
+        ai_queues_not_polled: Ningún worker está procesando las colas de IA (chat, detección de comercios, categorización). Comprueba que el worker cargue config/sidekiq.yml.
+        queue_backed_up: La tarea más antigua de la cola lleva esperando más de lo que permite el límite de latencia. El worker funciona, pero se está quedando atrás.

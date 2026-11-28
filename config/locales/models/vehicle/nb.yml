@@ -1,0 +1,14 @@
+---
+nb:
+  activerecord:
+    attributes:
+      "account/accountable":
+        purchase_date: "Kjøpsdato"
+      vehicle:
+        purchase_date: "Kjøpsdato"
+    errors:
+      models:
+        vehicle:
+          attributes:
+            purchase_date:
+              must_precede_entries: "må være før kontoens eldste oppføring"
